@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deployment Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        .test-result { margin: 10px 0; padding: 15px; border-radius: 5px; }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .loading { background: #cce7ff; border: 1px solid #b0d4f1; color: #004085; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🚀 Bulk Email Sender - Deployment Test</h1>
+    <div id="results"></div>
+
+    <script>
+        const results = document.getElementById('results');
+
+        function addResult(message, type = 'loading') {
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.innerHTML = message;
+            results.appendChild(div);
+        }
+
+        async function testFunction(url, name, method = 'GET', body = null) {
+            try {
+                addResult(`Testing ${name}...`, 'loading');
+
+                const options = {
+                    method,
+                    headers: { 'Content-Type': 'application/json' }
+                };
+
+                if (body) {
+                    options.body = JSON.stringify(body);
+                }
+
+                const response = await fetch(url, options);
+                const data = await response.json();
+
+                if (response.ok) {
+                    addResult(`✅ ${name}: SUCCESS<br><pre>${JSON.stringify(data, null, 2)}</pre>`, 'success');
+                } else {
+                    addResult(`❌ ${name}: FAILED (${response.status})<br><pre>${JSON.stringify(data, null, 2)}</pre>`, 'error');
+                }
+            } catch (error) {
+                addResult(`❌ ${name}: ERROR<br><pre>${error.message}</pre>`, 'error');
+            }
+        }
+
+        async function runTests() {
+            const baseUrl = window.location.origin + '/.netlify/functions';
+
+            addResult('🔍 Starting deployment tests...', 'loading');
+            addResult(`Base URL: ${baseUrl}`, 'loading');
+
+            // Test all functions
+            await testFunction(`${baseUrl}/default-files`, 'Default Files Function');
+
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+
+            await testFunction(`${baseUrl}/upload-excel`, 'Upload Excel Function', 'POST', {
+                content: 'dGVzdCBkYXRh' // base64 for "test data"
+            });
+
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            await testFunction(`${baseUrl}/upload-word`, 'Upload Word Function', 'POST', {
+                content: 'dGVzdCBkYXRh'
+            });
+
+            addResult('🏁 Tests completed! Check results above.', 'success');
+        }
+
+        // Start tests when page loads
+        runTests();
+    </script>
+</body>
+</html>
