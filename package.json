@@ -1,0 +1,24 @@
+{
+  "name": "bulk-email-sender",
+  "version": "1.0.0",
+  "description": "Bulk Email Sender for Business Opportunities",
+  "main": "index.html",
+  "scripts": {
+    "build": "echo 'No build step required'",
+    "dev": "netlify dev"
+  },
+  "dependencies": {
+    "nodemailer": "^6.9.7",
+    "xlsx": "^0.18.5",
+    "mammoth": "^1.6.0"
+  },
+  "keywords": [
+    "email",
+    "bulk",
+    "sender",
+    "netlify",
+    "serverless"
+  ],
+  "author": "Intex Technologies",
+  "license": "ISC"
+}
