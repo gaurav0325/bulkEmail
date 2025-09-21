@@ -726,7 +726,7 @@ We are pleased to introduce Intex Technologies, a globally recognized brand with
                 this.showLoading('Processing Excel file...');
                 try {
                     const fileContent = await this.fileToBase64(file);
-                    const response = await fetch(`${this.apiBaseUrl}/upload-excel`, {
+                    const response = await fetch(`${this.apiBaseUrl}/upload-excel-simple`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ content: fileContent })
@@ -735,7 +735,10 @@ We are pleased to introduce Intex Technologies, a globally recognized brand with
                     const result = await response.json();
                     if (result.success) {
                         this.processContactData(result.data);
-                        this.showAlert('success', `Successfully processed ${result.data.length} contacts from Excel file`);
+                        this.showAlert('success', result.message);
+                        if (result.note) {
+                            this.showAlert('info', result.note);
+                        }
                     } else {
                         this.showAlert('error', result.message);
                     }
@@ -750,7 +753,7 @@ We are pleased to introduce Intex Technologies, a globally recognized brand with
                 this.showLoading('Processing template file...');
                 try {
                     const fileContent = await this.fileToBase64(file);
-                    const response = await fetch(`${this.apiBaseUrl}/upload-word`, {
+                    const response = await fetch(`${this.apiBaseUrl}/upload-word-simple`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ content: fileContent })
@@ -760,7 +763,10 @@ We are pleased to introduce Intex Technologies, a globally recognized brand with
                     if (result.success) {
                         document.getElementById('emailTemplate').value = result.content;
                         this.updateTemplate();
-                        this.showAlert('success', 'Template loaded successfully');
+                        this.showAlert('success', result.message);
+                        if (result.note) {
+                            this.showAlert('info', result.note);
+                        }
                     } else {
                         this.showAlert('error', result.message);
                     }
@@ -962,7 +968,7 @@ We are pleased to introduce Intex Technologies, a globally recognized brand with
                 this.showLoading('Sending email...');
 
                 try {
-                    const response = await fetch(`${this.apiBaseUrl}/send-email`, {
+                    const response = await fetch(`${this.apiBaseUrl}/send-email-simple`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(emailData)
@@ -981,7 +987,10 @@ We are pleased to introduce Intex Technologies, a globally recognized brand with
                     this.updateStats();
 
                     if (result.success) {
-                        this.showAlert('success', `Email sent successfully to ${contact.contact_person || contact.firm}`);
+                        this.showAlert('success', result.message);
+                        if (result.note) {
+                            this.showAlert('info', result.note);
+                        }
                         this.selectNextContact();
                     } else {
                         this.showAlert('error', `Failed to send email: ${result.message}`);

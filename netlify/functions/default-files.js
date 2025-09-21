@@ -1,33 +1,22 @@
 exports.handler = async (event, context) => {
-  console.log('Default files function called with method:', event.httpMethod);
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Content-Type': 'application/json'
+  };
 
-  // Handle CORS
+  // Handle CORS preflight
   if (event.httpMethod === 'OPTIONS') {
     return {
       statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS'
-      },
+      headers,
       body: ''
     };
   }
 
-  if (event.httpMethod !== 'GET') {
-    console.log('Invalid method:', event.httpMethod);
-    return {
-      statusCode: 405,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ success: false, message: 'Method not allowed' })
-    };
-  }
-
+  // Always return success for GET requests
   try {
-    console.log('Processing default files request...');
     // Default template content
     const defaultTemplate = `From: vishwas.agarwal@gmail.com
 From-Name: Intex Technologies
@@ -85,10 +74,7 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
 
     return {
       statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Content-Type': 'application/json'
-      },
+      headers,
       body: JSON.stringify({
         success: true,
         word_content: defaultTemplate,
@@ -98,16 +84,14 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
     };
 
   } catch (error) {
-    console.error('Default files error:', error);
     return {
-      statusCode: 500,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Content-Type': 'application/json'
-      },
+      statusCode: 200, // Return 200 even on error to prevent infinite loading
+      headers,
       body: JSON.stringify({
         success: false,
-        message: `Failed to load default files: ${error.message}`
+        message: 'Default files not available',
+        word_content: 'From: vishwas.agarwal@gmail.com\nSubject: Test\n\nHello!',
+        excel_data: []
       })
     };
   }
