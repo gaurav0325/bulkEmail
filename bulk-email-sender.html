@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bulk Email Sender - Business Opportunities</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+            min-height: 70vh;
+        }
+
+        .left-panel {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            height: fit-content;
+        }
+
+        .right-panel {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.4em;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 5px;
+        }
+
+        .file-upload {
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .file-upload:hover {
+            border-color: #764ba2;
+            background-color: #f8f9ff;
+        }
+
+        .file-upload.dragover {
+            border-color: #764ba2;
+            background-color: #f0f4ff;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-icon {
+            font-size: 3em;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .upload-text {
+            font-size: 1.1em;
+            color: #666;
+        }
+
+        .button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .button.secondary {
+            background: #6c757d;
+        }
+
+        .button.success {
+            background: #28a745;
+        }
+
+        .button.danger {
+            background: #dc3545;
+        }
+
+        .contacts-list {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+        }
+
+        .contact-item {
+            padding: 15px;
+            border-bottom: 1px solid #e0e0e0;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .contact-item:hover {
+            background-color: #f8f9ff;
+        }
+
+        .contact-item.selected {
+            background-color: #e6f0ff;
+            border-left: 4px solid #667eea;
+        }
+
+        .contact-item.processed {
+            background-color: #d4edda;
+            border-left: 4px solid #28a745;
+        }
+
+        .contact-info {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .contact-email {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .contact-country {
+            color: #888;
+            font-size: 0.8em;
+            margin-top: 5px;
+        }
+
+        .email-preview {
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .email-header {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .email-field {
+            margin-bottom: 10px;
+        }
+
+        .email-field label {
+            font-weight: bold;
+            color: #555;
+            display: inline-block;
+            width: 80px;
+        }
+
+        .email-field input {
+            width: calc(100% - 90px);
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        .email-content {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 20px;
+            min-height: 300px;
+        }
+
+        .email-content textarea {
+            width: 100%;
+            min-height: 300px;
+            border: none;
+            resize: vertical;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-item {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .progress-bar {
+            background: #e0e0e0;
+            border-radius: 10px;
+            height: 20px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        .alert.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert.info {
+            background: #cce7ff;
+            color: #004085;
+            border: 1px solid #b0d4f1;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .template-section {
+            margin-bottom: 20px;
+        }
+
+        .template-section textarea {
+            width: 100%;
+            min-height: 150px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📧 Bulk Email Sender</h1>
+            <p>Professional Business Opportunity Letters</p>
+        </div>
+
+        <div class="main-content">
+            <div class="left-panel">
+                <div class="section">
+                    <h2>📂 Upload Files</h2>
+
+                    <div class="file-upload" id="excelUpload">
+                        <div class="upload-icon">📊</div>
+                        <div class="upload-text">
+                            <strong>Upload Excel File</strong><br>
+                            Drop your importers data file here or click to browse
+                        </div>
+                        <input type="file" id="excelFile" class="file-input" accept=".xlsx,.xls">
+                    </div>
+
+                    <div class="file-upload" id="templateUpload" style="margin-top: 15px;">
+                        <div class="upload-icon">📝</div>
+                        <div class="upload-text">
+                            <strong>Upload Letter Template</strong><br>
+                            Drop your letter template here or click to browse
+                        </div>
+                        <input type="file" id="templateFile" class="file-input" accept=".docx,.doc,.txt">
+                    </div>
+                </div>
+
+                <div class="section template-section">
+                    <h2>✏️ Email Template</h2>
+                    <textarea id="emailTemplate" placeholder="Your email template will appear here. You can also manually enter or edit the template.">From: your-email@company.com
+From-Name: Your Company Name
+To: {email}
+Subject: Exciting Business Opportunity - IT Peripherals & Home Appliances
+
+Dear {contactName},
+
+I hope this email finds you well. My name is [Your Name] from [Your Company Name], and I am reaching out to explore potential business opportunities in the area of IT peripherals and home appliances.
+
+We are a leading company specializing in high-quality IT peripherals and innovative home appliances, and we are actively seeking business partnerships in {country}. Given your expertise in the import business, we believe there could be excellent opportunities for collaboration.
+
+Our product range includes:
+• Premium IT peripherals (keyboards, mice, headsets, webcams)
+• Smart home appliances (kitchen appliances, cleaning devices, personal care)
+• Consumer electronics accessories
+• Office equipment and supplies
+
+We offer:
+✓ Competitive pricing and flexible payment terms
+✓ High-quality products with international certifications
+✓ Comprehensive marketing support
+✓ Reliable supply chain and logistics
+✓ Technical support and after-sales service
+
+We would be delighted to discuss how we can work together to expand your product portfolio and explore the growing market opportunities in {country}.
+
+Would you be available for a brief call or video meeting to discuss this opportunity further? I would be happy to share our product catalog and discuss terms that would be mutually beneficial.
+
+Thank you for your time and consideration. I look forward to hearing from you soon.
+
+Best regards,
+[Your Name]
+[Your Title]
+[Your Company Name]
+[Your Contact Information]
+[Your Email]
+[Your Phone Number]</textarea>
+                </div>
+
+                <div class="section">
+                    <h2>📊 Statistics</h2>
+                    <div class="stats">
+                        <div class="stat-item">
+                            <div class="stat-value" id="totalContacts">0</div>
+                            <div class="stat-label">Total Contacts</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="sentEmails">0</div>
+                            <div class="stat-label">Sent</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="remainingEmails">0</div>
+                            <div class="stat-label">Remaining</div>
+                        </div>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>👥 Contacts List</h2>
+                    <div class="contacts-list" id="contactsList">
+                        <div style="padding: 20px; text-align: center; color: #666;">
+                            Upload an Excel file to see contacts here
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="right-panel">
+                <div class="section">
+                    <h2>📨 Email Preview & Editor</h2>
+                    <div id="alertContainer"></div>
+
+                    <div class="email-preview" id="emailPreview">
+                        <div class="email-header">
+                            <div class="email-field">
+                                <label>From:</label>
+                                <input type="email" id="senderEmail" placeholder="your-email@company.com">
+                            </div>
+                            <div class="email-field">
+                                <label>From Name:</label>
+                                <input type="text" id="senderName" placeholder="Your Company Name">
+                            </div>
+                            <div class="email-field">
+                                <label>To:</label>
+                                <input type="email" id="recipientEmail" placeholder="recipient@example.com">
+                            </div>
+                            <div class="email-field">
+                                <label>Subject:</label>
+                                <input type="text" id="emailSubject" placeholder="Email subject">
+                            </div>
+                        </div>
+
+                        <div class="email-content">
+                            <textarea id="emailBody" placeholder="Email content will appear here when you select a contact"></textarea>
+                        </div>
+
+                        <div style="margin-top: 20px; text-align: right;">
+                            <button class="button secondary" id="previewBtn" disabled>👁️ Preview</button>
+                            <button class="button" id="sendBtn" disabled>📤 Send Email</button>
+                            <button class="button success" id="sendAllBtn" disabled>📬 Send All Remaining</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class BulkEmailSender {
+            constructor() {
+                this.contacts = [];
+                this.currentContactIndex = -1;
+                this.sentCount = 0;
+                this.template = '';
+                this.initializeEventListeners();
+            }
+
+            initializeEventListeners() {
+                // File upload handlers
+                this.setupFileUpload('excelUpload', 'excelFile', this.handleExcelFile.bind(this));
+                this.setupFileUpload('templateUpload', 'templateFile', this.handleTemplateFile.bind(this));
+
+                // Contact selection
+                document.getElementById('contactsList').addEventListener('click', this.handleContactSelection.bind(this));
+
+                // Button handlers
+                document.getElementById('sendBtn').addEventListener('click', this.sendCurrentEmail.bind(this));
+                document.getElementById('sendAllBtn').addEventListener('click', this.sendAllEmails.bind(this));
+                document.getElementById('previewBtn').addEventListener('click', this.previewEmail.bind(this));
+
+                // Template editing
+                document.getElementById('emailTemplate').addEventListener('input', this.updateTemplate.bind(this));
+            }
+
+            setupFileUpload(uploadId, inputId, handler) {
+                const uploadArea = document.getElementById(uploadId);
+                const fileInput = document.getElementById(inputId);
+
+                uploadArea.addEventListener('click', () => fileInput.click());
+                uploadArea.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.add('dragover');
+                });
+                uploadArea.addEventListener('dragleave', () => {
+                    uploadArea.classList.remove('dragover');
+                });
+                uploadArea.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.remove('dragover');
+                    const files = e.dataTransfer.files;
+                    if (files.length > 0) {
+                        fileInput.files = files;
+                        handler(files[0]);
+                    }
+                });
+                fileInput.addEventListener('change', (e) => {
+                    if (e.target.files.length > 0) {
+                        handler(e.target.files[0]);
+                    }
+                });
+            }
+
+            handleExcelFile(file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const firstSheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheetName];
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+                        this.processContactData(jsonData);
+                        this.showAlert('success', `Successfully loaded ${this.contacts.length} contacts from Excel file`);
+                    } catch (error) {
+                        this.showAlert('error', 'Error reading Excel file: ' + error.message);
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            }
+
+            handleTemplateFile(file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    if (file.name.endsWith('.docx')) {
+                        // Handle Word document
+                        mammoth.extractRawText({ arrayBuffer: e.target.result })
+                            .then((result) => {
+                                document.getElementById('emailTemplate').value = result.value;
+                                this.updateTemplate();
+                                this.showAlert('success', 'Template loaded from Word document');
+                            })
+                            .catch((error) => {
+                                this.showAlert('error', 'Error reading Word document: ' + error.message);
+                            });
+                    } else {
+                        // Handle text file
+                        document.getElementById('emailTemplate').value = e.target.result;
+                        this.updateTemplate();
+                        this.showAlert('success', 'Template loaded from text file');
+                    }
+                };
+
+                if (file.name.endsWith('.docx')) {
+                    reader.readAsArrayBuffer(file);
+                } else {
+                    reader.readAsText(file);
+                }
+            }
+
+            processContactData(data) {
+                this.contacts = data.map((row, index) => {
+                    // Try to identify common column names
+                    const email = this.findValue(row, ['email', 'e-mail', 'email_address', 'mail', 'Email', 'E-mail', 'Email Address']);
+                    const name = this.findValue(row, ['name', 'contact_name', 'company_name', 'contact', 'Name', 'Contact Name', 'Company Name', 'Company']);
+                    const country = this.findValue(row, ['country', 'nation', 'location', 'Country', 'Nation', 'Location']);
+
+                    return {
+                        id: index,
+                        email: email || '',
+                        name: name || '',
+                        country: country || '',
+                        sent: false,
+                        originalData: row
+                    };
+                }).filter(contact => contact.email); // Only include contacts with email addresses
+
+                this.renderContactsList();
+                this.updateStats();
+                this.enableControls();
+            }
+
+            findValue(obj, keys) {
+                for (let key of keys) {
+                    if (obj[key] !== undefined && obj[key] !== null && obj[key] !== '') {
+                        return obj[key].toString().trim();
+                    }
+                }
+                return '';
+            }
+
+            renderContactsList() {
+                const container = document.getElementById('contactsList');
+                container.innerHTML = '';
+
+                this.contacts.forEach((contact, index) => {
+                    const item = document.createElement('div');
+                    item.className = `contact-item ${contact.sent ? 'processed' : ''}`;
+                    item.dataset.index = index;
+
+                    item.innerHTML = `
+                        <div class="contact-info">${contact.name || 'Unknown Contact'}</div>
+                        <div class="contact-email">${contact.email}</div>
+                        <div class="contact-country">${contact.country || 'Unknown Country'}</div>
+                        ${contact.sent ? '<div style="color: #28a745; font-weight: bold; margin-top: 5px;">✓ Sent</div>' : ''}
+                    `;
+
+                    container.appendChild(item);
+                });
+            }
+
+            handleContactSelection(e) {
+                const contactItem = e.target.closest('.contact-item');
+                if (!contactItem || contactItem.classList.contains('processed')) return;
+
+                // Remove previous selection
+                document.querySelectorAll('.contact-item').forEach(item => {
+                    item.classList.remove('selected');
+                });
+
+                // Select current contact
+                contactItem.classList.add('selected');
+                this.currentContactIndex = parseInt(contactItem.dataset.index);
+                this.populateEmailPreview();
+            }
+
+            populateEmailPreview() {
+                if (this.currentContactIndex === -1) return;
+
+                const contact = this.contacts[this.currentContactIndex];
+                const template = document.getElementById('emailTemplate').value;
+
+                // Parse template headers and body
+                const templateData = this.parseEmailTemplate(template, contact);
+
+                // Populate form fields
+                document.getElementById('senderEmail').value = templateData.from || 'your-email@company.com';
+                document.getElementById('senderName').value = templateData.fromName || 'Your Company Name';
+                document.getElementById('recipientEmail').value = templateData.to || contact.email;
+                document.getElementById('emailSubject').value = templateData.subject || 'Business Opportunity - IT Peripherals & Home Appliances';
+                document.getElementById('emailBody').value = templateData.body;
+
+                // Enable send button
+                document.getElementById('sendBtn').disabled = false;
+                document.getElementById('previewBtn').disabled = false;
+            }
+
+            parseEmailTemplate(template, contact) {
+                const lines = template.split('\n');
+                let from = '';
+                let fromName = '';
+                let to = '';
+                let subject = '';
+                let bodyStartIndex = 0;
+
+                // Parse headers
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+
+                    if (line.toLowerCase().startsWith('from:')) {
+                        from = line.substring(5).trim();
+                        bodyStartIndex = i + 1;
+                    } else if (line.toLowerCase().startsWith('from-name:')) {
+                        fromName = line.substring(10).trim();
+                        bodyStartIndex = i + 1;
+                    } else if (line.toLowerCase().startsWith('to:')) {
+                        to = line.substring(3).trim();
+                        bodyStartIndex = i + 1;
+                    } else if (line.toLowerCase().startsWith('subject:')) {
+                        subject = line.substring(8).trim();
+                        bodyStartIndex = i + 1;
+                    } else if (line === '' && bodyStartIndex > 0) {
+                        // Empty line after headers indicates start of body
+                        bodyStartIndex = i + 1;
+                        break;
+                    } else if (bodyStartIndex === 0 && line !== '') {
+                        // No headers found, body starts from beginning
+                        break;
+                    }
+                }
+
+                // Extract body
+                let body = lines.slice(bodyStartIndex).join('\n').trim();
+
+                // Replace placeholders
+                const contactName = contact.name || 'Valued Prospective Partner';
+                from = from.replace(/{email}/g, contact.email);
+                to = to.replace(/{email}/g, contact.email);
+                subject = subject.replace(/{contactName}/g, contactName).replace(/{country}/g, contact.country || 'your region');
+                body = body.replace(/{contactName}/g, contactName).replace(/{country}/g, contact.country || 'your region').replace(/{email}/g, contact.email);
+
+                return {
+                    from,
+                    fromName,
+                    to,
+                    subject,
+                    body
+                };
+            }
+
+            updateTemplate() {
+                this.template = document.getElementById('emailTemplate').value;
+                if (this.currentContactIndex !== -1) {
+                    this.populateEmailPreview();
+                }
+            }
+
+            previewEmail() {
+                const emailWindow = window.open('', '_blank', 'width=600,height=800');
+                const from = document.getElementById('senderEmail').value;
+                const fromName = document.getElementById('senderName').value;
+                const to = document.getElementById('recipientEmail').value;
+                const subject = document.getElementById('emailSubject').value;
+                const body = document.getElementById('emailBody').value;
+
+                emailWindow.document.write(`
+                    <html>
+                    <head><title>Email Preview</title></head>
+                    <body style="font-family: Arial, sans-serif; padding: 20px;">
+                        <h2>Email Preview</h2>
+                        <div style="border: 1px solid #ccc; padding: 15px; margin: 10px 0;">
+                            <p><strong>From:</strong> ${fromName} &lt;${from}&gt;</p>
+                            <p><strong>To:</strong> ${to}</p>
+                            <p><strong>Subject:</strong> ${subject}</p>
+                        </div>
+                        <div style="border: 1px solid #ccc; padding: 15px; white-space: pre-wrap;">
+                            ${body}
+                        </div>
+                    </body>
+                    </html>
+                `);
+            }
+
+            async sendCurrentEmail() {
+                if (this.currentContactIndex === -1) return;
+
+                const contact = this.contacts[this.currentContactIndex];
+                const to = document.getElementById('recipientEmail').value;
+                const subject = document.getElementById('emailSubject').value;
+                const body = document.getElementById('emailBody').value;
+
+                try {
+                    // Simulate sending email (replace with actual email sending logic)
+                    await this.simulateEmailSend(to, subject, body);
+
+                    // Mark as sent
+                    contact.sent = true;
+                    this.sentCount++;
+
+                    // Update UI
+                    this.renderContactsList();
+                    this.updateStats();
+                    this.showAlert('success', `Email sent successfully to ${contact.name || contact.email}`);
+
+                    // Move to next unsent contact
+                    this.selectNextContact();
+
+                } catch (error) {
+                    this.showAlert('error', 'Failed to send email: ' + error.message);
+                }
+            }
+
+            async sendAllEmails() {
+                const unsentContacts = this.contacts.filter(c => !c.sent);
+                if (unsentContacts.length === 0) return;
+
+                if (!confirm(`Are you sure you want to send ${unsentContacts.length} emails?`)) return;
+
+                const sendAllBtn = document.getElementById('sendAllBtn');
+                sendAllBtn.disabled = true;
+                sendAllBtn.textContent = '📤 Sending...';
+
+                for (let i = 0; i < unsentContacts.length; i++) {
+                    const contact = unsentContacts[i];
+                    this.currentContactIndex = this.contacts.findIndex(c => c.id === contact.id);
+                    this.populateEmailPreview();
+
+                    try {
+                        await this.sendCurrentEmail();
+                        await this.delay(1000); // 1 second delay between emails
+                    } catch (error) {
+                        console.error('Error sending email to', contact.email, error);
+                    }
+                }
+
+                sendAllBtn.disabled = false;
+                sendAllBtn.textContent = '📬 Send All Remaining';
+                this.showAlert('success', 'Bulk email sending completed!');
+            }
+
+            selectNextContact() {
+                const nextIndex = this.contacts.findIndex((contact, index) =>
+                    index > this.currentContactIndex && !contact.sent
+                );
+
+                if (nextIndex !== -1) {
+                    const contactItems = document.querySelectorAll('.contact-item');
+                    contactItems[nextIndex].click();
+                } else {
+                    // No more contacts to send
+                    this.currentContactIndex = -1;
+                    document.getElementById('sendBtn').disabled = true;
+                    document.getElementById('previewBtn').disabled = true;
+                    document.querySelectorAll('.contact-item').forEach(item => {
+                        item.classList.remove('selected');
+                    });
+                }
+            }
+
+            async simulateEmailSend(to, subject, body) {
+                // This opens the default email client with the composed email
+                // User can review and send manually through their email client
+
+                const emailBody = encodeURIComponent(body.replace(/\n/g, '%0D%0A'));
+                const emailSubject = encodeURIComponent(subject);
+                const mailto = `mailto:${to}?subject=${emailSubject}&body=${emailBody}`;
+
+                try {
+                    // Open email client
+                    window.open(mailto, '_blank');
+
+                    // Simulate delay for user interaction
+                    return new Promise((resolve, reject) => {
+                        setTimeout(() => {
+                            // Assume success - user can manually handle failures
+                            resolve();
+                        }, 1000);
+                    });
+                } catch (error) {
+                    throw new Error('Could not open email client');
+                }
+            }
+
+            delay(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+
+            updateStats() {
+                document.getElementById('totalContacts').textContent = this.contacts.length;
+                document.getElementById('sentEmails').textContent = this.sentCount;
+                document.getElementById('remainingEmails').textContent = this.contacts.length - this.sentCount;
+
+                const progress = this.contacts.length > 0 ? (this.sentCount / this.contacts.length) * 100 : 0;
+                document.getElementById('progressFill').style.width = progress + '%';
+            }
+
+            enableControls() {
+                document.getElementById('sendAllBtn').disabled = false;
+            }
+
+            showAlert(type, message) {
+                const container = document.getElementById('alertContainer');
+                const alert = document.createElement('div');
+                alert.className = `alert ${type}`;
+                alert.textContent = message;
+
+                container.appendChild(alert);
+
+                setTimeout(() => {
+                    alert.remove();
+                }, 5000);
+            }
+        }
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', () => {
+            new BulkEmailSender();
+        });
+    </script>
+</body>
+</html>

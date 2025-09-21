@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Bulk Email Sender</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .button:hover {
+            background: #5a67d8;
+        }
+        .button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .contacts {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .contact-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+        .contact-item:hover {
+            background: #f0f8ff;
+        }
+        .contact-item.selected {
+            background: #667eea;
+            color: white;
+        }
+        .alert {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .alert.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .alert.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .alert.info {
+            background: #cce7ff;
+            color: #004085;
+            border: 1px solid #b0d4f1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Simple Bulk Email Sender</h1>
+            <p>Professional Business Email Campaign Tool</p>
+        </div>
+
+        <div class="section">
+            <h3>📁 File Loading</h3>
+            <button class="button" onclick="loadDefaultFiles()">Load Default Files</button>
+            <button class="button" onclick="testAPI()">Test API Connection</button>
+            <div id="alerts"></div>
+        </div>
+
+        <div class="section">
+            <h3>👥 Contacts (<span id="contactCount">0</span>)</h3>
+            <div class="contacts" id="contactsList">
+                <div style="padding: 20px; text-align: center; color: #666;">
+                    Click "Load Default Files" to see contacts
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>📧 Email Template</h3>
+            <textarea id="emailTemplate" placeholder="Email template will load here...">From: vishwas.agarwal@gmail.com
+From-Name: Intex Technologies
+To: {email}
+Subject: Business Partnership Opportunity - {country}
+
+Dear {contactName},
+
+We are pleased to introduce Intex Technologies, a globally recognized brand with a rich legacy spanning 29 years in the consumer electronics and technology sectors.
+
+Best regards,
+Vishwas Agarwal
+Business Head & COO</textarea>
+        </div>
+
+        <div class="section">
+            <h3>📨 Current Email</h3>
+            <div>
+                <label>To: </label><input type="email" id="toEmail" style="width: 300px; padding: 5px;">
+            </div><br>
+            <div>
+                <label>Subject: </label><input type="text" id="subject" style="width: 400px; padding: 5px;">
+            </div><br>
+            <textarea id="emailBody" placeholder="Select a contact to compose email..."></textarea>
+            <br>
+            <button class="button" onclick="sendEmail()" id="sendBtn" disabled>Send Email</button>
+            <button class="button" onclick="previewEmail()">Preview</button>
+        </div>
+    </div>
+
+    <script>
+        let contacts = [];
+        let currentContact = null;
+
+        async function testAPI() {
+            showAlert('info', 'Testing API connection...');
+            try {
+                const response = await fetch('/api/default-files');
+                if (response.ok) {
+                    showAlert('success', 'API connection successful!');
+                } else {
+                    showAlert('error', `API error: ${response.status}`);
+                }
+            } catch (error) {
+                showAlert('error', 'API connection failed: ' + error.message);
+            }
+        }
+
+        async function loadDefaultFiles() {
+            showAlert('info', 'Loading default files...');
+            try {
+                const response = await fetch('/api/default-files');
+                const data = await response.json();
+
+                console.log('Server response:', data);
+
+                if (data.success) {
+                    if (data.excel_data && data.excel_data.length > 0) {
+                        contacts = data.excel_data;
+                        renderContacts();
+                        showAlert('success', `Loaded ${contacts.length} contacts`);
+                    }
+
+                    if (data.word_content) {
+                        document.getElementById('emailTemplate').value = data.word_content;
+                        showAlert('success', 'Template loaded');
+                    }
+
+                    if (data.debug_info) {
+                        console.log('Debug info:', data.debug_info);
+                    }
+                } else {
+                    showAlert('error', data.message || 'Failed to load files');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('error', 'Error: ' + error.message);
+            }
+        }
+
+        function renderContacts() {
+            const container = document.getElementById('contactsList');
+            container.innerHTML = '';
+
+            contacts.forEach((contact, index) => {
+                const div = document.createElement('div');
+                div.className = 'contact-item';
+                div.onclick = () => selectContact(contact, index);
+
+                const firm = contact.firm || 'Unknown Company';
+                const person = contact.contact_person || 'Contact Person';
+                const email = contact.email || 'No email';
+
+                div.innerHTML = `
+                    <strong>${firm}</strong><br>
+                    👤 ${person}<br>
+                    📧 ${email}<br>
+                    🌍 ${contact.country || 'Unknown'}
+                `;
+
+                container.appendChild(div);
+            });
+
+            document.getElementById('contactCount').textContent = contacts.length;
+        }
+
+        function selectContact(contact, index) {
+            // Remove previous selection
+            document.querySelectorAll('.contact-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+
+            // Select current
+            event.target.classList.add('selected');
+            currentContact = contact;
+
+            // Populate email fields
+            const template = document.getElementById('emailTemplate').value;
+            const emailData = parseTemplate(template, contact);
+
+            document.getElementById('toEmail').value = contact.email;
+            document.getElementById('subject').value = emailData.subject;
+            document.getElementById('emailBody').value = emailData.body;
+            document.getElementById('sendBtn').disabled = false;
+        }
+
+        function parseTemplate(template, contact) {
+            const lines = template.split('\n');
+            let subject = 'Business Partnership Opportunity';
+            let body = template;
+
+            // Extract subject
+            const subjectLine = lines.find(line => line.toLowerCase().startsWith('subject:'));
+            if (subjectLine) {
+                subject = subjectLine.substring(8).trim();
+            }
+
+            // Replace placeholders
+            const contactName = contact.contact_person || contact.firm || 'Valued Prospective Partner';
+            subject = subject.replace(/{contactName}/g, contactName);
+            subject = subject.replace(/{country}/g, contact.country || 'your region');
+
+            body = body.replace(/{contactName}/g, contactName);
+            body = body.replace(/{country}/g, contact.country || 'your region');
+            body = body.replace(/{email}/g, contact.email);
+
+            return { subject, body };
+        }
+
+        async function sendEmail() {
+            if (!currentContact) return;
+
+            const emailData = {
+                from_email: 'vishwas.agarwal@gmail.com',
+                from_name: 'Intex Technologies',
+                to_email: document.getElementById('toEmail').value,
+                subject: document.getElementById('subject').value,
+                content: document.getElementById('emailBody').value
+            };
+
+            showAlert('info', 'Sending email...');
+
+            try {
+                const response = await fetch('/api/send-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(emailData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showAlert('success', 'Email sent successfully!');
+                } else {
+                    showAlert('error', 'Failed to send: ' + result.message);
+                }
+            } catch (error) {
+                showAlert('error', 'Send error: ' + error.message);
+            }
+        }
+
+        function previewEmail() {
+            const to = document.getElementById('toEmail').value;
+            const subject = document.getElementById('subject').value;
+            const body = document.getElementById('emailBody').value;
+
+            const preview = window.open('', '_blank', 'width=600,height=800');
+            preview.document.write(`
+                <html>
+                <head><title>Email Preview</title></head>
+                <body style="font-family: Arial; padding: 20px;">
+                    <h2>Email Preview</h2>
+                    <div style="border: 1px solid #ccc; padding: 15px; margin: 10px 0;">
+                        <p><strong>To:</strong> ${to}</p>
+                        <p><strong>Subject:</strong> ${subject}</p>
+                    </div>
+                    <div style="border: 1px solid #ccc; padding: 15px; white-space: pre-wrap;">
+                        ${body}
+                    </div>
+                </body>
+                </html>
+            `);
+        }
+
+        function showAlert(type, message) {
+            const container = document.getElementById('alerts');
+            const alert = document.createElement('div');
+            alert.className = `alert ${type}`;
+            alert.textContent = message;
+            container.appendChild(alert);
+
+            setTimeout(() => {
+                if (alert.parentNode) {
+                    alert.remove();
+                }
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,1696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Bulk Email Sender - Intex Technologies</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            min-height: 80vh;
+        }
+
+        .left-panel {
+            background: #f8f9fa;
+            padding: 30px;
+            border-right: 1px solid #e0e0e0;
+        }
+
+        .right-panel {
+            padding: 30px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .section h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 8px;
+        }
+
+        .button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            margin: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .button.success {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+
+        .button.danger {
+            background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);
+        }
+
+        .button.secondary {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+        }
+
+        .button.primary-send {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            font-size: 1.1em;
+            font-weight: bold;
+            padding: 15px 30px;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4);
+            border: 3px solid #ffffff;
+        }
+
+        .button.primary-send:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(40, 167, 69, 0.6);
+        }
+
+        .polish-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: linear-gradient(135deg, #ffc107 0%, #ff8f00 100%);
+            color: #333;
+            font-size: 0.9em;
+            padding: 8px 15px;
+            z-index: 10;
+        }
+
+        .polish-btn:hover {
+            background: linear-gradient(135deg, #ffb300 0%, #ff6f00 100%);
+            transform: translateY(-1px);
+        }
+
+        .contacts-container {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: white;
+        }
+
+        .contact-item {
+            padding: 15px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .contact-item:hover {
+            background: #f8f9ff;
+            transform: translateX(5px);
+        }
+
+        .contact-item.selected {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            border-left: 4px solid #ffffff;
+            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+        }
+
+        .contact-item.sent.success {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            border-left: 4px solid #28a745;
+            color: #155724;
+        }
+
+        .contact-item.sent.success.selected {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border-left: 4px solid #ffffff;
+        }
+
+        .contact-item.sent.failed {
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            border-left: 4px solid #dc3545;
+            color: #721c24;
+        }
+
+        .contact-item.sent.failed.selected {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+            border-left: 4px solid #ffffff;
+        }
+
+        .contact-firm {
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+        }
+
+        .contact-person {
+            color: #666;
+            margin-bottom: 3px;
+        }
+
+        .contact-email {
+            color: #888;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .contact-country {
+            display: inline-block;
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+        }
+
+        .contact-status {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 1.2em;
+        }
+
+        .email-form {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1em;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group input:not([readonly]) {
+            background: #fff;
+            border-left: 4px solid #28a745;
+        }
+
+        .form-group input[readonly] {
+            background: #f8f9fa;
+            border-left: 4px solid #6c757d;
+        }
+
+        .editable-hint {
+            font-size: 0.8em;
+            color: #28a745;
+            margin-top: 5px;
+            font-style: italic;
+        }
+
+        .readonly-hint {
+            font-size: 0.8em;
+            color: #6c757d;
+            margin-top: 5px;
+            font-style: italic;
+        }
+
+        .form-group textarea {
+            width: 100%;
+            min-height: 450px;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-family: 'Times New Roman', serif;
+            font-size: 15px;
+            line-height: 1.8;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+            background: #fafafa;
+            color: #333;
+        }
+
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-item {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .alert {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(-100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .alert.success {
+            background: #d4edda;
+            color: #155724;
+            border-left-color: #28a745;
+        }
+
+        .alert.error {
+            background: #f8d7da;
+            color: #721c24;
+            border-left-color: #dc3545;
+        }
+
+        .alert.info {
+            background: #cce7ff;
+            color: #004085;
+            border-left-color: #667eea;
+        }
+
+        .template-area {
+            margin-bottom: 20px;
+        }
+
+        .template-area textarea {
+            width: 100%;
+            height: 200px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 13px;
+        }
+
+        .progress-bar {
+            background: #e0e0e0;
+            border-radius: 10px;
+            height: 20px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100%;
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        .api-status {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .api-status.connected {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .api-status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .controls {
+            text-align: center;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            transform: scale(0.8);
+            transition: transform 0.3s ease;
+        }
+
+        .modal-overlay.show .modal {
+            transform: scale(1);
+        }
+
+        .modal h3 {
+            color: #667eea;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .modal .button {
+            margin: 10px;
+        }
+
+        .modal-content {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .success-modal {
+            border-left: 5px solid #28a745;
+        }
+
+        .error-modal {
+            border-left: 5px solid #dc3545;
+        }
+
+        .success-icon {
+            font-size: 3em;
+            color: #28a745;
+            margin-bottom: 15px;
+        }
+
+        .error-icon {
+            font-size: 3em;
+            color: #dc3545;
+            margin-bottom: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .modal {
+                width: 95%;
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📧 Complete Bulk Email Sender</h1>
+            <p>Intex Technologies - Professional Business Email Campaign Platform</p>
+        </div>
+
+        <div class="main-content">
+            <div class="left-panel">
+                <div class="section">
+                    <h3>🔗 API Status</h3>
+                    <div id="apiStatus" class="api-status disconnected">
+                        🔄 Checking connection...
+                    </div>
+                    <button class="button" onclick="testConnection()">Test Connection</button>
+                    <button class="button success" onclick="loadDefaultFiles()">📋 Load Default Files</button>
+                </div>
+
+                <div class="section">
+                    <h3>📊 Campaign Statistics</h3>
+                    <div class="stats">
+                        <div class="stat-item">
+                            <div class="stat-value" id="totalContacts">0</div>
+                            <div class="stat-label">Total</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="sentEmails">0</div>
+                            <div class="stat-label">Sent</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="successRate">0%</div>
+                            <div class="stat-label">Success</div>
+                        </div>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div style="text-align: center; margin-top: 15px;">
+                        <button class="button" onclick="downloadResults()" id="downloadBtn" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                            📊 Download Results Spreadsheet
+                        </button>
+                        <button class="button" onclick="toggleDebugPanel()" style="background: linear-gradient(135deg, #6c757d 0%, #495057 100%); margin-left: 10px;">
+                            🔧 Debug Panel
+                        </button>
+                    </div>
+
+                    <!-- Debug Panel -->
+                    <div id="debugPanel" style="display: none; margin-top: 15px; padding: 10px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 5px;">
+                        <h4>Debug Information</h4>
+                        <div id="debugContent">
+                            <p><strong>Modified Fields:</strong> <span id="debugModifiedFields">None</span></p>
+                            <p><strong>Current Contact:</strong> <span id="debugCurrentContact">None</span></p>
+                            <p><strong>Last Email Status:</strong> <span id="debugEmailStatus">None</span></p>
+                            <button class="button" onclick="showCurrentState()" style="font-size: 12px; padding: 5px 10px;">Show Current State</button>
+                            <button class="button" onclick="resetAllModifications()" style="font-size: 12px; padding: 5px 10px; background: #dc3545;">Reset All Locks</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h3>✏️ Email Template</h3>
+                    <div class="template-area">
+                        <textarea id="emailTemplate" placeholder="Template will load automatically...">From: vishwas.agarwal@gmail.com
+From-Name: Intex Technologies
+To: {email}
+Subject: Business Partnership Opportunity - {country}
+
+Dear Valued Prospective Partner,
+
+We are pleased to introduce Intex Technologies, a globally recognized brand with a rich legacy spanning 29 years in the consumer electronics and technology sectors. Intex has established itself as a trusted name, known for its diverse range of high-quality products, including home appliances, IT peripherals, and mobile devices.
+
+Having successfully built a strong presence in various international markets, Intex is now strategically re-entering the dynamic {country} market. We are actively seeking experienced and reputable importers and distributors to forge strong, mutually beneficial partnerships. Our goal is to collaborate with partners who share our vision of growth and are committed to expanding Intex's reach and availability across {country}.
+
+We believe that with your local expertise and our established brand reputation and product portfolio, we can achieve significant success together. We are confident that this collaboration will not only benefit both parties but also bring cutting-edge technology and reliable products to consumers in {country}.
+
+Our comprehensive product range includes:
+
+• IT PERIPHERALS: Keyboards, mice, headsets, webcams, and other essential computer accessories
+• HOME APPLIANCES: Kitchen appliances, air coolers, personal care devices, and smart home solutions
+• MOBILE ACCESSORIES: Chargers, power banks, cables, and mobile peripherals
+• AUDIO SOLUTIONS: Speakers, headphones, earphones, and sound systems
+
+What sets Intex apart as your ideal partner:
+
+✓ 29 years of proven experience and brand trust
+✓ Global presence in over 40 countries
+✓ International quality certifications and standards
+✓ Competitive pricing with attractive margins
+✓ Comprehensive marketing and technical support
+✓ Flexible payment terms and reliable logistics
+
+We are committed to providing our partners with:
+
+• Exclusive territorial distribution rights
+• Comprehensive product training and support
+• Marketing materials and promotional campaigns
+• Dedicated account management services
+• Technical support and after-sales service backup
+
+We would be delighted to discuss this partnership opportunity with you in detail. Our team is ready to share product catalogues, pricing structures, and partnership terms that reflect our commitment to mutual success.
+
+We look forward to the possibility of building a prosperous business relationship together.
+
+Best regards,
+
+Vishwas Agarwal
+Business Head & COO
+Intex Technologies
+
+Email: vishwas.agarwal@gmail.com
+Mobile: +91-9999290800
+Website: www.intexindia.co.in
+
+"Innovation that connects, technology that empowers"</textarea>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h3>📁 Upload Custom Files</h3>
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">📊 Upload Contact Spreadsheet (.xlsx)</label>
+                        <input type="file" id="excelUpload" accept=".xlsx,.xls" style="margin-bottom: 10px; width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+                        <button class="button" onclick="uploadExcelFile()" style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);">
+                            📊 Upload & Parse Excel
+                        </button>
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">📄 Upload Email Template (.docx)</label>
+                        <input type="file" id="wordUpload" accept=".docx,.doc" style="margin-bottom: 10px; width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+                        <button class="button" onclick="uploadWordFile()" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                            📄 Upload & Parse Template
+                        </button>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h3>👥 Contact Directory (<span id="contactCount">0</span>)</h3>
+                    <div class="contacts-container" id="contactsList">
+                        <div style="padding: 30px; text-align: center; color: #666;">
+                            📋 Click "Load Default Files" to see contacts
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="right-panel">
+                <div class="section">
+                    <h3>📨 Email Composer & Review</h3>
+                    <div id="alertContainer"></div>
+
+                    <div class="email-form">
+                        <div class="form-group">
+                            <label>📧 From Email:</label>
+                            <input type="email" id="fromEmail" value="vishwas.agarwal@gmail.com">
+                            <div class="editable-hint">✏️ Editable - change sender email if needed</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>👤 From Name:</label>
+                            <input type="text" id="fromName" value="Intex Technologies">
+                            <div class="editable-hint">✏️ Editable - change sender name if needed</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>📧 To Email:</label>
+                            <input type="email" id="toEmail" placeholder="Select a contact...">
+                            <div class="editable-hint">✏️ Editable - email will update automatically</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>🏢 Company/Firm:</label>
+                            <input type="text" id="firmName" placeholder="Company name...">
+                            <div class="editable-hint">✏️ Editable - email content will update automatically</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>👤 Contact Person:</label>
+                            <input type="text" id="contactPerson" placeholder="Contact person...">
+                            <div class="editable-hint">✏️ Editable - email content will update automatically</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>🌍 Country:</label>
+                            <input type="text" id="country" placeholder="Country...">
+                            <div class="editable-hint">✏️ Editable - email content will update automatically</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>📋 Subject:</label>
+                            <input type="text" id="emailSubject" placeholder="Email subject...">
+                        </div>
+
+                        <div class="form-group">
+                            <label>📝 Email Content:</label>
+                            <div style="position: relative;">
+                                <textarea id="emailBody" placeholder="Select a contact to compose email..."></textarea>
+                                <button class="button polish-btn" onclick="polishEmail()" id="polishBtn" disabled>✨ Polish Email</button>
+                            </div>
+                        </div>
+
+                        <div class="controls">
+                            <button class="button secondary" onclick="resetToOriginal()" id="resetBtn" disabled>🔄 Reset to Original</button>
+                            <button class="button secondary" onclick="previewEmail()" id="previewBtn" disabled>👁️ Preview Email</button>
+                            <button class="button primary-send" onclick="sendCurrentEmail()" id="sendBtn" disabled>📧 Send This Email</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success/Error Modal -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal" id="modalContent">
+            <div class="modal-content">
+                <div id="modalIcon"></div>
+                <h3 id="modalTitle"></h3>
+                <p id="modalMessage"></p>
+            </div>
+            <div class="modal-buttons">
+                <button class="button" id="modalCloseBtn" onclick="closeModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let contacts = [];
+        let currentContactIndex = -1;
+        let sentCount = 0;
+        let successCount = 0;
+        let originalContactData = null;
+
+        // Track which fields have been manually modified
+        let manuallyModifiedFields = {
+            fromEmail: false,
+            fromName: false,
+            toEmail: false,
+            emailSubject: false,
+            emailBody: false,
+            firmName: false,
+            contactPerson: false,
+            country: false
+        };
+
+        // Email sending results for spreadsheet export
+        let emailResults = [];
+
+        // Initialize application
+        document.addEventListener('DOMContentLoaded', function() {
+            testConnection();
+
+            // Add event listeners to track manual modifications
+            const fieldsToTrack = ['fromEmail', 'fromName', 'toEmail', 'emailSubject', 'emailBody', 'firmName', 'contactPerson', 'country'];
+            fieldsToTrack.forEach(fieldId => {
+                const element = document.getElementById(fieldId);
+                if (element) {
+                    // Track multiple events to ensure we catch all modifications
+                    ['input', 'change', 'keyup', 'paste'].forEach(event => {
+                        element.addEventListener(event, () => {
+                            manuallyModifiedFields[fieldId] = true;
+                            console.log(`Field ${fieldId} manually modified via ${event}`);
+
+                            // Show visual indicator that field is locked
+                            element.style.borderLeft = '3px solid #28a745';
+                            element.title = 'This field has been manually edited and will be preserved';
+                        });
+                    });
+                }
+            });
+            setupFormListeners();
+        });
+
+        function setupFormListeners() {
+            // Add event listeners for real-time template updates
+            const fields = ['fromEmail', 'fromName', 'toEmail', 'firmName', 'contactPerson', 'country'];
+            fields.forEach(fieldId => {
+                document.getElementById(fieldId).addEventListener('input', function() {
+                    if (currentContactIndex !== -1) {
+                        updateEmailTemplate();
+                    }
+                });
+            });
+        }
+
+        function updateEmailTemplate() {
+            // Get current values from form (edited or original)
+            const contactData = {
+                email: document.getElementById('toEmail').value,
+                firm: document.getElementById('firmName').value,
+                contact_person: document.getElementById('contactPerson').value,
+                country: document.getElementById('country').value
+            };
+
+            // Re-generate email with updated data
+            const template = document.getElementById('emailTemplate').value;
+            const emailData = parseEmailTemplate(template, contactData);
+
+            document.getElementById('emailSubject').value = emailData.subject;
+            document.getElementById('emailBody').value = emailData.body;
+        }
+
+        async function testConnection() {
+            const statusEl = document.getElementById('apiStatus');
+            statusEl.textContent = '🔄 Testing connection...';
+            statusEl.className = 'api-status disconnected';
+
+            try {
+                const response = await fetch('/api/default-files');
+                if (response.ok) {
+                    statusEl.textContent = '✅ API Connected - Ready to send emails';
+                    statusEl.className = 'api-status connected';
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                statusEl.textContent = '❌ API Disconnected - Check server';
+                statusEl.className = 'api-status disconnected';
+                showAlert('error', 'API connection failed: ' + error.message);
+            }
+        }
+
+        async function loadDefaultFiles() {
+            showAlert('info', 'Loading default files...');
+
+            try {
+                const response = await fetch('/api/default-files');
+                const data = await response.json();
+
+                console.log('Server response:', data);
+
+                if (data.success) {
+                    let loadedItems = 0;
+
+                    if (data.excel_data && data.excel_data.length > 0) {
+                        contacts = data.excel_data.map((contact, index) => ({
+                            ...contact,
+                            id: index,
+                            sent: false,
+                            success: false
+                        }));
+                        renderContacts();
+                        updateStats();
+                        showAlert('success', `✅ Loaded ${contacts.length} contacts from Excel file`);
+                        loadedItems++;
+
+                        // Bulk send button removed for individual email focus
+                    }
+
+                    if (data.word_content) {
+                        document.getElementById('emailTemplate').value = data.word_content;
+                        showAlert('success', '✅ Loaded email template from Word document');
+                        loadedItems++;
+                    }
+
+                    if (loadedItems === 0) {
+                        showAlert('info', '⚠️ No default files found. Please check file paths.');
+                    }
+                } else {
+                    showAlert('error', '❌ ' + (data.message || 'Failed to load files'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('error', '❌ Error loading files: ' + error.message);
+            }
+        }
+
+        function renderContacts() {
+            const container = document.getElementById('contactsList');
+            container.innerHTML = '';
+
+            // Group contacts by country
+            const countries = [...new Set(contacts.map(c => c.country))];
+
+            countries.forEach(country => {
+                // Country header
+                const countryHeader = document.createElement('div');
+                countryHeader.style.cssText = `
+                    padding: 12px 15px;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    font-weight: bold;
+                    font-size: 0.9em;
+                    text-transform: uppercase;
+                    letter-spacing: 1px;
+                `;
+
+                const countryContacts = contacts.filter(c => c.country === country);
+                countryHeader.textContent = `${country} (${countryContacts.length} contacts)`;
+                container.appendChild(countryHeader);
+
+                // Contacts for this country
+                countryContacts.forEach((contact) => {
+                    const item = document.createElement('div');
+                    let itemClass = 'contact-item';
+
+                    if (contact.sent) {
+                        itemClass += contact.success ? ' sent success' : ' sent failed';
+                    }
+
+                    // Add selected class if this is the current contact
+                    if (currentContactIndex === contact.id) {
+                        itemClass += ' selected';
+                    }
+
+                    item.className = itemClass;
+                    item.onclick = () => selectContact(contact);
+                    item.dataset.contactId = contact.id;
+
+                    const firm = contact.firm || 'Unknown Company';
+                    const person = contact.contact_person || 'Contact Person Not Available';
+                    const email = contact.email || 'No email';
+                    const address = contact.address ? `${contact.address}` : '';
+
+                    let statusIcon = '⏳';
+                    let statusText = 'Pending';
+                    if (contact.sent) {
+                        statusIcon = contact.success ? '✅' : '❌';
+                        statusText = contact.success ? 'Sent Successfully' : 'Send Failed';
+                    }
+
+                    item.innerHTML = `
+                        <div class="contact-status">${statusIcon}</div>
+                        <div class="contact-firm">${firm}</div>
+                        <div class="contact-person">${person}</div>
+                        <div class="contact-email">${email}</div>
+                        <div class="contact-country">${country}</div>
+                        ${address ? `<div style="margin-top: 5px; font-size: 0.8em; opacity: 0.8;">${address}</div>` : ''}
+                        ${contact.sent ? `<div style="margin-top: 8px; font-weight: bold; font-size: 0.85em;">${statusText}</div>` : ''}
+                    `;
+
+                    container.appendChild(item);
+                });
+            });
+
+            document.getElementById('contactCount').textContent = contacts.length;
+        }
+
+        function selectContact(contact) {
+            // Update current contact index
+            currentContactIndex = contact.id;
+
+            // Re-render contacts to update visual selection
+            renderContacts();
+
+            // Store original contact data for reset functionality
+            originalContactData = {
+                email: contact.email || '',
+                firm: contact.firm || 'Unknown Company',
+                contact_person: contact.contact_person || 'Valued Prospective Partner',
+                country: contact.country || ''
+            };
+
+            // Only populate fields that haven't been manually modified
+            if (!manuallyModifiedFields.toEmail) {
+                document.getElementById('toEmail').value = originalContactData.email;
+            }
+            if (!manuallyModifiedFields.firmName) {
+                document.getElementById('firmName').value = originalContactData.firm;
+            }
+            if (!manuallyModifiedFields.contactPerson) {
+                document.getElementById('contactPerson').value = originalContactData.contact_person;
+            }
+            if (!manuallyModifiedFields.country) {
+                document.getElementById('country').value = originalContactData.country;
+            }
+
+            // Parse template and populate email only if not manually modified
+            const template = document.getElementById('emailTemplate').value;
+            const emailData = parseEmailTemplate(template, originalContactData);
+
+            if (!manuallyModifiedFields.emailSubject) {
+                document.getElementById('emailSubject').value = emailData.subject;
+            }
+
+            // Only update email body if it hasn't been manually modified
+            // If user has edited the email body, preserve their changes
+            if (!manuallyModifiedFields.emailBody) {
+                document.getElementById('emailBody').value = emailData.body;
+            }
+
+            // Enable buttons
+            document.getElementById('sendBtn').disabled = false;
+            document.getElementById('previewBtn').disabled = false;
+            document.getElementById('resetBtn').disabled = false;
+            document.getElementById('polishBtn').disabled = false;
+
+            showAlert('info', `📝 Email composed for ${originalContactData.contact_person || originalContactData.firm} - Manual changes preserved`);
+        }
+
+        function resetToOriginal() {
+            if (!originalContactData) {
+                showAlert('error', '❌ No contact selected to reset');
+                return;
+            }
+
+            // Clear all manual modification flags and visual indicators
+            Object.keys(manuallyModifiedFields).forEach(key => {
+                manuallyModifiedFields[key] = false;
+                const element = document.getElementById(key);
+                if (element) {
+                    element.style.borderLeft = '';
+                    element.title = '';
+                }
+            });
+
+            // Reset all fields to original values
+            document.getElementById('toEmail').value = originalContactData.email;
+            document.getElementById('firmName').value = originalContactData.firm;
+            document.getElementById('contactPerson').value = originalContactData.contact_person;
+            document.getElementById('country').value = originalContactData.country;
+
+            // Re-generate email with original data
+            const template = document.getElementById('emailTemplate').value;
+            const emailData = parseEmailTemplate(template, originalContactData);
+
+            document.getElementById('emailSubject').value = emailData.subject;
+            document.getElementById('emailBody').value = emailData.body;
+
+            showAlert('success', '🔄 Reset to original contact information');
+        }
+
+        function parseEmailTemplate(template, contact) {
+            const lines = template.split('\n');
+            let subject = `Partnership Opportunity - Intex Technologies Distribution in ${contact.country || 'Your Region'}`;
+            let bodyStartIndex = 0;
+
+            // Extract subject from template
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (line.toLowerCase().startsWith('subject:')) {
+                    subject = line.substring(8).trim();
+                    bodyStartIndex = i + 1;
+                } else if (line === '' && bodyStartIndex > 0) {
+                    bodyStartIndex = i + 1;
+                    break;
+                }
+            }
+
+            // Extract body and ensure professional formatting
+            let body = lines.slice(bodyStartIndex).join('\n').trim();
+
+            // Replace all placeholders with proper formatting
+            const contactName = contact.contact_person && contact.contact_person !== 'Contact Person Not Available'
+                ? contact.contact_person
+                : 'Valued Prospective Partner';
+
+            const country = contact.country || 'your region';
+            const email = contact.email || '';
+            const firm = contact.firm || 'your esteemed organisation';
+
+            // Apply replacements with proper capitalisation
+            subject = subject.replace(/{contactName}/g, contactName)
+                           .replace(/{country}/g, country)
+                           .replace(/{email}/g, email)
+                           .replace(/{firm}/g, firm);
+
+            body = body.replace(/{contactName}/g, contactName)
+                       .replace(/{country}/g, country)
+                       .replace(/{email}/g, email)
+                       .replace(/{firm}/g, firm);
+
+            // Ensure professional formatting with proper line spacing
+            body = body.replace(/\n\n\n+/g, '\n\n') // Remove excessive line breaks
+                      .replace(/([.!?])\n([A-Z])/g, '$1\n\n$2') // Add spacing after sentences starting new paragraphs
+                      .replace(/:\n•/g, ':\n\n•') // Add spacing before bullet lists
+                      .replace(/•\s+/g, '• '); // Ensure consistent bullet formatting
+
+            return { subject, body };
+        }
+
+        async function sendCurrentEmail() {
+            if (currentContactIndex === -1) {
+                showAlert('error', '❌ Please select a contact first');
+                return;
+            }
+
+            const contact = contacts[currentContactIndex];
+
+            if (contact.sent) {
+                showAlert('info', '⚠️ This email has already been sent');
+                return;
+            }
+
+            const emailData = {
+                from_email: document.getElementById('fromEmail').value,
+                from_name: document.getElementById('fromName').value,
+                to_email: document.getElementById('toEmail').value,
+                subject: document.getElementById('emailSubject').value,
+                content: document.getElementById('emailBody').value
+            };
+
+            // Validate email data
+            if (!emailData.to_email || !emailData.subject || !emailData.content) {
+                showAlert('error', '❌ Please fill in all email fields');
+                return;
+            }
+
+            showAlert('info', '📤 Sending email...');
+
+            try {
+                const response = await fetch('/api/send-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(emailData)
+                });
+
+                const result = await response.json();
+
+                // Update contact status
+                contact.sent = true;
+                contact.success = result.success;
+                sentCount++;
+                if (result.success) successCount++;
+
+                // Track email result for spreadsheet export
+                emailResults.push({
+                    timestamp: new Date().toISOString(),
+                    firm: contact.firm || 'Unknown Company',
+                    contact_person: contact.contact_person || 'Not Available',
+                    email: emailData.to_email,
+                    country: contact.country || 'Unknown',
+                    subject: emailData.subject,
+                    from_email: emailData.from_email,
+                    from_name: emailData.from_name,
+                    status: result.success ? 'Sent Successfully' : 'Failed',
+                    error_message: result.success ? '' : result.message,
+                    sent_by: 'Intex Technologies Email Campaign'
+                });
+
+                // Update UI
+                renderContacts();
+                updateStats();
+
+                if (result.success) {
+                    // Update debug status
+                    setEmailDebugStatus('SUCCESS', result.method);
+
+                    // Show success modal
+                    showModal('success', 'Email Sent Successfully!',
+                        `Your business opportunity email has been delivered to ${contact.contact_person || contact.firm} at ${emailData.to_email}`);
+
+                    selectNextContact();
+                } else {
+                    // Update debug status
+                    setEmailDebugStatus('FAILED', result.method);
+
+                    // Show error modal
+                    showModal('error', 'Email Send Failed',
+                        `Failed to send email to ${contact.contact_person || contact.firm}: ${result.message}`);
+                }
+
+            } catch (error) {
+                showAlert('error', '❌ Network error: ' + error.message);
+            }
+        }
+
+        function selectNextContact() {
+            const nextContact = contacts.find(c => c.id > currentContactIndex && !c.sent);
+            if (nextContact) {
+                selectContact(nextContact);
+                showAlert('info', `➡️ Moved to next contact: ${nextContact.contact_person || nextContact.firm}`);
+            } else {
+                // No more contacts
+                currentContactIndex = -1;
+                document.getElementById('sendBtn').disabled = true;
+                document.getElementById('previewBtn').disabled = true;
+                clearEmailForm();
+                showAlert('success', '🎉 All emails have been sent!');
+            }
+        }
+
+        function clearEmailForm() {
+            document.getElementById('toEmail').value = '';
+            document.getElementById('firmName').value = '';
+            document.getElementById('contactPerson').value = '';
+            document.getElementById('country').value = '';
+            document.getElementById('emailSubject').value = '';
+            document.getElementById('emailBody').value = '';
+
+            // Disable buttons when no contact is selected
+            document.getElementById('resetBtn').disabled = true;
+            document.getElementById('polishBtn').disabled = true;
+            originalContactData = null;
+        }
+
+        async function sendAllEmails() {
+            const unsentContacts = contacts.filter(c => !c.sent);
+
+            if (unsentContacts.length === 0) {
+                showAlert('info', '✅ All emails have already been sent');
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to send ${unsentContacts.length} emails? This action cannot be undone.`)) {
+                return;
+            }
+
+            const sendAllBtn = document.getElementById('sendAllBtn');
+            sendAllBtn.disabled = true;
+            sendAllBtn.textContent = '📤 Sending...';
+
+            showAlert('info', `📬 Starting bulk email sending (${unsentContacts.length} emails)...`);
+
+            let successfulSends = 0;
+            let failedSends = 0;
+
+            for (let i = 0; i < unsentContacts.length; i++) {
+                const contact = unsentContacts[i];
+                const template = document.getElementById('emailTemplate').value;
+                const emailData = parseEmailTemplate(template, contact);
+
+                try {
+                    const response = await fetch('/api/send-email', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            from_email: 'vishwas.agarwal@gmail.com',
+                            from_name: 'Intex Technologies',
+                            to_email: contact.email,
+                            subject: emailData.subject,
+                            content: emailData.body
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    contact.sent = true;
+                    contact.success = result.success;
+                    sentCount++;
+
+                    if (result.success) {
+                        successfulSends++;
+                        successCount++;
+                    } else {
+                        failedSends++;
+                    }
+
+                    // Update progress
+                    updateStats();
+                    renderContacts();
+
+                    // Small delay between emails
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+
+                } catch (error) {
+                    contact.sent = true;
+                    contact.success = false;
+                    sentCount++;
+                    failedSends++;
+                    console.error('Error sending to', contact.email, error);
+                }
+            }
+
+            sendAllBtn.disabled = false;
+            sendAllBtn.textContent = '📬 Send All Remaining';
+
+            showAlert('success', `🎉 Bulk sending completed! ✅ Success: ${successfulSends}, ❌ Failed: ${failedSends}`);
+        }
+
+        function previewEmail() {
+            const fromEmail = document.getElementById('fromEmail').value;
+            const fromName = document.getElementById('fromName').value;
+            const toEmail = document.getElementById('toEmail').value;
+            const subject = document.getElementById('emailSubject').value;
+            const body = document.getElementById('emailBody').value;
+
+            const preview = window.open('', '_blank', 'width=700,height=900');
+            preview.document.write(`
+                <html>
+                <head>
+                    <title>Email Preview</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; padding: 30px; background: #f5f5f5; }
+                        .container { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+                        .header { background: #667eea; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+                        .content { border: 1px solid #ddd; padding: 25px; border-radius: 8px; white-space: pre-wrap; line-height: 1.6; }
+                        .field { margin-bottom: 10px; }
+                        .label { font-weight: bold; color: #333; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h2>📧 Email Preview</h2>
+                        </div>
+                        <div class="field">
+                            <span class="label">From:</span> ${fromName} &lt;${fromEmail}&gt;
+                        </div>
+                        <div class="field">
+                            <span class="label">To:</span> ${toEmail}
+                        </div>
+                        <div class="field">
+                            <span class="label">Subject:</span> ${subject}
+                        </div>
+                        <hr style="margin: 20px 0;">
+                        <div class="content">${body}</div>
+                    </div>
+                </body>
+                </html>
+            `);
+        }
+
+        function updateStats() {
+            const total = contacts.length;
+            const remaining = total - sentCount;
+            const successRate = sentCount > 0 ? Math.round((successCount / sentCount) * 100) : 0;
+
+            document.getElementById('totalContacts').textContent = total;
+            document.getElementById('sentEmails').textContent = sentCount;
+            document.getElementById('successRate').textContent = successRate + '%';
+
+            const progress = total > 0 ? (sentCount / total) * 100 : 0;
+            document.getElementById('progressFill').style.width = progress + '%';
+        }
+
+        function showAlert(type, message) {
+            const container = document.getElementById('alertContainer');
+            const alert = document.createElement('div');
+            alert.className = `alert ${type}`;
+            alert.textContent = message;
+
+            container.appendChild(alert);
+
+            setTimeout(() => {
+                if (alert.parentNode) {
+                    alert.remove();
+                }
+            }, 7000);
+        }
+
+        function polishEmail() {
+            if (currentContactIndex === -1) {
+                showAlert('error', '❌ Please select a contact first');
+                return;
+            }
+
+            const currentBody = document.getElementById('emailBody').value;
+            const contact = contacts[currentContactIndex];
+            const firmName = document.getElementById('firmName').value;
+            const contactPerson = document.getElementById('contactPerson').value;
+            const country = document.getElementById('country').value;
+
+            // AI-enhanced email polishing with contextual information
+            const polishedEmail = enhanceEmailContent(currentBody, {
+                firmName: firmName,
+                contactPerson: contactPerson,
+                country: country,
+                originalData: contact
+            });
+
+            document.getElementById('emailBody').value = polishedEmail;
+            showAlert('success', '✨ Email polished with AI enhancements and contextual details');
+        }
+
+        function enhanceEmailContent(originalEmail, context) {
+            // AI-enhanced email with geographical and company-specific context
+            const enhancements = {
+                'Kenya': {
+                    localContext: 'the rapidly growing East African market',
+                    opportunities: 'mobile technology adoption and urban development',
+                    culturalNote: 'Kenya\'s position as a regional technology hub'
+                },
+                'Uganda': {
+                    localContext: 'the emerging East African economy',
+                    opportunities: 'infrastructure development and consumer electronics growth',
+                    culturalNote: 'Uganda\'s young and tech-savvy population'
+                },
+                'Nigeria': {
+                    localContext: 'Africa\'s largest economy and most populous nation',
+                    opportunities: 'massive consumer base and growing middle class',
+                    culturalNote: 'Nigeria\'s leadership in African technology and commerce'
+                },
+                'Ethiopia': {
+                    localContext: 'one of Africa\'s fastest-growing economies',
+                    opportunities: 'industrial transformation and urbanization',
+                    culturalNote: 'Ethiopia\'s strategic position in the Horn of Africa'
+                },
+                'Philippines': {
+                    localContext: 'the dynamic Southeast Asian archipelago market',
+                    opportunities: 'digital transformation and consumer electronics demand',
+                    culturalNote: 'the Philippines\' strong business process outsourcing sector'
+                },
+                'Sri Lanka': {
+                    localContext: 'the strategic island nation in South Asia',
+                    opportunities: 'tourism recovery and technology modernization',
+                    culturalNote: 'Sri Lanka\'s educated workforce and port connectivity'
+                }
+            };
+
+            const countryInfo = enhancements[context.country] || {
+                localContext: 'your dynamic market',
+                opportunities: 'growth in technology and consumer goods',
+                culturalNote: 'the region\'s unique business landscape'
+            };
+
+            // Professional British English email template with contextualised content
+            return `Dear ${context.contactPerson},
+
+I trust this correspondence finds you well and that your business continues to flourish.
+
+I am writing to introduce Intex Technologies, a distinguished global brand with an exemplary 29-year heritage in consumer electronics and technology innovation. Having established a formidable presence across numerous international markets, we are now strategically focusing our expansion efforts on ${countryInfo.localContext}.
+
+Given ${context.firmName}'s respected standing within the import and distribution sector, we perceive considerable potential for a mutually advantageous partnership. We are particularly enthused by the opportunities presented by ${countryInfo.opportunities}, which align exceptionally well with our comprehensive product portfolio.
+
+Why Intex Technologies represents an ideal partnership for ${context.country}:
+
+PROVEN GLOBAL SUCCESS: Our products have earned the trust of customers across more than 40 countries worldwide
+
+QUALITY ASSURANCE: All our products carry international certifications and meet the most stringent quality standards
+
+COMPREHENSIVE SUPPORT: We provide extensive marketing, technical, and logistics support specifically tailored for the ${context.country} market
+
+MARKET INSIGHTS: We possess deep understanding of ${countryInfo.culturalNote}
+
+PARTNERSHIP APPROACH: We believe in establishing enduring relationships built on mutual success rather than mere transactional arrangements
+
+Our Product Portfolio includes:
+
+IT PERIPHERALS: State-of-the-art keyboards, mice, headsets, and webcams engineered for contemporary productivity requirements
+
+HOME APPLIANCES: Innovative kitchen solutions, efficient air cooling systems, and sophisticated personal care devices
+
+MOBILE ACCESSORIES: Premium chargers, power banks, and mobile peripherals designed for modern lifestyles
+
+AUDIO SOLUTIONS: High-quality speakers, headphones, and sound systems delivering superior audio experiences
+
+We recognise that ${context.firmName} has cultivated strong relationships with consumers throughout ${context.country}, and we would be privileged to support your continued expansion with our innovative product range.
+
+Our Partnership Commitment encompasses:
+
+Exclusive territorial rights with competitive and sustainable pricing structures
+Comprehensive product training and certification programmes
+Marketing collateral and campaign support customised for the ${context.country} market
+Dedicated account management and technical support services
+Flexible payment terms and efficient logistics solutions
+
+I should be delighted to arrange a video conference at your earliest convenience to discuss how Intex Technologies might contribute to ${context.firmName}'s continued success within ${context.country}. Our team stands ready to share detailed product catalogues, pricing structures, and partnership terms that reflect our commitment to your prosperity.
+
+I thank you for your consideration of this partnership opportunity and look forward to the prospect of building a mutually beneficial business relationship.
+
+Yours sincerely,
+
+Vishwas Agarwal
+Business Head & Chief Operating Officer
+Intex Technologies
+
+Email: vishwas@ivoomi.co
+Mobile: +91-9999290800
+Website: www.intexindia.co.in
+
+"Innovation that connects, technology that empowers"`;
+        }
+
+        function showModal(type, title, message) {
+            const modal = document.getElementById('modalOverlay');
+            const modalContent = document.getElementById('modalContent');
+            const modalIcon = document.getElementById('modalIcon');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalMessage = document.getElementById('modalMessage');
+            const modalCloseBtn = document.getElementById('modalCloseBtn');
+
+            // Set modal content based on type
+            if (type === 'success') {
+                modalContent.className = 'modal success-modal';
+                modalIcon.innerHTML = '<div class="success-icon">✅</div>';
+                modalCloseBtn.className = 'button success';
+            } else {
+                modalContent.className = 'modal error-modal';
+                modalIcon.innerHTML = '<div class="error-icon">❌</div>';
+                modalCloseBtn.className = 'button danger';
+            }
+
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+
+            // Show modal
+            modal.classList.add('show');
+
+            // Auto-close after 5 seconds for success, keep open for errors
+            if (type === 'success') {
+                setTimeout(() => {
+                    closeModal();
+                }, 5000);
+            }
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('modalOverlay');
+            modal.classList.remove('show');
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('modalOverlay').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // Download results as Excel spreadsheet
+        function downloadResults() {
+            if (emailResults.length === 0) {
+                showAlert('info', '📊 No email results to download yet');
+                return;
+            }
+
+            // Create CSV content
+            const headers = ['Timestamp', 'Company', 'Contact Person', 'Email', 'Country', 'Subject', 'From Email', 'From Name', 'Status', 'Error Message', 'Sent By'];
+            const csvContent = [
+                headers.join(','),
+                ...emailResults.map(result => [
+                    `"${result.timestamp}"`,
+                    `"${result.firm}"`,
+                    `"${result.contact_person}"`,
+                    `"${result.email}"`,
+                    `"${result.country}"`,
+                    `"${result.subject}"`,
+                    `"${result.from_email}"`,
+                    `"${result.from_name}"`,
+                    `"${result.status}"`,
+                    `"${result.error_message}"`,
+                    `"${result.sent_by}"`
+                ].join(','))
+            ].join('\n');
+
+            // Create and download file
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `Intex_Email_Campaign_Results_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            showAlert('success', `📊 Downloaded results for ${emailResults.length} emails`);
+        }
+
+        // Upload Excel file function
+        async function uploadExcelFile() {
+            const fileInput = document.getElementById('excelUpload');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                showAlert('error', '❌ Please select an Excel file first');
+                return;
+            }
+
+            if (!file.name.toLowerCase().endsWith('.xlsx') && !file.name.toLowerCase().endsWith('.xls')) {
+                showAlert('error', '❌ Please select a valid Excel file (.xlsx or .xls)');
+                return;
+            }
+
+            showAlert('info', '📊 Processing Excel file...');
+
+            try {
+                const fileReader = new FileReader();
+                fileReader.onload = async function(e) {
+                    const base64Data = btoa(e.target.result);
+
+                    const response = await fetch('/api/upload-excel', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ content: base64Data })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        contacts = result.data.map((contact, index) => ({
+                            ...contact,
+                            id: index,
+                            sent: false,
+                            success: false
+                        }));
+
+                        // Reset counters
+                        sentCount = 0;
+                        successCount = 0;
+                        currentContactIndex = -1;
+                        emailResults = [];
+
+                        renderContacts();
+                        updateStats();
+                        showAlert('success', `✅ Uploaded and parsed ${contacts.length} contacts`);
+                    } else {
+                        showAlert('error', '❌ Error processing Excel file: ' + result.message);
+                    }
+                };
+                fileReader.readAsBinaryString(file);
+            } catch (error) {
+                showAlert('error', '❌ Error uploading file: ' + error.message);
+            }
+        }
+
+        // Upload Word template function
+        async function uploadWordFile() {
+            const fileInput = document.getElementById('wordUpload');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                showAlert('error', '❌ Please select a Word document first');
+                return;
+            }
+
+            if (!file.name.toLowerCase().endsWith('.docx') && !file.name.toLowerCase().endsWith('.doc')) {
+                showAlert('error', '❌ Please select a valid Word document (.docx or .doc)');
+                return;
+            }
+
+            showAlert('info', '📄 Processing Word document...');
+
+            try {
+                const fileReader = new FileReader();
+                fileReader.onload = async function(e) {
+                    const base64Data = btoa(e.target.result);
+
+                    const response = await fetch('/api/upload-word', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ content: base64Data })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        document.getElementById('emailTemplate').value = result.content;
+                        showAlert('success', '✅ Email template uploaded and loaded successfully');
+                    } else {
+                        showAlert('error', '❌ Error processing Word document: ' + result.message);
+                    }
+                };
+                fileReader.readAsBinaryString(file);
+            } catch (error) {
+                showAlert('error', '❌ Error uploading file: ' + error.message);
+            }
+        }
+
+        // Debug functions
+        function toggleDebugPanel() {
+            const panel = document.getElementById('debugPanel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+            if (panel.style.display === 'block') {
+                updateDebugInfo();
+            }
+        }
+
+        function updateDebugInfo() {
+            const modifiedFields = Object.keys(manuallyModifiedFields).filter(key => manuallyModifiedFields[key]);
+            document.getElementById('debugModifiedFields').textContent = modifiedFields.length > 0 ? modifiedFields.join(', ') : 'None';
+
+            const currentContact = currentContactIndex >= 0 ? contacts[currentContactIndex] : null;
+            document.getElementById('debugCurrentContact').textContent = currentContact ?
+                `${currentContact.firm || 'Unknown'} (${currentContact.email || 'No email'})` : 'None';
+        }
+
+        function showCurrentState() {
+            updateDebugInfo();
+            console.log('=== CURRENT STATE ===');
+            console.log('Modified Fields:', manuallyModifiedFields);
+            console.log('Current Contact Index:', currentContactIndex);
+            console.log('Email Body Value:', document.getElementById('emailBody').value.substring(0, 100) + '...');
+            console.log('Template Value:', document.getElementById('emailTemplate').value.substring(0, 100) + '...');
+            alert('Debug info logged to console (F12 > Console)');
+        }
+
+        function resetAllModifications() {
+            if (confirm('This will unlock all fields and allow auto-population. Continue?')) {
+                Object.keys(manuallyModifiedFields).forEach(key => {
+                    manuallyModifiedFields[key] = false;
+                    const element = document.getElementById(key);
+                    if (element) {
+                        element.style.borderLeft = '';
+                        element.title = '';
+                    }
+                });
+                updateDebugInfo();
+                showAlert('success', '🔓 All field locks removed - auto-population enabled');
+            }
+        }
+
+        function setEmailDebugStatus(status, method) {
+            document.getElementById('debugEmailStatus').textContent = `${status} via ${method || 'Unknown'}`;
+        }
+    </script>
+</body>
+</html>

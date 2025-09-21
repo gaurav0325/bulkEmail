@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Bulk Email Sender - Intex Technologies</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            color: #333;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .header h1 {
+            font-size: 2.8em;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            font-size: 1.3em;
+            color: #666;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+            min-height: 70vh;
+        }
+
+        .left-panel, .right-panel {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .left-panel {
+            height: fit-content;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.4em;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 5px;
+        }
+
+        .file-upload {
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            padding: 25px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            margin-bottom: 15px;
+        }
+
+        .file-upload:hover {
+            border-color: #764ba2;
+            background-color: #f8f9ff;
+            transform: translateY(-2px);
+        }
+
+        .file-upload.dragover {
+            border-color: #764ba2;
+            background-color: #f0f4ff;
+            transform: scale(1.02);
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-icon {
+            font-size: 2.5em;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .upload-text {
+            font-size: 1em;
+            color: #666;
+        }
+
+        .button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s ease;
+            margin: 5px;
+            font-weight: 600;
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .button.secondary {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+        }
+
+        .button.success {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+
+        .button.danger {
+            background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);
+        }
+
+        .contacts-list {
+            max-height: 500px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            background: white;
+        }
+
+        .contact-item {
+            padding: 15px;
+            border-bottom: 1px solid #e0e0e0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .contact-item:hover {
+            background: linear-gradient(135deg, #f8f9ff 0%, #e6f0ff 100%);
+            transform: translateX(5px);
+        }
+
+        .contact-item.selected {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-left: 4px solid #ffffff;
+        }
+
+        .contact-item.processed {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            border-left: 4px solid #28a745;
+        }
+
+        .contact-info {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .contact-details {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        .country-badge {
+            display: inline-block;
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            margin-top: 5px;
+        }
+
+        .email-preview {
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+
+        .email-header {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .email-field {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+
+        .email-field label {
+            font-weight: bold;
+            color: #555;
+            min-width: 100px;
+            margin-right: 15px;
+        }
+
+        .email-field input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+        }
+
+        .email-field input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            outline: none;
+        }
+
+        .email-content {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 25px;
+            min-height: 400px;
+        }
+
+        .email-content textarea {
+            width: 100%;
+            min-height: 400px;
+            border: none;
+            resize: vertical;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 14px;
+            line-height: 1.8;
+            outline: none;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .stat-item {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .stat-value {
+            font-size: 2.2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .progress-bar {
+            background: #e0e0e0;
+            border-radius: 15px;
+            height: 25px;
+            margin-bottom: 25px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100%;
+            width: 0%;
+            transition: width 0.5s ease;
+            border-radius: 15px;
+        }
+
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-weight: bold;
+            font-size: 0.9em;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(-100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .alert.success {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            color: #155724;
+            border-left-color: #28a745;
+        }
+
+        .alert.error {
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            color: #721c24;
+            border-left-color: #dc3545;
+        }
+
+        .alert.info {
+            background: linear-gradient(135deg, #cce7ff 0%, #b0d4f1 100%);
+            color: #004085;
+            border-left-color: #667eea;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .template-section textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+            resize: vertical;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .loading-spinner {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .api-status {
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Enhanced Bulk Email Sender</h1>
+            <p>Intex Technologies - Professional Business Opportunity Platform</p>
+        </div>
+
+        <div class="main-content">
+            <div class="left-panel">
+                <div class="api-status" id="apiStatus">
+                    🔄 Checking API connection...
+                </div>
+
+                <div class="section">
+                    <h2>📂 File Management</h2>
+
+                    <button class="button" id="loadDefaultBtn">📋 Load Default Files</button>
+
+                    <div class="file-upload" id="excelUpload">
+                        <div class="upload-icon">📊</div>
+                        <div class="upload-text">
+                            <strong>Upload Excel File</strong><br>
+                            Multi-worksheet support for all countries
+                        </div>
+                        <input type="file" id="excelFile" class="file-input" accept=".xlsx,.xls">
+                    </div>
+
+                    <div class="file-upload" id="templateUpload">
+                        <div class="upload-icon">📝</div>
+                        <div class="upload-text">
+                            <strong>Upload Letter Template</strong><br>
+                            Word document with business content
+                        </div>
+                        <input type="file" id="templateFile" class="file-input" accept=".docx,.doc">
+                    </div>
+                </div>
+
+                <div class="section template-section">
+                    <h2>✏️ Email Template</h2>
+                    <textarea id="emailTemplate" placeholder="Template will be loaded automatically...">From: vishwas.agarwal@gmail.com
+From-Name: Intex Technologies
+To: {email}
+Subject: Business Partnership Opportunity - {country}
+
+Dear {contactName},
+
+We are pleased to introduce Intex Technologies, a globally recognized brand with a rich legacy spanning 29 years in the consumer electronics and technology sectors...</textarea>
+                </div>
+
+                <div class="section">
+                    <h2>📊 Campaign Statistics</h2>
+                    <div class="stats">
+                        <div class="stat-item">
+                            <div class="stat-value" id="totalContacts">0</div>
+                            <div class="stat-label">Total Contacts</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="sentEmails">0</div>
+                            <div class="stat-label">Sent</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="remainingEmails">0</div>
+                            <div class="stat-label">Remaining</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="successRate">0%</div>
+                            <div class="stat-label">Success Rate</div>
+                        </div>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                        <div class="progress-text" id="progressText">0%</div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>👥 Contact Directory</h2>
+                    <div class="contacts-list" id="contactsList">
+                        <div style="padding: 30px; text-align: center; color: #666;">
+                            📋 Load default files or upload Excel file to see contacts
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="right-panel">
+                <div class="section">
+                    <h2>📨 Email Composer & Sender</h2>
+                    <div id="alertContainer"></div>
+
+                    <div class="email-preview" id="emailPreview">
+                        <div class="email-header">
+                            <div class="email-field">
+                                <label>From:</label>
+                                <input type="email" id="senderEmail" value="vishwas.agarwal@gmail.com">
+                            </div>
+                            <div class="email-field">
+                                <label>From Name:</label>
+                                <input type="text" id="senderName" value="Intex Technologies">
+                            </div>
+                            <div class="email-field">
+                                <label>To:</label>
+                                <input type="email" id="recipientEmail" placeholder="recipient@example.com">
+                            </div>
+                            <div class="email-field">
+                                <label>Subject:</label>
+                                <input type="text" id="emailSubject" placeholder="Email subject">
+                            </div>
+                        </div>
+
+                        <div class="email-content">
+                            <textarea id="emailBody" placeholder="Select a contact to compose email..."></textarea>
+                        </div>
+
+                        <div style="margin-top: 25px; text-align: right;">
+                            <button class="button secondary" id="previewBtn" disabled>👁️ Preview</button>
+                            <button class="button" id="sendBtn" disabled>📤 Send Email</button>
+                            <button class="button success" id="sendAllBtn" disabled>📬 Send All Remaining</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="loading-overlay hidden" id="loadingOverlay">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <div id="loadingText">Processing...</div>
+        </div>
+    </div>
+
+    <script>
+        class EnhancedBulkEmailSender {
+            constructor() {
+                this.contacts = [];
+                this.currentContactIndex = -1;
+                this.sentCount = 0;
+                this.successCount = 0;
+                this.template = '';
+                this.apiBaseUrl = window.location.origin;
+                this.initializeEventListeners();
+                this.checkApiStatus();
+                // Don't auto-load default files on startup
+            }
+
+            initializeEventListeners() {
+                // File upload handlers
+                this.setupFileUpload('excelUpload', 'excelFile', this.handleExcelFile.bind(this));
+                this.setupFileUpload('templateUpload', 'templateFile', this.handleTemplateFile.bind(this));
+
+                // Button handlers
+                document.getElementById('loadDefaultBtn').addEventListener('click', this.loadDefaultFiles.bind(this));
+                document.getElementById('contactsList').addEventListener('click', this.handleContactSelection.bind(this));
+                document.getElementById('sendBtn').addEventListener('click', this.sendCurrentEmail.bind(this));
+                document.getElementById('sendAllBtn').addEventListener('click', this.sendAllEmails.bind(this));
+                document.getElementById('previewBtn').addEventListener('click', this.previewEmail.bind(this));
+                document.getElementById('emailTemplate').addEventListener('input', this.updateTemplate.bind(this));
+            }
+
+            async checkApiStatus() {
+                try {
+                    const response = await fetch(`${this.apiBaseUrl}/api/default-files`);
+                    if (response.ok) {
+                        document.getElementById('apiStatus').innerHTML = '✅ API Connected - Ready to send emails';
+                        document.getElementById('apiStatus').style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+                    } else {
+                        throw new Error('API not responding');
+                    }
+                } catch (error) {
+                    document.getElementById('apiStatus').innerHTML = '❌ API Connection Failed - Check server';
+                    document.getElementById('apiStatus').style.background = 'linear-gradient(135deg, #dc3545 0%, #fd7e14 100%)';
+                }
+            }
+
+            async loadDefaultFiles() {
+                console.log('Starting loadDefaultFiles...');
+                this.showLoading('Loading default files...');
+
+                // Add a timeout to prevent endless loading
+                const timeoutId = setTimeout(() => {
+                    console.log('Timeout reached, hiding loading...');
+                    this.hideLoading();
+                    this.showAlert('error', 'Request timed out. Please try again.');
+                }, 10000); // 10 second timeout
+
+                try {
+                    console.log('Fetching from:', `${this.apiBaseUrl}/api/default-files`);
+                    const response = await fetch(`${this.apiBaseUrl}/api/default-files`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    clearTimeout(timeoutId); // Clear timeout on successful response
+                    console.log('Response status:', response.status);
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+
+                    const data = await response.json();
+                    console.log('Response data:', data);
+
+                    if (data.success) {
+                        let loadedItems = 0;
+
+                        if (data.excel_data && data.excel_data.length > 0) {
+                            this.processContactData(data.excel_data);
+                            this.showAlert('success', `Loaded ${data.excel_data.length} contacts from default Excel file`);
+                            loadedItems++;
+                        }
+
+                        if (data.word_content) {
+                            document.getElementById('emailTemplate').value = data.word_content;
+                            this.updateTemplate();
+                            this.showAlert('success', 'Loaded default letter template');
+                            loadedItems++;
+                        }
+
+                        if (loadedItems === 0) {
+                            this.showAlert('info', 'No default files found. Please upload files manually.');
+                        }
+                    } else {
+                        this.showAlert('info', 'No default files found. Please upload files manually.');
+                    }
+                } catch (error) {
+                    clearTimeout(timeoutId); // Clear timeout on error
+                    console.error('Default files error:', error);
+                    this.showAlert('error', 'Failed to load default files: ' + error.message);
+                } finally {
+                    console.log('Hiding loading overlay...');
+                    this.hideLoading();
+                }
+            }
+
+            setupFileUpload(uploadId, inputId, handler) {
+                const uploadArea = document.getElementById(uploadId);
+                const fileInput = document.getElementById(inputId);
+
+                uploadArea.addEventListener('click', () => fileInput.click());
+                uploadArea.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.add('dragover');
+                });
+                uploadArea.addEventListener('dragleave', () => {
+                    uploadArea.classList.remove('dragover');
+                });
+                uploadArea.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.remove('dragover');
+                    const files = e.dataTransfer.files;
+                    if (files.length > 0) {
+                        handler(files[0]);
+                    }
+                });
+                fileInput.addEventListener('change', (e) => {
+                    if (e.target.files.length > 0) {
+                        handler(e.target.files[0]);
+                    }
+                });
+            }
+
+            async handleExcelFile(file) {
+                this.showLoading('Processing Excel file...');
+                try {
+                    const fileContent = await this.fileToBase64(file);
+                    const response = await fetch(`${this.apiBaseUrl}/api/upload-excel`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ content: fileContent })
+                    });
+
+                    const result = await response.json();
+                    if (result.success) {
+                        this.processContactData(result.data);
+                        this.showAlert('success', `Successfully processed ${result.data.length} contacts from Excel file`);
+                    } else {
+                        this.showAlert('error', result.message);
+                    }
+                } catch (error) {
+                    this.showAlert('error', 'Error processing Excel file: ' + error.message);
+                } finally {
+                    this.hideLoading();
+                }
+            }
+
+            async handleTemplateFile(file) {
+                this.showLoading('Processing template file...');
+                try {
+                    const fileContent = await this.fileToBase64(file);
+                    const response = await fetch(`${this.apiBaseUrl}/api/upload-word`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ content: fileContent })
+                    });
+
+                    const result = await response.json();
+                    if (result.success) {
+                        document.getElementById('emailTemplate').value = result.content;
+                        this.updateTemplate();
+                        this.showAlert('success', 'Template loaded successfully');
+                    } else {
+                        this.showAlert('error', result.message);
+                    }
+                } catch (error) {
+                    this.showAlert('error', 'Error processing template file: ' + error.message);
+                } finally {
+                    this.hideLoading();
+                }
+            }
+
+            fileToBase64(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        const base64 = reader.result.split(',')[1];
+                        resolve(base64);
+                    };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            processContactData(data) {
+                this.contacts = data.map((contact, index) => ({
+                    ...contact,
+                    id: index,
+                    sent: false,
+                    success: false
+                }));
+
+                this.renderContactsList();
+                this.updateStats();
+                this.enableControls();
+            }
+
+            renderContactsList() {
+                const container = document.getElementById('contactsList');
+                container.innerHTML = '';
+
+                // Group by country
+                const countries = [...new Set(this.contacts.map(c => c.country))];
+
+                countries.forEach(country => {
+                    const countryContacts = this.contacts.filter(c => c.country === country);
+
+                    // Country header
+                    const countryHeader = document.createElement('div');
+                    countryHeader.style.padding = '15px';
+                    countryHeader.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                    countryHeader.style.color = 'white';
+                    countryHeader.style.fontWeight = 'bold';
+                    countryHeader.innerHTML = `${country} (${countryContacts.length} contacts)`;
+                    container.appendChild(countryHeader);
+
+                    // Contacts for this country
+                    countryContacts.forEach((contact, index) => {
+                        const item = document.createElement('div');
+                        item.className = `contact-item ${contact.sent ? 'processed' : ''}`;
+                        item.dataset.index = contact.id;
+
+                        const firmName = contact.firm || 'Unknown Company';
+                        const contactPerson = contact.contact_person || 'Contact Person';
+                        const statusIcon = contact.sent ? (contact.success ? '✅' : '❌') : '⏳';
+
+                        item.innerHTML = `
+                            <div class="contact-info">${firmName}</div>
+                            <div class="contact-details">
+                                👤 ${contactPerson}<br>
+                                📧 ${contact.email}<br>
+                                📍 ${contact.address || 'No address'}
+                            </div>
+                            <div class="country-badge">${country}</div>
+                            ${contact.sent ? `<div style="margin-top: 10px; font-weight: bold;">${statusIcon} ${contact.success ? 'Sent Successfully' : 'Failed to Send'}</div>` : ''}
+                        `;
+
+                        container.appendChild(item);
+                    });
+                });
+            }
+
+            handleContactSelection(e) {
+                const contactItem = e.target.closest('.contact-item');
+                if (!contactItem || contactItem.classList.contains('processed')) return;
+
+                // Remove previous selection
+                document.querySelectorAll('.contact-item').forEach(item => {
+                    item.classList.remove('selected');
+                });
+
+                // Select current contact
+                contactItem.classList.add('selected');
+                this.currentContactIndex = parseInt(contactItem.dataset.index);
+                this.populateEmailPreview();
+            }
+
+            populateEmailPreview() {
+                if (this.currentContactIndex === -1) return;
+
+                const contact = this.contacts.find(c => c.id === this.currentContactIndex);
+                const template = document.getElementById('emailTemplate').value;
+
+                // Parse template and populate fields
+                const templateData = this.parseEmailTemplate(template, contact);
+
+                document.getElementById('senderEmail').value = templateData.from || 'vishwas.agarwal@gmail.com';
+                document.getElementById('senderName').value = templateData.fromName || 'Intex Technologies';
+                document.getElementById('recipientEmail').value = contact.email;
+                document.getElementById('emailSubject').value = templateData.subject;
+                document.getElementById('emailBody').value = templateData.body;
+
+                // Enable buttons
+                document.getElementById('sendBtn').disabled = false;
+                document.getElementById('previewBtn').disabled = false;
+            }
+
+            parseEmailTemplate(template, contact) {
+                const lines = template.split('\n');
+                let from = 'vishwas.agarwal@gmail.com';
+                let fromName = 'Intex Technologies';
+                let subject = `Business Partnership Opportunity - ${contact.country}`;
+                let bodyStartIndex = 0;
+
+                // Parse headers
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (line.toLowerCase().startsWith('from:')) {
+                        from = line.substring(5).trim();
+                        bodyStartIndex = i + 1;
+                    } else if (line.toLowerCase().startsWith('from-name:')) {
+                        fromName = line.substring(10).trim();
+                        bodyStartIndex = i + 1;
+                    } else if (line.toLowerCase().startsWith('subject:')) {
+                        subject = line.substring(8).trim();
+                        bodyStartIndex = i + 1;
+                    } else if (line === '' && bodyStartIndex > 0) {
+                        bodyStartIndex = i + 1;
+                        break;
+                    }
+                }
+
+                // Extract body and replace placeholders
+                let body = lines.slice(bodyStartIndex).join('\n').trim();
+                const contactName = contact.contact_person || contact.firm || 'Valued Prospective Partner';
+
+                body = body.replace(/{contactName}/g, contactName);
+                body = body.replace(/{country}/g, contact.country);
+                body = body.replace(/{email}/g, contact.email);
+                body = body.replace(/{firm}/g, contact.firm || 'your esteemed organization');
+
+                subject = subject.replace(/{contactName}/g, contactName);
+                subject = subject.replace(/{country}/g, contact.country);
+
+                return { from, fromName, subject, body };
+            }
+
+            previewEmail() {
+                const emailWindow = window.open('', '_blank', 'width=700,height=900');
+                const from = document.getElementById('senderEmail').value;
+                const fromName = document.getElementById('senderName').value;
+                const to = document.getElementById('recipientEmail').value;
+                const subject = document.getElementById('emailSubject').value;
+                const body = document.getElementById('emailBody').value;
+
+                emailWindow.document.write(`
+                    <html>
+                    <head>
+                        <title>Email Preview</title>
+                        <style>
+                            body { font-family: Arial, sans-serif; padding: 30px; }
+                            .header { background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 20px; }
+                            .content { border: 1px solid #ddd; padding: 25px; border-radius: 10px; white-space: pre-wrap; line-height: 1.6; }
+                        </style>
+                    </head>
+                    <body>
+                        <h2>📧 Email Preview</h2>
+                        <div class="header">
+                            <p><strong>From:</strong> ${fromName} &lt;${from}&gt;</p>
+                            <p><strong>To:</strong> ${to}</p>
+                            <p><strong>Subject:</strong> ${subject}</p>
+                        </div>
+                        <div class="content">${body}</div>
+                    </body>
+                    </html>
+                `);
+            }
+
+            async sendCurrentEmail() {
+                if (this.currentContactIndex === -1) return;
+
+                const contact = this.contacts.find(c => c.id === this.currentContactIndex);
+                const emailData = {
+                    from_email: document.getElementById('senderEmail').value,
+                    from_name: document.getElementById('senderName').value,
+                    to_email: document.getElementById('recipientEmail').value,
+                    subject: document.getElementById('emailSubject').value,
+                    content: document.getElementById('emailBody').value
+                };
+
+                this.showLoading('Sending email...');
+
+                try {
+                    const response = await fetch(`${this.apiBaseUrl}/api/send-email`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(emailData)
+                    });
+
+                    const result = await response.json();
+
+                    // Update contact status
+                    contact.sent = true;
+                    contact.success = result.success;
+                    this.sentCount++;
+                    if (result.success) this.successCount++;
+
+                    // Update UI
+                    this.renderContactsList();
+                    this.updateStats();
+
+                    if (result.success) {
+                        this.showAlert('success', `Email sent successfully to ${contact.contact_person || contact.firm}`);
+                        this.selectNextContact();
+                    } else {
+                        this.showAlert('error', `Failed to send email: ${result.message}`);
+                    }
+
+                } catch (error) {
+                    this.showAlert('error', 'Network error: ' + error.message);
+                } finally {
+                    this.hideLoading();
+                }
+            }
+
+            async sendAllEmails() {
+                const unsentContacts = this.contacts.filter(c => !c.sent);
+                if (unsentContacts.length === 0) {
+                    this.showAlert('info', 'All emails have already been sent');
+                    return;
+                }
+
+                if (!confirm(`Send ${unsentContacts.length} emails? This may take a while.`)) return;
+
+                const sendAllBtn = document.getElementById('sendAllBtn');
+                sendAllBtn.disabled = true;
+                sendAllBtn.textContent = '📤 Sending...';
+
+                this.showLoading('Sending bulk emails...');
+
+                try {
+                    const emailsToSend = unsentContacts.map(contact => {
+                        const templateData = this.parseEmailTemplate(document.getElementById('emailTemplate').value, contact);
+                        return {
+                            from_email: 'vishwas.agarwal@gmail.com',
+                            from_name: 'Intex Technologies',
+                            to_email: contact.email,
+                            subject: templateData.subject,
+                            content: templateData.body
+                        };
+                    });
+
+                    const response = await fetch(`${this.apiBaseUrl}/api/send-bulk-emails`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ emails: emailsToSend })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        // Update contact statuses
+                        result.results.forEach((emailResult, index) => {
+                            const contact = unsentContacts[index];
+                            contact.sent = true;
+                            contact.success = emailResult.success;
+                            this.sentCount++;
+                            if (emailResult.success) this.successCount++;
+                        });
+
+                        this.renderContactsList();
+                        this.updateStats();
+                        this.showAlert('success', `Bulk email sending completed! Sent: ${result.results.filter(r => r.success).length}, Failed: ${result.results.filter(r => !r.success).length}`);
+                    } else {
+                        this.showAlert('error', 'Bulk email sending failed: ' + result.message);
+                    }
+
+                } catch (error) {
+                    this.showAlert('error', 'Bulk email error: ' + error.message);
+                } finally {
+                    sendAllBtn.disabled = false;
+                    sendAllBtn.textContent = '📬 Send All Remaining';
+                    this.hideLoading();
+                }
+            }
+
+            selectNextContact() {
+                const nextContact = this.contacts.find(c => c.id > this.currentContactIndex && !c.sent);
+                if (nextContact) {
+                    this.currentContactIndex = nextContact.id;
+                    const contactItems = document.querySelectorAll('.contact-item');
+                    contactItems.forEach(item => {
+                        if (parseInt(item.dataset.index) === nextContact.id) {
+                            item.click();
+                        }
+                    });
+                } else {
+                    this.currentContactIndex = -1;
+                    document.getElementById('sendBtn').disabled = true;
+                    document.getElementById('previewBtn').disabled = true;
+                }
+            }
+
+            updateTemplate() {
+                this.template = document.getElementById('emailTemplate').value;
+                if (this.currentContactIndex !== -1) {
+                    this.populateEmailPreview();
+                }
+            }
+
+            updateStats() {
+                const total = this.contacts.length;
+                const remaining = total - this.sentCount;
+                const successRate = this.sentCount > 0 ? Math.round((this.successCount / this.sentCount) * 100) : 0;
+
+                document.getElementById('totalContacts').textContent = total;
+                document.getElementById('sentEmails').textContent = this.sentCount;
+                document.getElementById('remainingEmails').textContent = remaining;
+                document.getElementById('successRate').textContent = successRate + '%';
+
+                const progress = total > 0 ? (this.sentCount / total) * 100 : 0;
+                document.getElementById('progressFill').style.width = progress + '%';
+                document.getElementById('progressText').textContent = Math.round(progress) + '%';
+            }
+
+            enableControls() {
+                document.getElementById('sendAllBtn').disabled = false;
+            }
+
+            showAlert(type, message) {
+                const container = document.getElementById('alertContainer');
+                const alert = document.createElement('div');
+                alert.className = `alert ${type}`;
+                alert.textContent = message;
+
+                container.appendChild(alert);
+
+                setTimeout(() => {
+                    if (alert.parentNode) {
+                        alert.remove();
+                    }
+                }, 5000);
+            }
+
+            showLoading(text = 'Processing...') {
+                const overlay = document.getElementById('loadingOverlay');
+                const loadingText = document.getElementById('loadingText');
+
+                if (loadingText) loadingText.textContent = text;
+                if (overlay) overlay.classList.remove('hidden');
+            }
+
+            hideLoading() {
+                const overlay = document.getElementById('loadingOverlay');
+                if (overlay) {
+                    overlay.classList.add('hidden');
+                }
+            }
+        }
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', () => {
+            new EnhancedBulkEmailSender();
+        });
+    </script>
+</body>
+</html>
