@@ -1,6 +1,8 @@
 const nodemailer = require('nodemailer');
 
 exports.handler = async (event, context) => {
+  console.log('Send bulk emails function called with method:', event.httpMethod);
+
   // Handle CORS
   if (event.httpMethod === 'OPTIONS') {
     return {

@@ -1,6 +1,8 @@
 const XLSX = require('xlsx');
 
 exports.handler = async (event, context) => {
+  console.log('Upload Excel function called with method:', event.httpMethod);
+
   // Handle CORS
   if (event.httpMethod === 'OPTIONS') {
     return {

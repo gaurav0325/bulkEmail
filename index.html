@@ -592,16 +592,31 @@ We are pleased to introduce Intex Technologies, a globally recognized brand with
 
             async checkApiStatus() {
                 try {
-                    const response = await fetch(`${this.apiBaseUrl}/default-files`);
+                    console.log('Checking API status at:', `${this.apiBaseUrl}/default-files`);
+                    const response = await fetch(`${this.apiBaseUrl}/default-files`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    console.log('API response status:', response.status);
+
                     if (response.ok) {
                         document.getElementById('apiStatus').innerHTML = '✅ API Connected - Ready to send emails';
                         document.getElementById('apiStatus').style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
                     } else {
-                        throw new Error('API not responding');
+                        console.error('API response not ok:', response.status, response.statusText);
+                        throw new Error(`API responded with ${response.status}`);
                     }
                 } catch (error) {
-                    document.getElementById('apiStatus').innerHTML = '❌ API Connection Failed - Check server';
+                    console.error('API check failed:', error);
+                    document.getElementById('apiStatus').innerHTML = '❌ API Connection Failed - Functions may be loading';
                     document.getElementById('apiStatus').style.background = 'linear-gradient(135deg, #dc3545 0%, #fd7e14 100%)';
+
+                    // Retry after 3 seconds
+                    setTimeout(() => {
+                        this.checkApiStatus();
+                    }, 3000);
                 }
             }
 
@@ -612,22 +627,31 @@ We are pleased to introduce Intex Technologies, a globally recognized brand with
                 const timeoutId = setTimeout(() => {
                     console.log('Timeout reached, hiding loading...');
                     this.hideLoading();
-                    this.showAlert('error', 'Request timed out. Please try again.');
-                }, 10000);
+                    this.showAlert('error', 'Request timed out. Functions may still be initializing. Please try again.');
+                }, 15000); // Increased timeout for Netlify cold starts
 
                 try {
                     console.log('Fetching from:', `${this.apiBaseUrl}/default-files`);
+
+                    // Add longer timeout for initial function load
+                    const controller = new AbortController();
+                    const timeoutSignal = setTimeout(() => controller.abort(), 12000);
+
                     const response = await fetch(`${this.apiBaseUrl}/default-files`, {
                         method: 'GET',
                         headers: {
                             'Content-Type': 'application/json'
-                        }
+                        },
+                        signal: controller.signal
                     });
 
+                    clearTimeout(timeoutSignal);
                     clearTimeout(timeoutId);
                     console.log('Response status:', response.status);
 
                     if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error('Response error:', errorText);
                         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                     }
 
@@ -659,7 +683,12 @@ We are pleased to introduce Intex Technologies, a globally recognized brand with
                 } catch (error) {
                     clearTimeout(timeoutId);
                     console.error('Default files error:', error);
-                    this.showAlert('error', 'Failed to load default files: ' + error.message);
+
+                    if (error.name === 'AbortError') {
+                        this.showAlert('error', 'Request timed out. Netlify functions may be initializing. Please wait and try again.');
+                    } else {
+                        this.showAlert('error', 'Failed to load default files: ' + error.message);
+                    }
                 } finally {
                     console.log('Hiding loading overlay...');
                     this.hideLoading();

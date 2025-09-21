@@ -1,6 +1,8 @@
 const mammoth = require('mammoth');
 
 exports.handler = async (event, context) => {
+  console.log('Upload Word function called with method:', event.httpMethod);
+
   // Handle CORS
   if (event.httpMethod === 'OPTIONS') {
     return {

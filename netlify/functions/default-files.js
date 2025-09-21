@@ -1,4 +1,6 @@
 exports.handler = async (event, context) => {
+  console.log('Default files function called with method:', event.httpMethod);
+
   // Handle CORS
   if (event.httpMethod === 'OPTIONS') {
     return {
@@ -13,6 +15,7 @@ exports.handler = async (event, context) => {
   }
 
   if (event.httpMethod !== 'GET') {
+    console.log('Invalid method:', event.httpMethod);
     return {
       statusCode: 405,
       headers: {
@@ -24,6 +27,7 @@ exports.handler = async (event, context) => {
   }
 
   try {
+    console.log('Processing default files request...');
     // Default template content
     const defaultTemplate = `From: vishwas.agarwal@gmail.com
 From-Name: Intex Technologies
