@@ -114,20 +114,60 @@
             <button class="button" onclick="loadSampleData()">📋 Load Sample Data</button>
 
             <h3>Email Template</h3>
-            <textarea id="emailTemplate" placeholder="Email template will appear here...">From: info@datanalysisninsights.co.uk
-From-Name: Data Analysis Insights
+            <textarea id="emailTemplate" placeholder="Email template will appear here...">From: vishwas.agarwal@gmail.com
+From-Name: Intex Technologies
 To: {email}
-Subject: Business Partnership Opportunity - {country}
+Subject: Business Partnership Opportunity - Intex Technologies in {country}
 
-Dear {contactName},
+Dear Valued Prospective Partner,
 
-We are pleased to introduce Data Analysis Insights, your trusted partner for comprehensive business intelligence and market research solutions.
+We are pleased to introduce Intex Technologies, a globally recognized brand with a rich legacy spanning 29 years in the consumer electronics and technology sectors.
 
-We are actively seeking business partnerships in {country} with organizations that value data-driven insights and strategic intelligence.
+Since our inception in 1996, we have been at the forefront of innovation, designing and manufacturing cutting-edge products that enhance the daily lives of millions of consumers worldwide. Our commitment to excellence has made us a trusted name in markets across the globe.
+
+Our Product Portfolio:
+• IT Peripherals: Speakers, keyboards, mice, webcams, and computer accessories
+• Home Appliances: Air coolers, room heaters, water purifiers, and kitchen appliances
+• Mobile Accessories: Power banks, chargers, cables, and smartphone accessories
+• Audio Solutions: Wireless speakers, headphones, and sound systems
+
+We are actively seeking distribution partners in {country} who share our vision of delivering high-quality, innovative products to consumers. We believe {firm}, with its {businessFocus}, would be an ideal partner for expanding our reach in the {country} market.
+
+Given {firm}'s {marketStrength}, we see significant opportunities for collaboration in areas where Intex Technologies can provide value:
+
+{businessOpportunities}
+
+What We Offer Our Partners:
+✓ Competitive pricing with attractive profit margins
+✓ Comprehensive marketing support and co-branding opportunities
+✓ Technical training and ongoing product support
+✓ Flexible payment terms and credit facilities
+✓ Exclusive territory rights (subject to discussion)
+✓ Access to our complete product catalog and new launches
+
+Why Partner with Intex Technologies:
+- 29+ years of industry experience and innovation
+- Global presence with operations in 40+ countries
+- ISO certified manufacturing facilities
+- Strong R&D capabilities with continuous product development
+- Proven track record of successful partnerships worldwide
+
+We would welcome the opportunity to discuss how we can work together to bring Intex Technologies' innovative products to the {country} market through {firm}. Our team is available to provide detailed product catalogs, pricing structures, and partnership terms that align with your business objectives.
+
+Please feel free to contact us at your earliest convenience to explore this exciting business opportunity. We are confident that a partnership between Intex Technologies and {firm} will be mutually beneficial and contribute to significant growth in the {country} market.
+
+Thank you for your time and consideration. We look forward to hearing from you soon and to the possibility of establishing a long-term, successful business relationship.
 
 Best regards,
-Data Analysis Insights Team
-Email: info@datanalysisninsights.co.uk</textarea>
+
+Vishwas Agarwal
+Business Development Manager
+Intex Technologies
+Email: vishwas.agarwal@gmail.com
+Phone: +91-11-4716-1111
+Website: www.intex.in
+
+P.S. We are also interested in exploring private label manufacturing opportunities and joint ventures for established brands in the {country} market. Please let us know if {firm} has any interest in such collaborations.</textarea>
 
             <h3>Contact List</h3>
             <div id="contactsList">
@@ -190,13 +230,15 @@ Email: info@datanalysisninsights.co.uk</textarea>
         let contacts = [];
         let selectedContactIndex = -1;
 
-        // Sample data - no API calls needed
+        // Sample data with detailed business focus - no API calls needed
         const sampleContacts = [
             {
                 email: "john.smith@techsolutions.co.uk",
                 contactName: "John Smith",
                 firm: "Tech Solutions UK Ltd",
                 country: "United Kingdom",
+                businessFocus: "IT retail and consumer electronics distribution",
+                marketStrength: "Strong presence in UK retail chains and online platforms",
                 sent: false,
                 success: false
             },
@@ -205,6 +247,8 @@ Email: info@datanalysisninsights.co.uk</textarea>
                 contactName: "Sarah Jones",
                 firm: "Innovate Corp",
                 country: "United States",
+                businessFocus: "Home appliances and smart technology distribution",
+                marketStrength: "Extensive network across major US retail outlets",
                 sent: false,
                 success: false
             },
@@ -213,6 +257,8 @@ Email: info@datanalysisninsights.co.uk</textarea>
                 contactName: "Raj Patel",
                 firm: "Global Tech Solutions",
                 country: "India",
+                businessFocus: "Mobile accessories and IT peripherals wholesale",
+                marketStrength: "Pan-India distribution network with tier-2 and tier-3 city reach",
                 sent: false,
                 success: false
             },
@@ -221,6 +267,8 @@ Email: info@datanalysisninsights.co.uk</textarea>
                 contactName: "Maria Garcia",
                 firm: "TechMexico Solutions",
                 country: "Mexico",
+                businessFocus: "Consumer electronics and audio solutions retail",
+                marketStrength: "Leading distributor in Mexico and Central America",
                 sent: false,
                 success: false
             },
@@ -229,6 +277,18 @@ Email: info@datanalysisninsights.co.uk</textarea>
                 contactName: "Ahmed Hassan",
                 firm: "Middle East Tech Hub",
                 country: "United Arab Emirates",
+                businessFocus: "Premium electronics and home appliances distribution",
+                marketStrength: "Strategic location serving GCC and MENA markets",
+                sent: false,
+                success: false
+            },
+            {
+                email: "chen.li@asiatech.sg",
+                contactName: "Chen Li",
+                firm: "Asia Tech Distribution",
+                country: "Singapore",
+                businessFocus: "IT peripherals and business solutions distribution",
+                marketStrength: "Hub for Southeast Asian market penetration",
                 sent: false,
                 success: false
             }
@@ -276,11 +336,31 @@ Email: info@datanalysisninsights.co.uk</textarea>
                     <strong>${contact.firm}</strong> ${statusIcon}<br>
                     👤 ${contact.contactName}<br>
                     📧 ${contact.email}<br>
-                    🌍 ${contact.country}
-                    ${contact.sent ? `<br><small>${contact.success ? 'Sent successfully' : 'Failed to send'}</small>` : ''}
+                    🌍 ${contact.country}<br>
+                    💼 ${contact.businessFocus}<br>
+                    📈 ${contact.marketStrength}
+                    ${contact.sent ? `<br><small style="font-weight: bold;">${contact.success ? '✅ Sent successfully' : '❌ Failed to send'}</small>` : ''}
                 `;
                 container.appendChild(div);
             });
+        }
+
+        function generateBusinessOpportunities(contact) {
+            const opportunities = {
+                "United Kingdom": "• Premium IT peripherals for the growing remote work market\n• Smart home appliances aligned with UK energy efficiency standards\n• Audio solutions for the thriving UK gaming and entertainment sector",
+
+                "United States": "• Advanced home automation and smart appliance solutions\n• High-quality audio systems for the premium consumer market\n• Mobile accessories for the competitive US smartphone market",
+
+                "India": "• Affordable mobile accessories for the massive smartphone user base\n• IT peripherals targeting the growing IT services sector\n• Energy-efficient appliances for price-conscious consumers",
+
+                "Mexico": "• Consumer electronics tailored for the Latin American market\n• Audio solutions for Mexico's vibrant entertainment industry\n• Cost-effective home appliances for the expanding middle class",
+
+                "United Arab Emirates": "• Premium electronics for the affluent GCC market\n• Smart home solutions for modern UAE households\n• High-end audio systems for the luxury consumer segment",
+
+                "Singapore": "• IT peripherals for Singapore's tech-savvy business environment\n• Compact home appliances suitable for urban living\n• Professional audio solutions for the creative industries"
+            };
+
+            return opportunities[contact.country] || "• Customized product solutions based on local market requirements\n• Premium electronics suited for your market demographics\n• Innovative technology products aligned with regional preferences";
         }
 
         function selectContact(index) {
@@ -292,17 +372,27 @@ Email: info@datanalysisninsights.co.uk</textarea>
                 item.classList.toggle('selected', i === index);
             });
 
-            // Populate email form
+            // Update email form headers
+            document.getElementById('fromEmail').value = 'vishwas.agarwal@gmail.com';
             document.getElementById('toEmail').value = contact.email;
-            document.getElementById('subject').value = `Business Partnership Opportunity - ${contact.country}`;
+            document.getElementById('subject').value = `Business Partnership Opportunity - Intex Technologies in ${contact.country}`;
 
-            // Generate email body from template
+            // Generate personalized email body from template
             let template = document.getElementById('emailTemplate').value;
-            let body = template.replace(/{email}/g, contact.email)
-                              .replace(/{contactName}/g, contact.contactName)
-                              .replace(/{country}/g, contact.country);
 
-            // Remove email headers from body
+            // Generate business opportunities specific to this contact
+            const businessOpportunities = generateBusinessOpportunities(contact);
+
+            let body = template
+                .replace(/{email}/g, contact.email)
+                .replace(/{contactName}/g, contact.contactName || 'Valued Prospective Partner')
+                .replace(/{country}/g, contact.country)
+                .replace(/{firm}/g, contact.firm)
+                .replace(/{businessFocus}/g, contact.businessFocus || 'established market presence')
+                .replace(/{marketStrength}/g, contact.marketStrength || 'strong distribution network')
+                .replace(/{businessOpportunities}/g, businessOpportunities);
+
+            // Remove email headers from body for display
             const lines = body.split('\n');
             let bodyStart = 0;
             for (let i = 0; i < lines.length; i++) {
@@ -319,7 +409,7 @@ Email: info@datanalysisninsights.co.uk</textarea>
             document.getElementById('messageBody').value = lines.slice(bodyStart).join('\n').trim();
             document.getElementById('sendBtn').disabled = false;
 
-            showAlert(`Selected: ${contact.contactName} from ${contact.firm}`);
+            showAlert(`Selected: ${contact.contactName} from ${contact.firm} (${contact.country})`);
         }
 
         async function sendEmail() {
@@ -444,11 +534,18 @@ Email: info@datanalysisninsights.co.uk</textarea>
                 try {
                     showAlert(`Sending ${i + 1}/${unsentContacts.length}: ${contact.contactName}`);
 
-                    // Generate email content for this contact
+                    // Generate personalized email content for this contact
                     let template = document.getElementById('emailTemplate').value;
-                    let body = template.replace(/{email}/g, contact.email)
-                                      .replace(/{contactName}/g, contact.contactName)
-                                      .replace(/{country}/g, contact.country);
+                    const businessOpportunities = generateBusinessOpportunities(contact);
+
+                    let body = template
+                        .replace(/{email}/g, contact.email)
+                        .replace(/{contactName}/g, contact.contactName || 'Valued Prospective Partner')
+                        .replace(/{country}/g, contact.country)
+                        .replace(/{firm}/g, contact.firm)
+                        .replace(/{businessFocus}/g, contact.businessFocus || 'established market presence')
+                        .replace(/{marketStrength}/g, contact.marketStrength || 'strong distribution network')
+                        .replace(/{businessOpportunities}/g, businessOpportunities);
 
                     // Remove email headers from body
                     const lines = body.split('\n');
@@ -470,10 +567,10 @@ Email: info@datanalysisninsights.co.uk</textarea>
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            from_email: 'info@datanalysisninsights.co.uk',
-                            from_name: 'Data Analysis Insights',
+                            from_email: 'vishwas.agarwal@gmail.com',
+                            from_name: 'Intex Technologies',
                             to_email: contact.email,
-                            subject: `Business Partnership Opportunity - ${contact.country}`,
+                            subject: `Business Partnership Opportunity - Intex Technologies in ${contact.country}`,
                             content: emailBody
                         })
                     });
