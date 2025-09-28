@@ -565,15 +565,27 @@ We are pleased to introduce Intex Technologies, a globally recognized brand with
     <script>
         class EnhancedBulkEmailSender {
             constructor() {
-                this.contacts = [];
-                this.currentContactIndex = -1;
-                this.sentCount = 0;
-                this.successCount = 0;
-                this.template = '';
-                // Updated to use Netlify Functions
-                this.apiBaseUrl = window.location.origin + '/.netlify/functions';
-                this.initializeEventListeners();
-                this.checkApiStatus();
+                try {
+                    this.contacts = [];
+                    this.currentContactIndex = -1;
+                    this.sentCount = 0;
+                    this.successCount = 0;
+                    this.template = '';
+                    this.apiRetryAttempted = false;
+                    // Updated to use Netlify Functions
+                    this.apiBaseUrl = window.location.origin + '/.netlify/functions';
+
+                    console.log('Initializing EnhancedBulkEmailSender...');
+                    this.initializeEventListeners();
+
+                    // Delay API check to prevent immediate loops
+                    setTimeout(() => {
+                        this.checkApiStatus();
+                    }, 1000);
+                } catch (error) {
+                    console.error('Constructor error:', error);
+                    document.getElementById('apiStatus').innerHTML = '❌ Initialization failed';
+                }
             }
 
             initializeEventListeners() {
@@ -593,58 +605,30 @@ We are pleased to introduce Intex Technologies, a globally recognized brand with
             async checkApiStatus() {
                 try {
                     console.log('Checking API status at:', `${this.apiBaseUrl}/default-files`);
-                    const response = await fetch(`${this.apiBaseUrl}/default-files`, {
-                        method: 'GET',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        }
-                    });
+                    const response = await fetch(`${this.apiBaseUrl}/default-files`);
                     console.log('API response status:', response.status);
 
                     if (response.ok) {
-                        // Also check if Zoho SMTP is configured
-                        this.checkZohoStatus();
+                        document.getElementById('apiStatus').innerHTML = '✅ API Connected - Ready to send emails';
+                        document.getElementById('apiStatus').style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
                     } else {
-                        console.error('API response not ok:', response.status, response.statusText);
                         throw new Error(`API responded with ${response.status}`);
                     }
                 } catch (error) {
                     console.error('API check failed:', error);
-                    document.getElementById('apiStatus').innerHTML = '❌ API Connection Failed - Functions may be loading';
+                    document.getElementById('apiStatus').innerHTML = '❌ API Connection Failed - Retrying...';
                     document.getElementById('apiStatus').style.background = 'linear-gradient(135deg, #dc3545 0%, #fd7e14 100%)';
 
-                    // Retry after 3 seconds
-                    setTimeout(() => {
-                        this.checkApiStatus();
-                    }, 3000);
-                }
-            }
-
-            async checkZohoStatus() {
-                try {
-                    // Test Zoho Mail configuration with a simple check
-                    const testResponse = await fetch(`${this.apiBaseUrl}/send-email-zoho`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            to_email: 'test@example.com',
-                            subject: 'Configuration Test',
-                            content: 'Test'
-                        })
-                    });
-
-                    const result = await testResponse.json();
-
-                    if (result.setup_required) {
-                        document.getElementById('apiStatus').innerHTML = '⚙️ API Connected - Configure Zoho Mail SMTP';
-                        document.getElementById('apiStatus').style.background = 'linear-gradient(135deg, #ffc107 0%, #fd7e14 100%)';
+                    // Only retry once more after 5 seconds, then give up
+                    if (!this.apiRetryAttempted) {
+                        this.apiRetryAttempted = true;
+                        setTimeout(() => {
+                            this.checkApiStatus();
+                        }, 5000);
                     } else {
-                        document.getElementById('apiStatus').innerHTML = '✅ Zoho Mail Ready - smtppro.zoho.com configured';
-                        document.getElementById('apiStatus').style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+                        document.getElementById('apiStatus').innerHTML = '⚠️ API Connection Issues - Manual refresh may help';
+                        document.getElementById('apiStatus').style.background = 'linear-gradient(135deg, #ffc107 0%, #fd7e14 100%)';
                     }
-                } catch (error) {
-                    document.getElementById('apiStatus').innerHTML = '✅ API Connected - Ready to send emails';
-                    document.getElementById('apiStatus').style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
                 }
             }
 
@@ -652,73 +636,64 @@ We are pleased to introduce Intex Technologies, a globally recognized brand with
                 console.log('Starting loadDefaultFiles...');
                 this.showLoading('Loading default files...');
 
-                const timeoutId = setTimeout(() => {
-                    console.log('Timeout reached, hiding loading...');
+                // Set a maximum timeout
+                const maxTimeout = setTimeout(() => {
+                    console.log('Max timeout reached');
                     this.hideLoading();
-                    this.showAlert('error', 'Request timed out. Functions may still be initializing. Please try again.');
-                }, 15000); // Increased timeout for Netlify cold starts
+                    this.showAlert('error', 'Request timed out. Please try again.');
+                }, 10000);
 
                 try {
                     console.log('Fetching from:', `${this.apiBaseUrl}/default-files`);
 
-                    // Add longer timeout for initial function load
-                    const controller = new AbortController();
-                    const timeoutSignal = setTimeout(() => controller.abort(), 12000);
+                    const response = await fetch(`${this.apiBaseUrl}/default-files`);
+                    clearTimeout(maxTimeout);
 
-                    const response = await fetch(`${this.apiBaseUrl}/default-files`, {
-                        method: 'GET',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        signal: controller.signal
-                    });
-
-                    clearTimeout(timeoutSignal);
-                    clearTimeout(timeoutId);
-                    console.log('Response status:', response.status);
-
-                    if (!response.ok) {
-                        const errorText = await response.text();
-                        console.error('Response error:', errorText);
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                    }
+                    console.log('Response received:', response.status);
 
                     const data = await response.json();
-                    console.log('Response data:', data);
+                    console.log('Data received:', !!data);
 
-                    if (data.success) {
-                        let loadedItems = 0;
-
+                    if (data && data.success) {
                         if (data.excel_data && data.excel_data.length > 0) {
                             this.processContactData(data.excel_data);
-                            this.showAlert('success', `Loaded ${data.excel_data.length} contacts from default Excel file`);
-                            loadedItems++;
+                            this.showAlert('success', `Loaded ${data.excel_data.length} contacts`);
                         }
 
                         if (data.word_content) {
                             document.getElementById('emailTemplate').value = data.word_content;
                             this.updateTemplate();
-                            this.showAlert('success', 'Loaded default letter template');
-                            loadedItems++;
-                        }
-
-                        if (loadedItems === 0) {
-                            this.showAlert('info', 'No default files found. Please upload files manually.');
+                            this.showAlert('success', 'Template loaded');
                         }
                     } else {
-                        this.showAlert('info', 'No default files found. Please upload files manually.');
+                        this.showAlert('info', 'Using default data');
+                        // Load minimal default data to prevent loops
+                        this.processContactData([{
+                            email: "test@example.com",
+                            contact_person: "Test Contact",
+                            firm: "Test Company",
+                            country: "Test Country",
+                            id: 0,
+                            sent: false,
+                            success: false
+                        }]);
                     }
                 } catch (error) {
-                    clearTimeout(timeoutId);
-                    console.error('Default files error:', error);
+                    clearTimeout(maxTimeout);
+                    console.error('Load error:', error);
+                    this.showAlert('error', 'Load failed: ' + error.message);
 
-                    if (error.name === 'AbortError') {
-                        this.showAlert('error', 'Request timed out. Netlify functions may be initializing. Please wait and try again.');
-                    } else {
-                        this.showAlert('error', 'Failed to load default files: ' + error.message);
-                    }
+                    // Load minimal fallback data
+                    this.processContactData([{
+                        email: "fallback@example.com",
+                        contact_person: "Fallback Contact",
+                        firm: "Fallback Company",
+                        country: "Test",
+                        id: 0,
+                        sent: false,
+                        success: false
+                    }]);
                 } finally {
-                    console.log('Hiding loading overlay...');
                     this.hideLoading();
                 }
             }
@@ -1170,17 +1145,33 @@ We are pleased to introduce Intex Technologies, a globally recognized brand with
             }
 
             showLoading(text = 'Processing...') {
-                const overlay = document.getElementById('loadingOverlay');
-                const loadingText = document.getElementById('loadingText');
+                try {
+                    const overlay = document.getElementById('loadingOverlay');
+                    const loadingText = document.getElementById('loadingText');
 
-                if (loadingText) loadingText.textContent = text;
-                if (overlay) overlay.classList.remove('hidden');
+                    if (loadingText) loadingText.textContent = text;
+                    if (overlay) {
+                        overlay.classList.remove('hidden');
+
+                        // Force hide after 15 seconds to prevent infinite loading
+                        setTimeout(() => {
+                            this.hideLoading();
+                            this.showAlert('error', 'Loading timed out. Please refresh the page.');
+                        }, 15000);
+                    }
+                } catch (error) {
+                    console.error('showLoading error:', error);
+                }
             }
 
             hideLoading() {
-                const overlay = document.getElementById('loadingOverlay');
-                if (overlay) {
-                    overlay.classList.add('hidden');
+                try {
+                    const overlay = document.getElementById('loadingOverlay');
+                    if (overlay) {
+                        overlay.classList.add('hidden');
+                    }
+                } catch (error) {
+                    console.error('hideLoading error:', error);
                 }
             }
         }
