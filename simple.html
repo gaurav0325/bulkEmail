@@ -280,15 +280,30 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
                 item.classList.toggle('selected', i === index);
             });
 
+            // Extract subject from template and populate dynamically
+            const template = document.getElementById('emailTemplate').value;
+            const lines = template.split('\n');
+            let subjectTemplate = 'Business Partnership Opportunity - Intex Technologies in {country}';
+
+            // Find subject line in template
+            for (let line of lines) {
+                if (line.startsWith('Subject: ')) {
+                    subjectTemplate = line.replace('Subject: ', '').trim();
+                    break;
+                }
+            }
+
             // Populate email form
             document.getElementById('toEmail').value = contact.email;
-            document.getElementById('subject').value = `Business Partnership Opportunity - Intex Technologies in ${contact.country}`;
+            document.getElementById('subject').value = subjectTemplate.replace(/{country}/g, contact.country)
+                                                                     .replace(/{firm}/g, contact.firm)
+                                                                     .replace(/{email}/g, contact.email);
 
             // Generate email body from template
-            let template = document.getElementById('emailTemplate').value;
             let body = template.replace(/{email}/g, contact.email)
                               .replace(/{contactName}/g, contact.contactName)
-                              .replace(/{country}/g, contact.country);
+                              .replace(/{country}/g, contact.country)
+                              .replace(/{firm}/g, contact.firm);
 
             // Remove email headers from body
             const lines = body.split('\n');
@@ -377,9 +392,28 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
             }
         }
 
+        function extractTemplateHeaders() {
+            const template = document.getElementById('emailTemplate').value;
+            const lines = template.split('\n');
+
+            // Extract headers from template
+            for (let line of lines) {
+                if (line.startsWith('From: ')) {
+                    const fromEmail = line.replace('From: ', '').trim();
+                    document.getElementById('fromEmail').value = fromEmail;
+                }
+                if (line.startsWith('From-Name: ')) {
+                    const fromName = line.replace('From-Name: ', '').trim();
+                    // Store from name for later use
+                    window.defaultFromName = fromName;
+                }
+            }
+        }
+
         // Initialize on page load - no complex initialization
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Simple email sender loaded');
+            extractTemplateHeaders(); // Extract and populate From field
             showAlert('Simple Email Sender ready! Click "Load Sample Data" to start.');
         });
     </script>
