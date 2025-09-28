@@ -469,11 +469,11 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
 
             // Extract subject from template and populate dynamically
             const template = document.getElementById('emailTemplate').value;
-            const lines = template.split('\n');
+            const templateLines = template.split('\n');
             let subjectTemplate = 'Business Partnership Opportunity - Intex Technologies in {country}';
 
             // Find subject line in template
-            for (let line of lines) {
+            for (let line of templateLines) {
                 if (line.startsWith('Subject: ')) {
                     subjectTemplate = line.replace('Subject: ', '').trim();
                     break;
@@ -493,20 +493,20 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
                               .replace(/{firm}/g, contact.firm);
 
             // Remove email headers from body
-            const lines = body.split('\n');
+            const bodyLines = body.split('\n');
             let bodyStart = 0;
-            for (let i = 0; i < lines.length; i++) {
-                if (lines[i].trim() === '' && i > 0) {
+            for (let i = 0; i < bodyLines.length; i++) {
+                if (bodyLines[i].trim() === '' && i > 0) {
                     bodyStart = i + 1;
                     break;
                 }
-                if (!lines[i].includes(':') || lines[i].startsWith('Dear')) {
+                if (!bodyLines[i].includes(':') || bodyLines[i].startsWith('Dear')) {
                     bodyStart = i;
                     break;
                 }
             }
 
-            document.getElementById('messageBody').value = lines.slice(bodyStart).join('\n').trim();
+            document.getElementById('messageBody').value = bodyLines.slice(bodyStart).join('\n').trim();
             document.getElementById('sendBtn').disabled = false;
 
             showAlert(`Selected: ${contact.contactName} from ${contact.firm}`);
@@ -581,10 +581,10 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
 
         function extractTemplateHeaders() {
             const template = document.getElementById('emailTemplate').value;
-            const lines = template.split('\n');
+            const headerLines = template.split('\n');
 
             // Extract headers from template
-            for (let line of lines) {
+            for (let line of headerLines) {
                 if (line.startsWith('From: ')) {
                     const fromEmail = line.replace('From: ', '').trim();
                     document.getElementById('fromEmail').value = fromEmail;
@@ -610,13 +610,13 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
 
         // Add a simple CSV processor as fallback
         function parseCSV(text) {
-            const lines = text.split('\n');
-            const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+            const csvLines = text.split('\n');
+            const headers = csvLines[0].split(',').map(h => h.trim().toLowerCase());
             const data = [];
 
-            for (let i = 1; i < lines.length; i++) {
-                if (lines[i].trim()) {
-                    const values = lines[i].split(',');
+            for (let i = 1; i < csvLines.length; i++) {
+                if (csvLines[i].trim()) {
+                    const values = csvLines[i].split(',');
                     const row = {};
                     headers.forEach((header, index) => {
                         row[header] = values[index] ? values[index].trim() : '';
