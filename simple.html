@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bulk Email Sender - Data Analysis Insights</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -110,6 +111,12 @@
     <div class="main-content">
         <div class="panel">
             <h2>📂 Contacts & Template</h2>
+
+            <div style="margin-bottom: 15px;">
+                <label for="fileUpload" style="display: block; margin-bottom: 5px;">📁 Upload Contact Spreadsheet:</label>
+                <input type="file" id="fileUpload" accept=".xlsx,.xls,.csv" onchange="handleFileUpload(event)" style="margin-bottom: 10px;">
+                <small style="color: #666;">Supports Excel (.xlsx, .xls) and CSV files. Each tab/sheet represents a country.</small>
+            </div>
 
             <button class="button" onclick="loadSampleData()">📋 Load Sample Data</button>
 
@@ -253,19 +260,134 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
             showAlert('Sample contacts loaded successfully!');
         }
 
+        async function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            showAlert('Processing spreadsheet...', 'success');
+
+            try {
+                const data = await file.arrayBuffer();
+                const workbook = XLSX.read(data, { type: 'array' });
+
+                contacts = []; // Clear existing contacts
+
+                // Process each worksheet (tab) as a country
+                workbook.SheetNames.forEach(sheetName => {
+                    const worksheet = workbook.Sheets[sheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+                    if (jsonData.length < 2) return; // Skip empty sheets
+
+                    const headers = jsonData[0].map(h => h?.toString().toLowerCase().trim());
+                    const rows = jsonData.slice(1);
+
+                    // Map column indices for key parameters
+                    const columnMap = {
+                        firm: findColumnIndex(headers, ['firm name', 'company', 'firm', 'organization']),
+                        address: findColumnIndex(headers, ['address', 'location', 'addr']),
+                        phone: findColumnIndex(headers, ['contact number', 'phone', 'telephone', 'mobile']),
+                        contactName: findColumnIndex(headers, ['contact person', 'name', 'contact', 'person']),
+                        email: findColumnIndex(headers, ['email', 'email address', 'e-mail']),
+                        website: findColumnIndex(headers, ['website', 'url', 'web', 'site']),
+                        source: findColumnIndex(headers, ['source', 'lead source', 'origin']),
+                        category: findColumnIndex(headers, ['category', 'type', 'sector', 'industry'])
+                    };
+
+                    // Process each row
+                    rows.forEach(row => {
+                        if (!row || row.length === 0) return;
+
+                        const contact = {
+                            country: sheetName, // Use sheet name as country
+                            firm: getCellValue(row, columnMap.firm) || 'Unknown Company',
+                            address: getCellValue(row, columnMap.address) || '',
+                            phone: getCellValue(row, columnMap.phone) || '',
+                            contactName: getCellValue(row, columnMap.contactName) || 'Contact Person',
+                            email: getCellValue(row, columnMap.email) || '',
+                            website: getCellValue(row, columnMap.website) || '',
+                            source: getCellValue(row, columnMap.source) || '',
+                            category: getCellValue(row, columnMap.category) || '',
+                            businessFocus: generateBusinessFocus(getCellValue(row, columnMap.category)),
+                            marketStrength: 'High'
+                        };
+
+                        // Only add if email exists
+                        if (contact.email && contact.email.includes('@')) {
+                            contacts.push(contact);
+                        }
+                    });
+                });
+
+                renderContacts();
+                showAlert(`✅ Loaded ${contacts.length} contacts from ${workbook.SheetNames.length} countries!`);
+
+            } catch (error) {
+                showAlert(`Error processing file: ${error.message}`, 'error');
+                console.error('File processing error:', error);
+            }
+        }
+
+        function findColumnIndex(headers, possibleNames) {
+            for (let name of possibleNames) {
+                const index = headers.findIndex(h => h && h.includes(name));
+                if (index !== -1) return index;
+            }
+            return -1;
+        }
+
+        function getCellValue(row, columnIndex) {
+            if (columnIndex === -1 || !row[columnIndex]) return '';
+            return row[columnIndex].toString().trim();
+        }
+
+        function generateBusinessFocus(category) {
+            const focusMap = {
+                'technology': 'IT peripherals and smart devices',
+                'retail': 'Consumer electronics and home appliances',
+                'electronics': 'Audio solutions and mobile accessories',
+                'manufacturing': 'Industrial equipment and automation',
+                'healthcare': 'Medical devices and monitoring systems',
+                'education': 'Educational technology and audio-visual equipment'
+            };
+
+            const categoryLower = category.toLowerCase();
+            for (let [key, focus] of Object.entries(focusMap)) {
+                if (categoryLower.includes(key)) return focus;
+            }
+            return 'Consumer electronics and technology solutions';
+        }
+
         function renderContacts() {
             const container = document.getElementById('contactsList');
             container.innerHTML = '';
+
+            if (contacts.length === 0) {
+                container.innerHTML = '<p>No contacts loaded. Upload a spreadsheet or load sample data.</p>';
+                return;
+            }
 
             contacts.forEach((contact, index) => {
                 const div = document.createElement('div');
                 div.className = 'contact-item';
                 div.onclick = () => selectContact(index);
+
+                // Enhanced display with all contact details
                 div.innerHTML = `
-                    <strong>${contact.firm}</strong><br>
-                    👤 ${contact.contactName}<br>
-                    📧 ${contact.email}<br>
-                    🌍 ${contact.country}
+                    <div style="display: flex; justify-content: between; align-items: start;">
+                        <div style="flex: 1;">
+                            <strong>${contact.firm}</strong>
+                            ${contact.category ? `<span style="background: #e3f2fd; color: #1976d2; padding: 2px 6px; border-radius: 3px; font-size: 0.8em; margin-left: 8px;">${contact.category}</span>` : ''}
+                            <br>
+                            👤 ${contact.contactName}<br>
+                            📧 ${contact.email}<br>
+                            🌍 ${contact.country}
+                            ${contact.phone ? `<br>📞 ${contact.phone}` : ''}
+                            ${contact.website ? `<br>🌐 ${contact.website}` : ''}
+                            ${contact.address ? `<br>📍 ${contact.address}` : ''}
+                            ${contact.source ? `<br>📊 Source: ${contact.source}` : ''}
+                        </div>
+                    </div>
                 `;
                 container.appendChild(div);
             });
