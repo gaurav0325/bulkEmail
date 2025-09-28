@@ -227,19 +227,40 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
                 email: "john.smith@techsolutions.co.uk",
                 contactName: "John Smith",
                 firm: "Tech Solutions UK Ltd",
-                country: "United Kingdom"
+                country: "United Kingdom",
+                phone: "+44-20-7123-4567",
+                website: "www.techsolutions.co.uk",
+                address: "123 Tech Street, London",
+                source: "Website",
+                category: "Technology",
+                businessFocus: "IT peripherals and smart devices",
+                marketStrength: "High"
             },
             {
                 email: "sarah.jones@innovate.com",
                 contactName: "Sarah Jones",
                 firm: "Innovate Corp",
-                country: "United States"
+                country: "United States",
+                phone: "+1-555-123-4567",
+                website: "www.innovate.com",
+                address: "456 Innovation Ave, Silicon Valley",
+                source: "Referral",
+                category: "Electronics",
+                businessFocus: "Audio solutions and mobile accessories",
+                marketStrength: "High"
             },
             {
                 email: "raj.patel@globaltech.in",
                 contactName: "Raj Patel",
                 firm: "Global Tech Solutions",
-                country: "India"
+                country: "India",
+                phone: "+91-11-2345-6789",
+                website: "www.globaltech.in",
+                address: "789 Tech Park, Mumbai",
+                source: "Trade Show",
+                category: "Manufacturing",
+                businessFocus: "Industrial equipment and automation",
+                marketStrength: "Medium"
             }
         ];
 
@@ -268,21 +289,60 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
             const file = event.target.files[0];
             if (!file) return;
 
+            // Check if XLSX library is loaded
+            if (typeof XLSX === 'undefined') {
+                showAlert('Error: Excel processing library not loaded. Please refresh the page.', 'error');
+                return;
+            }
+
             console.log('File selected:', file.name, file.type, file.size);
             showAlert(`Processing ${file.name}...`, 'success');
 
             try {
-                const data = await file.arrayBuffer();
-                console.log('File read, size:', data.byteLength);
-
-                const workbook = XLSX.read(data, { type: 'array' });
-                console.log('Workbook loaded, sheets:', workbook.SheetNames);
-
                 contacts = []; // Clear existing contacts
                 let totalProcessed = 0;
 
-                // Process each worksheet (tab) as a country
-                workbook.SheetNames.forEach(sheetName => {
+                // Handle CSV files differently
+                if (file.name.toLowerCase().endsWith('.csv')) {
+                    const text = await file.text();
+                    console.log('CSV file read, length:', text.length);
+
+                    const csvData = parseCSV(text);
+                    console.log('CSV parsed, headers:', csvData.headers);
+
+                    // Process CSV data
+                    csvData.data.forEach(row => {
+                        const contact = {
+                            country: row.country || 'Unknown',
+                            firm: row['firm name'] || row.company || row.firm || 'Unknown Company',
+                            address: row.address || row.location || '',
+                            phone: row['contact number'] || row.phone || row.telephone || '',
+                            contactName: row['contact person'] || row.name || row.contact || 'Contact Person',
+                            email: row.email || row['email address'] || '',
+                            website: row.website || row.url || '',
+                            source: row.source || row['lead source'] || '',
+                            category: row.category || row.type || row.sector || '',
+                            businessFocus: generateBusinessFocus(row.category || row.type || ''),
+                            marketStrength: 'Medium'
+                        };
+
+                        if (contact.email && contact.email.includes('@')) {
+                            contacts.push(contact);
+                            totalProcessed++;
+                        }
+                    });
+
+                    console.log(`CSV processed: ${totalProcessed} contacts`);
+                } else {
+                    // Handle Excel files
+                    const data = await file.arrayBuffer();
+                    console.log('Excel file read, size:', data.byteLength);
+
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    console.log('Workbook loaded, sheets:', workbook.SheetNames);
+
+                    // Process each worksheet (tab) as a country
+                    workbook.SheetNames.forEach(sheetName => {
                     const worksheet = workbook.Sheets[sheetName];
                     const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
@@ -328,12 +388,14 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
                         }
                     });
 
-                    console.log(`Processed sheet "${sheetName}": ${jsonData.length - 1} rows`);
-                });
+                        console.log(`Processed sheet "${sheetName}": ${jsonData.length - 1} rows`);
+                    });
 
-                console.log(`Total contacts loaded: ${contacts.length}`);
+                    console.log(`Total contacts loaded: ${contacts.length}`);
+                }
+
                 renderContacts();
-                showAlert(`✅ Loaded ${contacts.length} contacts from ${workbook.SheetNames.length} countries!`);
+                showAlert(`✅ Loaded ${contacts.length} contacts${file.name.toLowerCase().endsWith('.csv') ? '' : ` from multiple countries`}!`);
 
             } catch (error) {
                 showAlert(`Error processing file: ${error.message}`, 'error');
@@ -545,9 +607,40 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
             }
         }
 
+        function testXLSXLibrary() {
+            if (typeof XLSX === 'undefined') {
+                console.error('XLSX library not loaded');
+                showAlert('⚠️ Excel processing library failed to load. File upload may not work.', 'error');
+                return false;
+            } else {
+                console.log('XLSX library loaded successfully, version:', XLSX.version);
+                return true;
+            }
+        }
+
+        // Add a simple CSV processor as fallback
+        function parseCSV(text) {
+            const lines = text.split('\n');
+            const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+            const data = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                if (lines[i].trim()) {
+                    const values = lines[i].split(',');
+                    const row = {};
+                    headers.forEach((header, index) => {
+                        row[header] = values[index] ? values[index].trim() : '';
+                    });
+                    data.push(row);
+                }
+            }
+            return { headers, data };
+        }
+
         // Initialize on page load - no complex initialization
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Simple email sender loaded');
+            testXLSXLibrary(); // Test if XLSX library loaded
             extractTemplateHeaders(); // Extract and populate From field
             renderContacts(); // Initialize contact list display
             showAlert('Simple Email Sender ready! Upload a spreadsheet or click "Load Sample Data" to start.');
