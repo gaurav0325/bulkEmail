@@ -158,11 +158,9 @@
             <h3 style="margin: 0; color: #007bff;">📧 Bulk Email Sender</h3>
             <small style="color: #666;">Data Analysis Insights - Professional Email Campaign Tool</small>
         </div>
-        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-            <div id="status" class="status ready" style="margin: 0; padding: 6px 10px; font-size: 11px;" role="status" aria-live="polite">✅ System Ready</div>
-            <button class="button" onclick="testConnection()" style="background: #28a745; padding: 8px 12px; font-size: 12px;" aria-label="Test SMTP Connection">🔧 Test SMTP</button>
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end;">
             <button class="button" onclick="sendEmail()" id="sendBtn" disabled style="padding: 10px 20px; font-size: 14px; font-weight: bold;" aria-label="Send Email to Selected Contact">📤 Send Email</button>
-            <button class="button" onclick="confirmBulkEmail()" id="bulkSendBtn" disabled style="background: #dc3545; padding: 10px 20px; font-size: 14px; font-weight: bold;" aria-label="Send Bulk Email to All Contacts">📧 Bulk Email</button>
+            <button class="button" id="bulkSendBtn" disabled style="background: #6c757d; padding: 10px 20px; font-size: 14px; font-weight: bold; cursor: not-allowed;" aria-label="Bulk Email (Coming Soon)" title="Bulk email functionality coming soon">📧 Bulk Email</button>
         </div>
     </div>
 
@@ -224,14 +222,14 @@
             <div style="margin-bottom: 15px;">
                 <label for="fromEmail" style="font-size: 14px; font-weight: bold; color: #333; display: block; margin-bottom: 5px;">From:</label>
                 <input type="email" id="fromEmail" value="info@datanalysisninsights.co.uk" placeholder="Sender email" style="font-size: 14px; padding: 10px; width: 100%; border: 1px solid #ddd; border-radius: 4px;" aria-required="true" oninput="validateEmail(this)">
+                <div style="background: #e8f4fd; border: 1px solid #b3d9ff; border-radius: 4px; padding: 8px; margin-top: 5px; font-size: 12px; color: #0056b3;">
+                    📧 <strong>Emails will be sent from:</strong> Intex Technologies &lt;info@datanalysisninsights.co.uk&gt;
+                </div>
                 <div id="fromEmailError" style="color: #dc3545; font-size: 12px; margin-top: 2px; display: none;" role="alert"></div>
             </div>
 
             <div style="margin-bottom: 15px;">
                 <label for="toEmail" style="font-size: 14px; font-weight: bold; color: #333; display: block; margin-bottom: 5px;">To: <small style="color: #28a745;">(Use / or , for multiple emails)</small></label>
-                <div style="background: #e8f4fd; border: 1px solid #b3d9ff; border-radius: 4px; padding: 8px; margin-bottom: 5px; font-size: 12px; color: #0056b3;">
-                    📧 <strong>Emails will be sent from:</strong> Intex Technologies &lt;info@datanalysisninsights.co.uk&gt;
-                </div>
                 <input type="text" id="toEmail" placeholder="Select contact or type emails separated by / or ," style="font-size: 14px; padding: 10px; width: 100%; border: 1px solid #ddd; border-radius: 4px;" aria-required="true" oninput="validateEmailList(this)" aria-describedby="toEmailDesc">
                 <small id="toEmailDesc" style="color: #666; font-size: 11px;">Separate multiple emails with commas, semicolons, or forward slashes</small>
                 <div id="toEmailError" style="color: #dc3545; font-size: 12px; margin-top: 2px; display: none;" role="alert"></div>
@@ -633,14 +631,18 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
 
             if (messageExpanded) {
                 messageBody.style.minHeight = '400px';
+                messageBody.style.height = '400px';
                 expandBtn.textContent = '📄 Expand';
                 expandBtn.setAttribute('aria-label', 'Expand message area');
                 messageExpanded = false;
+                showAlert('Message area collapsed to normal size', 'success');
             } else {
                 messageBody.style.minHeight = '600px';
+                messageBody.style.height = '600px';
                 expandBtn.textContent = '📄 Collapse';
                 expandBtn.setAttribute('aria-label', 'Collapse message area');
                 messageExpanded = true;
+                showAlert('Message area expanded for better readability', 'success');
             }
         }
 
@@ -1177,12 +1179,6 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
             document.getElementById('totalCount').textContent = `${emailStatusCounts.total} contacts`;
             document.getElementById('sentCount').textContent = `${emailStatusCounts.sent} sent`;
             document.getElementById('failedCount').textContent = `${emailStatusCounts.failed} failed`;
-
-            // Enable bulk button if there are pending contacts
-            const bulkBtn = document.getElementById('bulkSendBtn');
-            if (bulkBtn) {
-                bulkBtn.disabled = emailStatusCounts.pending === 0;
-            }
         }
 
         function handleScroll() {
@@ -1229,14 +1225,13 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
 
             // Populate email form
             document.getElementById('toEmail').value = contact.email;
-            document.getElementById('subject').value = subjectTemplate.replace(/{country}/g, contact.country)
-                                                                     .replace(/{firm}/g, contact.firm)
+            document.getElementById('subject').value = subjectTemplate.replace(/{firm}/g, contact.firm)
+                                                                     .replace(/{contactName}/g, contact.contactName)
                                                                      .replace(/{email}/g, contact.email);
 
-            // Generate email body from template
+            // Generate email body from template - let user decide about country context
             let body = template.replace(/{email}/g, contact.email)
                               .replace(/{contactName}/g, contact.contactName)
-                              .replace(/{country}/g, contact.country)
                               .replace(/{firm}/g, contact.firm);
 
             // Remove email headers from body
@@ -1255,7 +1250,6 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
 
             document.getElementById('messageBody').value = bodyLines.slice(bodyStart).join('\n').trim();
             document.getElementById('sendBtn').disabled = false;
-            document.getElementById('bulkSendBtn').disabled = false;
 
             showAlert(`Selected: ${contact.contactName} from ${contact.firm}`);
         }
@@ -1367,183 +1361,9 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
             }
         }
 
-        function confirmBulkEmail() {
-            if (contacts.length === 0) {
-                showAlert('No contacts loaded. Please upload a spreadsheet first.', 'error');
-                return;
-            }
+        // Bulk email functionality temporarily disabled
 
-            const pendingContacts = contacts.filter(c => c.emailStatus === 'pending');
-            if (pendingContacts.length === 0) {
-                showAlert('No pending contacts to send emails to. All contacts have already been processed.', 'error');
-                return;
-            }
-
-            const template = document.getElementById('emailTemplate').value;
-            const subject = document.getElementById('subject').value;
-            const body = document.getElementById('messageBody').value;
-
-            if (!subject || !body) {
-                showAlert('Please fill in the Subject and Message fields before sending bulk emails.', 'error');
-                return;
-            }
-
-            const confirmMessage = `🚨 BULK EMAIL CONFIRMATION 🚨
-
-Are you absolutely sure you want to send emails to ${pendingContacts.length} contacts?
-
-This will:
-✓ Send personalized emails to each contact
-✓ Use the current Subject and Message content
-✓ Update contact status for tracking
-✓ Cannot be undone once started
-
-Contacts to email: ${pendingContacts.length}
-Subject: "${subject.substring(0, 50)}${subject.length > 50 ? '...' : ''}"
-
-Click OK to proceed or Cancel to abort.`;
-
-            if (confirm(confirmMessage)) {
-                bulkSendEmails(pendingContacts);
-            }
-        }
-
-        async function bulkSendEmails(contactsToEmail) {
-            if (contactsToEmail.length === 0) return;
-
-            // Validate inputs first
-            const subjectValid = validateSubject(document.getElementById('subject'));
-            const messageValid = validateMessage(document.getElementById('messageBody'));
-
-            if (!subjectValid || !messageValid) {
-                showAlert('Please fix validation errors before sending bulk emails', 'error');
-                return;
-            }
-
-            showAlert(`🚀 Starting bulk email to ${contactsToEmail.length} contacts...`, 'success');
-
-            const bulkBtn = document.getElementById('bulkSendBtn');
-            const sendBtn = document.getElementById('sendBtn');
-
-            bulkBtn.textContent = '📤 Sending...';
-            bulkBtn.disabled = true;
-            sendBtn.disabled = true;
-
-            let successCount = 0;
-            let failureCount = 0;
-
-            try {
-                for (let i = 0; i < contactsToEmail.length; i++) {
-                    const contact = contactsToEmail[i];
-
-                    // Update button text with progress
-                    bulkBtn.textContent = `📤 Sending ${i + 1}/${contactsToEmail.length}...`;
-
-                    // Generate personalized email content
-                    const personalizedSubject = document.getElementById('subject').value
-                        .replace(/{country}/g, contact.country)
-                        .replace(/{firm}/g, contact.firm)
-                        .replace(/{email}/g, contact.email)
-                        .replace(/{contactName}/g, contact.contactName);
-
-                    const personalizedBody = document.getElementById('messageBody').value
-                        .replace(/{country}/g, contact.country)
-                        .replace(/{firm}/g, contact.firm)
-                        .replace(/{email}/g, contact.email)
-                        .replace(/{contactName}/g, contact.contactName);
-
-                    try {
-                        const response = await fetch('/.netlify/functions/send-email-working', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                from_email: document.getElementById('fromEmail').value,
-                                from_name: 'Intex Technologies',
-                                to_email: contact.email,
-                                subject: personalizedSubject,
-                                content: personalizedBody
-                            })
-                        });
-
-                        const result = await response.json();
-
-                        if (result.success) {
-                            contact.emailStatus = 'sent';
-                            successCount++;
-                            addToEmailHistory(contact.email, personalizedSubject, 'sent', Date.now());
-                        } else {
-                            contact.emailStatus = 'failed';
-                            failureCount++;
-                            addToEmailHistory(contact.email, personalizedSubject, 'failed', Date.now());
-                        }
-                    } catch (error) {
-                        console.error(`Bulk email error for ${contact.email}:`, error);
-                        contact.emailStatus = 'failed';
-                        failureCount++;
-                        addToEmailHistory(contact.email, personalizedSubject, 'failed', Date.now());
-                    }
-
-                    // Small delay to avoid overwhelming the server
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                }
-
-                // Final results
-                showAlert(`✅ Bulk email completed! Success: ${successCount}, Failed: ${failureCount}`, 'success');
-                renderContacts(); // Update contact colors
-
-            } catch (error) {
-                console.error('Bulk email process error:', error);
-                showAlert(`❌ Bulk email process failed: ${error.message}`, 'error');
-            } finally {
-                bulkBtn.textContent = '📧 Bulk Email';
-                bulkBtn.disabled = false;
-                sendBtn.disabled = false;
-            }
-        }
-
-        async function testConnection() {
-            try {
-                console.log('=== SMTP CONNECTION TEST STARTED ===');
-                showAlert('Testing SMTP credentials and connection...', 'success');
-
-                document.getElementById('status').textContent = '🔄 Testing SMTP...';
-                document.getElementById('status').className = 'status ready';
-
-                const response = await fetch('/.netlify/functions/test-smtp', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-
-                const result = await response.json();
-                console.log('SMTP test result:', result);
-
-                if (result.success) {
-                    showAlert(`${result.message}`, 'success');
-                    showAlert(`Connected to: ${result.smtp_config.server}:${result.smtp_config.port}`, 'success');
-                    document.getElementById('status').textContent = '✅ SMTP Ready';
-                    document.getElementById('status').className = 'status ready';
-                } else {
-                    showAlert(`${result.message}`, 'error');
-
-                    if (result.troubleshooting && result.troubleshooting.length > 0) {
-                        showAlert(`Troubleshooting: ${result.troubleshooting.join(', ')}`, 'error');
-                    }
-
-                    if (result.instructions) {
-                        console.log('SMTP Setup Instructions:', result.instructions);
-                        showAlert('Check console for detailed setup instructions', 'error');
-                    }
-
-                    document.getElementById('status').textContent = '❌ SMTP Issues';
-                    document.getElementById('status').className = 'status error';
-                }
-            } catch (error) {
-                console.error('SMTP test error:', error);
-                showAlert('❌ SMTP test failed - network error', 'error');
-                document.getElementById('status').textContent = '❌ SMTP Error';
-                document.getElementById('status').className = 'status error';
-            }
-        }
+        // Test connection functionality removed
 
         function extractTemplateHeaders() {
             const template = document.getElementById('emailTemplate').value;
