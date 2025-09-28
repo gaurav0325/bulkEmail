@@ -244,14 +244,18 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
 
         async function handleFileUpload(event) {
             const file = event.target.files[0];
-            if (!file) return;
+            if (!file) {
+                console.log('No file selected');
+                return;
+            }
 
-            // Check if XLSX library is loaded
-            if (typeof XLSX === 'undefined') {
+            // Check if XLSX library is loaded for Excel files
+            if (!file.name.toLowerCase().endsWith('.csv') && typeof XLSX === 'undefined') {
                 showAlert('Error: Excel processing library not loaded. Please refresh the page.', 'error');
                 return;
             }
 
+            console.log('=== FILE UPLOAD STARTED ===');
             console.log('File selected:', file.name, file.type, file.size);
             showAlert(`Processing ${file.name}...`, 'success');
 
@@ -261,14 +265,17 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
 
                 // Handle CSV files differently
                 if (file.name.toLowerCase().endsWith('.csv')) {
+                    console.log('Processing CSV file...');
                     const text = await file.text();
                     console.log('CSV file read, length:', text.length);
 
                     const csvData = parseCSV(text);
                     console.log('CSV parsed, headers:', csvData.headers);
+                    console.log('CSV data rows:', csvData.data.length);
 
                     // Process CSV data
-                    csvData.data.forEach(row => {
+                    csvData.data.forEach((row, index) => {
+                        console.log(`Processing row ${index + 1}:`, row);
                         const contact = {
                             country: row.country || 'Unknown',
                             firm: row['firm name'] || row.company || row.firm || 'Unknown Company',
@@ -283,13 +290,19 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
                             marketStrength: 'Medium'
                         };
 
+                        console.log('Contact created:', contact);
+
                         if (contact.email && contact.email.includes('@')) {
                             contacts.push(contact);
                             totalProcessed++;
+                            console.log(`Added contact ${totalProcessed}: ${contact.firm} - ${contact.email}`);
+                        } else {
+                            console.log('Skipped contact (no valid email):', contact);
                         }
                     });
 
-                    console.log(`CSV processed: ${totalProcessed} contacts`);
+                    console.log(`CSV processed: ${totalProcessed} contacts added to array`);
+                    console.log('Final contacts array:', contacts);
                 } else {
                     // Handle Excel files
                     const data = await file.arrayBuffer();
@@ -351,6 +364,7 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
                     console.log(`Total contacts loaded: ${contacts.length}`);
                 }
 
+                console.log('About to render contacts. Array length:', contacts.length);
                 renderContacts();
                 showAlert(`✅ Loaded ${contacts.length} contacts${file.name.toLowerCase().endsWith('.csv') ? '' : ` from multiple countries`}!`);
 
@@ -391,7 +405,16 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
         }
 
         function renderContacts() {
+            console.log('=== RENDER CONTACTS CALLED ===');
+            console.log('Contacts to render:', contacts.length);
+            console.log('Contacts array:', contacts);
+
             const container = document.getElementById('contactsList');
+            if (!container) {
+                console.error('contactsList element not found!');
+                return;
+            }
+
             container.innerHTML = '';
 
             if (contacts.length === 0) {
@@ -405,7 +428,9 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
                 return;
             }
 
+            console.log('Rendering individual contacts...');
             contacts.forEach((contact, index) => {
+                console.log(`Rendering contact ${index + 1}:`, contact);
                 const div = document.createElement('div');
                 div.className = 'contact-item';
                 div.onclick = () => selectContact(index);
@@ -428,7 +453,9 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
                     </div>
                 `;
                 container.appendChild(div);
+                console.log(`Contact ${index + 1} added to DOM`);
             });
+            console.log('=== CONTACT RENDERING COMPLETE ===');
         }
 
         function selectContact(index) {
