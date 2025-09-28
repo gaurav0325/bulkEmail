@@ -513,10 +513,13 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
         }
 
         async function sendEmail() {
+            console.log('=== EMAIL SENDING STARTED ===');
             const fromEmail = document.getElementById('fromEmail').value;
             const toEmail = document.getElementById('toEmail').value;
             const subject = document.getElementById('subject').value;
             const body = document.getElementById('messageBody').value;
+
+            console.log('Email details:', { fromEmail, toEmail, subject: subject.substring(0, 50) + '...' });
 
             if (!toEmail || !subject || !body) {
                 showAlert('Please fill in all fields', 'error');
@@ -527,19 +530,23 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
                 document.getElementById('sendBtn').textContent = '📤 Sending...';
                 document.getElementById('sendBtn').disabled = true;
 
-                // Try to send via simple function
-                const response = await fetch('/.netlify/functions/send-email-simple', {
+                // Try to send via working function with real SMTP
+                console.log('Sending request to Netlify function...');
+                const response = await fetch('/.netlify/functions/send-email-working', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         from_email: fromEmail,
+                        from_name: 'Intex Technologies',
                         to_email: toEmail,
                         subject: subject,
                         content: body
                     })
                 });
 
+                console.log('Response status:', response.status);
                 const result = await response.json();
+                console.log('Response result:', result);
 
                 if (result.success) {
                     showAlert(`✅ ${result.message}`);
@@ -551,6 +558,7 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
                 }
 
             } catch (error) {
+                console.error('Email sending error:', error);
                 showAlert(`Network error: ${error.message}`, 'error');
             } finally {
                 document.getElementById('sendBtn').textContent = '📤 Send Email';
