@@ -112,17 +112,20 @@
         <div class="panel">
             <h2>📂 Contacts & Template</h2>
 
-            <div style="margin-bottom: 15px; padding: 15px; border: 2px dashed #007bff; border-radius: 8px; background: #f8f9fa;">
-                <label for="fileUpload" style="display: block; margin-bottom: 5px; font-weight: bold; color: #007bff;">📁 Upload Contact Spreadsheet:</label>
-                <input type="file" id="fileUpload" accept=".xlsx,.xls,.csv" onchange="handleFileUpload(event)" style="margin-bottom: 10px; width: 100%; padding: 8px;">
-                <small style="color: #666; display: block;">
-                    ✓ Supports Excel (.xlsx, .xls) and CSV files<br>
-                    ✓ Each tab/sheet represents a country<br>
-                    ✓ Expected columns: firm name, address, contact number, contact person, email, website, source, category
-                </small>
-            </div>
+            <div style="text-align: center; padding: 30px; border: 3px dashed #007bff; border-radius: 12px; background: linear-gradient(135deg, #f8f9fa 0%, #e3f2fd 100%); margin-bottom: 20px;">
+                <h3 style="color: #007bff; margin-bottom: 15px;">📊 Upload Your Contact Database</h3>
+                <p style="color: #666; margin-bottom: 20px;">Upload your spreadsheet to start sending personalized emails</p>
 
-            <button class="button" onclick="loadSampleData()">📋 Load Sample Data</button>
+                <label for="fileUpload" class="button" style="background: #28a745; cursor: pointer; display: inline-block; font-size: 16px; padding: 12px 24px;">
+                    📁 Choose Spreadsheet File
+                </label>
+                <input type="file" id="fileUpload" accept=".xlsx,.xls,.csv" onchange="handleFileUpload(event)" style="display: none;">
+
+                <div style="margin-top: 15px; font-size: 14px; color: #666;">
+                    <strong>Supported formats:</strong> Excel (.xlsx, .xls) • CSV files<br>
+                    <strong>Structure:</strong> Each tab/sheet = country • Columns: firm name, contact person, email, phone, etc.
+                </div>
+            </div>
 
             <h3>Email Template</h3>
             <textarea id="emailTemplate" placeholder="Email template will appear here...">From: vishwas.agarwal@gmail.com
@@ -221,48 +224,7 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
         let contacts = [];
         let selectedContactIndex = -1;
 
-        // Sample data - no API calls needed
-        const sampleContacts = [
-            {
-                email: "john.smith@techsolutions.co.uk",
-                contactName: "John Smith",
-                firm: "Tech Solutions UK Ltd",
-                country: "United Kingdom",
-                phone: "+44-20-7123-4567",
-                website: "www.techsolutions.co.uk",
-                address: "123 Tech Street, London",
-                source: "Website",
-                category: "Technology",
-                businessFocus: "IT peripherals and smart devices",
-                marketStrength: "High"
-            },
-            {
-                email: "sarah.jones@innovate.com",
-                contactName: "Sarah Jones",
-                firm: "Innovate Corp",
-                country: "United States",
-                phone: "+1-555-123-4567",
-                website: "www.innovate.com",
-                address: "456 Innovation Ave, Silicon Valley",
-                source: "Referral",
-                category: "Electronics",
-                businessFocus: "Audio solutions and mobile accessories",
-                marketStrength: "High"
-            },
-            {
-                email: "raj.patel@globaltech.in",
-                contactName: "Raj Patel",
-                firm: "Global Tech Solutions",
-                country: "India",
-                phone: "+91-11-2345-6789",
-                website: "www.globaltech.in",
-                address: "789 Tech Park, Mumbai",
-                source: "Trade Show",
-                category: "Manufacturing",
-                businessFocus: "Industrial equipment and automation",
-                marketStrength: "Medium"
-            }
-        ];
+        // No sample data - users must upload their own spreadsheets
 
         function showAlert(message, type = 'success') {
             const alerts = document.getElementById('alerts');
@@ -279,11 +241,6 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
             }, 5000);
         }
 
-        function loadSampleData() {
-            contacts = [...sampleContacts];
-            renderContacts();
-            showAlert('Sample contacts loaded successfully!');
-        }
 
         async function handleFileUpload(event) {
             const file = event.target.files[0];
@@ -438,7 +395,13 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
             container.innerHTML = '';
 
             if (contacts.length === 0) {
-                container.innerHTML = '<p>No contacts loaded. Upload a spreadsheet or load sample data.</p>';
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #666; border: 2px dashed #ddd; border-radius: 8px; background: #f9f9f9;">
+                        <h4 style="color: #999; margin-bottom: 10px;">📋 No Contacts Loaded</h4>
+                        <p>Upload your spreadsheet above to see your contact database here</p>
+                        <small>Your contacts will appear here after uploading</small>
+                    </div>
+                `;
                 return;
             }
 
@@ -643,7 +606,7 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
             testXLSXLibrary(); // Test if XLSX library loaded
             extractTemplateHeaders(); // Extract and populate From field
             renderContacts(); // Initialize contact list display
-            showAlert('Simple Email Sender ready! Upload a spreadsheet or click "Load Sample Data" to start.');
+            showAlert('📧 Email Sender Ready! Upload your contact spreadsheet to begin sending personalized emails.');
         });
     </script>
 </body>
