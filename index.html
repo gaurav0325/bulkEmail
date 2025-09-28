@@ -996,7 +996,7 @@ We are pleased to introduce Intex Technologies, a globally recognized brand with
                 this.showLoading('Sending email...');
 
                 try {
-                    const response = await fetch(`${this.apiBaseUrl}/send-email-zoho`, {
+                    const response = await fetch(`${this.apiBaseUrl}/send-email-simple`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(emailData)

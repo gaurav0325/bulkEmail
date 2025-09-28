@@ -15,84 +15,90 @@ exports.handler = async (event, context) => {
     };
   }
 
-  // Always return success for GET requests
-  try {
-    // Default template content
-    const defaultTemplate = `From: vishwas.agarwal@gmail.com
-From-Name: Intex Technologies
+  // ALWAYS return 200 with data - no try/catch to prevent errors
+  const response = {
+    statusCode: 200,
+    headers,
+    body: JSON.stringify({
+      success: true,
+      message: 'Default files loaded successfully',
+      timestamp: new Date().toISOString(),
+      word_content: getDefaultTemplate(),
+      excel_data: getSampleContacts()
+    })
+  };
+
+  return response;
+};
+
+function getDefaultTemplate() {
+  return `From: info@datanalysisninsights.co.uk
+From-Name: Data Analysis Insights
 To: {email}
 Subject: Business Partnership Opportunity - {country}
 
 Dear {contactName},
 
-We are pleased to introduce Intex Technologies, a globally recognized brand with a rich legacy spanning 29 years in the consumer electronics and technology sectors.
+We are pleased to introduce Data Analysis Insights, your trusted partner for comprehensive business intelligence and market research solutions.
 
-Since our inception in 1996, we have been at the forefront of innovation, designing and manufacturing cutting-edge products that enhance the daily lives of millions of consumers worldwide. Our commitment to excellence has made us a trusted name in markets across the globe.
+Since our establishment, we have been at the forefront of providing cutting-edge analytics and insights that drive business growth and strategic decision-making across various industries.
 
-Our Product Portfolio:
-• IT Peripherals: Speakers, keyboards, mice, webcams, and computer accessories
-• Home Appliances: Air coolers, room heaters, water purifiers, and kitchen appliances
-• Mobile Accessories: Power banks, chargers, cables, and smartphone accessories
-• Audio Solutions: Wireless speakers, headphones, and sound systems
+Our Services:
+• Market Research & Analysis
+• Business Intelligence Solutions
+• Data Visualization & Reporting
+• Strategic Consulting
+• Industry Trend Analysis
 
-We are actively seeking distribution partners in {country} who share our vision of delivering high-quality, innovative products to consumers. We believe your organization, with its established market presence and distribution network, would be an ideal partner for expanding our reach in your region.
+We are actively seeking business partnerships in {country} with organizations that value data-driven insights and strategic intelligence.
 
-What We Offer:
-✓ Competitive pricing and attractive margins
-✓ Comprehensive marketing support
-✓ Technical training and product support
-✓ Flexible payment terms
-✓ Exclusive territory rights (subject to discussion)
+We believe your organization, with its established market presence and commitment to excellence, would be an ideal partner for expanding our services in your region.
 
-We would welcome the opportunity to discuss how we can work together to bring Intex Technologies' innovative products to your market. Our team is available to provide detailed product catalogs, pricing information, and partnership terms that align with your business objectives.
+Partnership Benefits:
+✓ Comprehensive training and support
+✓ Marketing assistance and co-branding opportunities
+✓ Flexible partnership terms
+✓ Exclusive territorial rights (subject to discussion)
+✓ Ongoing technical and business support
 
-Please feel free to contact us at your earliest convenience to explore this exciting business opportunity.
+We would welcome the opportunity to discuss how we can work together to bring our innovative solutions to your market.
 
-Thank you for your time and consideration. We look forward to hearing from you soon.
+Please feel free to contact us to explore this exciting business opportunity.
 
 Best regards,
 
-Vishwas Agarwal
-Business Development Manager
-Intex Technologies
-Email: vishwas.agarwal@gmail.com
-Website: www.intex.in
+Data Analysis Insights Team
+Email: info@datanalysisninsights.co.uk
+Website: www.datanalysisninsights.co.uk
 
-P.S. We are also interested in exploring private label manufacturing opportunities for established brands in your market.`;
+P.S. We are also interested in exploring joint ventures and collaborative projects in the business intelligence sector.`;
+}
 
-    // Sample contact data (you can replace this with actual default data)
-    const sampleContacts = [
-      {
-        email: "contact@example.com",
-        contact_person: "John Smith",
-        firm: "Tech Solutions Ltd",
-        country: "United Kingdom",
-        address: "123 Business Street, London",
-        phone: "+44 20 1234 5678"
-      }
-    ];
-
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({
-        success: true,
-        word_content: defaultTemplate,
-        excel_data: sampleContacts,
-        message: 'Default files loaded successfully'
-      })
-    };
-
-  } catch (error) {
-    return {
-      statusCode: 200, // Return 200 even on error to prevent infinite loading
-      headers,
-      body: JSON.stringify({
-        success: false,
-        message: 'Default files not available',
-        word_content: 'From: vishwas.agarwal@gmail.com\nSubject: Test\n\nHello!',
-        excel_data: []
-      })
-    };
-  }
-};
+function getSampleContacts() {
+  return [
+    {
+      email: "john.smith@techsolutions.co.uk",
+      contact_person: "John Smith",
+      firm: "Tech Solutions UK Ltd",
+      country: "United Kingdom",
+      address: "123 Business Park, London EC1A 1BB",
+      phone: "+44 20 7123 4567"
+    },
+    {
+      email: "sarah.jones@innovate.com",
+      contact_person: "Sarah Jones",
+      firm: "Innovate Corp",
+      country: "United States",
+      address: "456 Innovation Drive, New York, NY 10001",
+      phone: "+1 212 555 0123"
+    },
+    {
+      email: "raj.patel@globaltech.in",
+      contact_person: "Raj Patel",
+      firm: "Global Tech Solutions",
+      country: "India",
+      address: "789 Tech Hub, Mumbai 400001",
+      phone: "+91 22 1234 5678"
+    }
+  ];
+}
