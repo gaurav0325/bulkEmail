@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bulk Email Sender - Data Analysis Insights</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -111,7 +112,20 @@
         <div class="panel">
             <h2>📂 Contacts & Template</h2>
 
-            <button class="button" onclick="loadSampleData()">📋 Load Sample Data</button>
+            <div style="text-align: center; padding: 30px; border: 3px dashed #007bff; border-radius: 12px; background: linear-gradient(135deg, #f8f9fa 0%, #e3f2fd 100%); margin-bottom: 20px;">
+                <h3 style="color: #007bff; margin-bottom: 15px;">📊 Upload Your Contact Database</h3>
+                <p style="color: #666; margin-bottom: 20px;">Upload your spreadsheet to start sending personalized emails</p>
+
+                <label for="fileUpload" class="button" style="background: #28a745; cursor: pointer; display: inline-block; font-size: 16px; padding: 12px 24px;">
+                    📁 Choose Spreadsheet File
+                </label>
+                <input type="file" id="fileUpload" accept=".xlsx,.xls,.csv" onchange="handleFileUpload(event)" style="display: none;">
+
+                <div style="margin-top: 15px; font-size: 14px; color: #666;">
+                    <strong>Supported formats:</strong> Excel (.xlsx, .xls) • CSV files<br>
+                    <strong>Structure:</strong> Each tab/sheet = country • Columns: firm name, contact person, email, phone, etc.
+                </div>
+            </div>
 
             <h3>Email Template</h3>
             <textarea id="emailTemplate" placeholder="Email template will appear here...">From: vishwas.agarwal@gmail.com
@@ -131,10 +145,9 @@ Our Product Portfolio:
 • Mobile Accessories: Power banks, chargers, cables, and smartphone accessories
 • Audio Solutions: Wireless speakers, headphones, and sound systems
 
-We are actively seeking distribution partners in {country} who share our vision of delivering high-quality, innovative products to consumers. We believe {firm}, with its {businessFocus}, would be an ideal partner for expanding our reach in the {country} market.
+We are actively seeking distribution partners in {country} who share our vision of delivering high-quality, innovative products to consumers. We believe {firm}, with its established market presence and commitment to excellence, would be an ideal partner for expanding our reach in the {country} market.
 
-Given {firm}'s {marketStrength}, we see significant opportunities for collaboration in areas where Intex Technologies can provide value:
-
+Specific Opportunities for {firm} in {country}:
 {businessOpportunities}
 
 What We Offer Our Partners:
@@ -181,7 +194,7 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
 
             <div style="margin-bottom: 15px;">
                 <label>From:</label>
-                <input type="email" id="fromEmail" value="info@datanalysisninsights.co.uk">
+                <input type="email" id="fromEmail" value="vishwas.agarwal@gmail.com">
             </div>
 
             <div style="margin-bottom: 15px;">
@@ -201,26 +214,7 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
 
             <div>
                 <button class="button" onclick="sendEmail()" id="sendBtn" disabled>📤 Send Email</button>
-                <button class="button" onclick="sendBulkEmails()" id="bulkBtn" disabled style="background: #dc3545;">📬 Send All</button>
                 <button class="button" onclick="testConnection()" style="background: #28a745;">🔧 Test SMTP</button>
-            </div>
-
-            <div style="margin-top: 20px;">
-                <h3>📊 Statistics</h3>
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
-                    <div style="background: #e7f3ff; padding: 10px; border-radius: 5px; text-align: center;">
-                        <div style="font-size: 1.5em; font-weight: bold;" id="totalCount">0</div>
-                        <div>Total</div>
-                    </div>
-                    <div style="background: #e7ffe7; padding: 10px; border-radius: 5px; text-align: center;">
-                        <div style="font-size: 1.5em; font-weight: bold;" id="sentCount">0</div>
-                        <div>Sent</div>
-                    </div>
-                    <div style="background: #ffe7e7; padding: 10px; border-radius: 5px; text-align: center;">
-                        <div style="font-size: 1.5em; font-weight: bold;" id="remainingCount">0</div>
-                        <div>Remaining</div>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
@@ -230,69 +224,7 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
         let contacts = [];
         let selectedContactIndex = -1;
 
-        // Sample data with detailed business focus - no API calls needed
-        const sampleContacts = [
-            {
-                email: "john.smith@techsolutions.co.uk",
-                contactName: "John Smith",
-                firm: "Tech Solutions UK Ltd",
-                country: "United Kingdom",
-                businessFocus: "IT retail and consumer electronics distribution",
-                marketStrength: "Strong presence in UK retail chains and online platforms",
-                sent: false,
-                success: false
-            },
-            {
-                email: "sarah.jones@innovate.com",
-                contactName: "Sarah Jones",
-                firm: "Innovate Corp",
-                country: "United States",
-                businessFocus: "Home appliances and smart technology distribution",
-                marketStrength: "Extensive network across major US retail outlets",
-                sent: false,
-                success: false
-            },
-            {
-                email: "raj.patel@globaltech.in",
-                contactName: "Raj Patel",
-                firm: "Global Tech Solutions",
-                country: "India",
-                businessFocus: "Mobile accessories and IT peripherals wholesale",
-                marketStrength: "Pan-India distribution network with tier-2 and tier-3 city reach",
-                sent: false,
-                success: false
-            },
-            {
-                email: "maria.garcia@techmexico.mx",
-                contactName: "Maria Garcia",
-                firm: "TechMexico Solutions",
-                country: "Mexico",
-                businessFocus: "Consumer electronics and audio solutions retail",
-                marketStrength: "Leading distributor in Mexico and Central America",
-                sent: false,
-                success: false
-            },
-            {
-                email: "ahmed.hassan@middleeasttech.ae",
-                contactName: "Ahmed Hassan",
-                firm: "Middle East Tech Hub",
-                country: "United Arab Emirates",
-                businessFocus: "Premium electronics and home appliances distribution",
-                marketStrength: "Strategic location serving GCC and MENA markets",
-                sent: false,
-                success: false
-            },
-            {
-                email: "chen.li@asiatech.sg",
-                contactName: "Chen Li",
-                firm: "Asia Tech Distribution",
-                country: "Singapore",
-                businessFocus: "IT peripherals and business solutions distribution",
-                marketStrength: "Hub for Southeast Asian market penetration",
-                sent: false,
-                success: false
-            }
-        ];
+        // No sample data - users must upload their own spreadsheets
 
         function showAlert(message, type = 'success') {
             const alerts = document.getElementById('alerts');
@@ -309,58 +241,194 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
             }, 5000);
         }
 
-        function loadSampleData() {
-            contacts = [...sampleContacts];
-            renderContacts();
-            updateStats();
-            document.getElementById('bulkBtn').disabled = false;
-            showAlert('Sample contacts loaded successfully!');
+
+        async function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Check if XLSX library is loaded
+            if (typeof XLSX === 'undefined') {
+                showAlert('Error: Excel processing library not loaded. Please refresh the page.', 'error');
+                return;
+            }
+
+            console.log('File selected:', file.name, file.type, file.size);
+            showAlert(`Processing ${file.name}...`, 'success');
+
+            try {
+                contacts = []; // Clear existing contacts
+                let totalProcessed = 0;
+
+                // Handle CSV files differently
+                if (file.name.toLowerCase().endsWith('.csv')) {
+                    const text = await file.text();
+                    console.log('CSV file read, length:', text.length);
+
+                    const csvData = parseCSV(text);
+                    console.log('CSV parsed, headers:', csvData.headers);
+
+                    // Process CSV data
+                    csvData.data.forEach(row => {
+                        const contact = {
+                            country: row.country || 'Unknown',
+                            firm: row['firm name'] || row.company || row.firm || 'Unknown Company',
+                            address: row.address || row.location || '',
+                            phone: row['contact number'] || row.phone || row.telephone || '',
+                            contactName: row['contact person'] || row.name || row.contact || 'Contact Person',
+                            email: row.email || row['email address'] || '',
+                            website: row.website || row.url || '',
+                            source: row.source || row['lead source'] || '',
+                            category: row.category || row.type || row.sector || '',
+                            businessFocus: generateBusinessFocus(row.category || row.type || ''),
+                            marketStrength: 'Medium'
+                        };
+
+                        if (contact.email && contact.email.includes('@')) {
+                            contacts.push(contact);
+                            totalProcessed++;
+                        }
+                    });
+
+                    console.log(`CSV processed: ${totalProcessed} contacts`);
+                } else {
+                    // Handle Excel files
+                    const data = await file.arrayBuffer();
+                    console.log('Excel file read, size:', data.byteLength);
+
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    console.log('Workbook loaded, sheets:', workbook.SheetNames);
+
+                    // Process each worksheet (tab) as a country
+                    workbook.SheetNames.forEach(sheetName => {
+                    const worksheet = workbook.Sheets[sheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+                    if (jsonData.length < 2) return; // Skip empty sheets
+
+                    const headers = jsonData[0].map(h => h?.toString().toLowerCase().trim());
+                    const rows = jsonData.slice(1);
+
+                    // Map column indices for key parameters
+                    const columnMap = {
+                        firm: findColumnIndex(headers, ['firm name', 'company', 'firm', 'organization']),
+                        address: findColumnIndex(headers, ['address', 'location', 'addr']),
+                        phone: findColumnIndex(headers, ['contact number', 'phone', 'telephone', 'mobile']),
+                        contactName: findColumnIndex(headers, ['contact person', 'name', 'contact', 'person']),
+                        email: findColumnIndex(headers, ['email', 'email address', 'e-mail']),
+                        website: findColumnIndex(headers, ['website', 'url', 'web', 'site']),
+                        source: findColumnIndex(headers, ['source', 'lead source', 'origin']),
+                        category: findColumnIndex(headers, ['category', 'type', 'sector', 'industry'])
+                    };
+
+                    // Process each row
+                    rows.forEach(row => {
+                        if (!row || row.length === 0) return;
+
+                        const contact = {
+                            country: sheetName, // Use sheet name as country
+                            firm: getCellValue(row, columnMap.firm) || 'Unknown Company',
+                            address: getCellValue(row, columnMap.address) || '',
+                            phone: getCellValue(row, columnMap.phone) || '',
+                            contactName: getCellValue(row, columnMap.contactName) || 'Contact Person',
+                            email: getCellValue(row, columnMap.email) || '',
+                            website: getCellValue(row, columnMap.website) || '',
+                            source: getCellValue(row, columnMap.source) || '',
+                            category: getCellValue(row, columnMap.category) || '',
+                            businessFocus: generateBusinessFocus(getCellValue(row, columnMap.category)),
+                            marketStrength: 'High'
+                        };
+
+                        // Only add if email exists
+                        if (contact.email && contact.email.includes('@')) {
+                            contacts.push(contact);
+                            totalProcessed++;
+                        }
+                    });
+
+                        console.log(`Processed sheet "${sheetName}": ${jsonData.length - 1} rows`);
+                    });
+
+                    console.log(`Total contacts loaded: ${contacts.length}`);
+                }
+
+                renderContacts();
+                showAlert(`✅ Loaded ${contacts.length} contacts${file.name.toLowerCase().endsWith('.csv') ? '' : ` from multiple countries`}!`);
+
+            } catch (error) {
+                showAlert(`Error processing file: ${error.message}`, 'error');
+                console.error('File processing error:', error);
+            }
+        }
+
+        function findColumnIndex(headers, possibleNames) {
+            for (let name of possibleNames) {
+                const index = headers.findIndex(h => h && h.includes(name));
+                if (index !== -1) return index;
+            }
+            return -1;
+        }
+
+        function getCellValue(row, columnIndex) {
+            if (columnIndex === -1 || !row[columnIndex]) return '';
+            return row[columnIndex].toString().trim();
+        }
+
+        function generateBusinessFocus(category) {
+            const focusMap = {
+                'technology': 'IT peripherals and smart devices',
+                'retail': 'Consumer electronics and home appliances',
+                'electronics': 'Audio solutions and mobile accessories',
+                'manufacturing': 'Industrial equipment and automation',
+                'healthcare': 'Medical devices and monitoring systems',
+                'education': 'Educational technology and audio-visual equipment'
+            };
+
+            const categoryLower = category.toLowerCase();
+            for (let [key, focus] of Object.entries(focusMap)) {
+                if (categoryLower.includes(key)) return focus;
+            }
+            return 'Consumer electronics and technology solutions';
         }
 
         function renderContacts() {
             const container = document.getElementById('contactsList');
             container.innerHTML = '';
 
+            if (contacts.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #666; border: 2px dashed #ddd; border-radius: 8px; background: #f9f9f9;">
+                        <h4 style="color: #999; margin-bottom: 10px;">📋 No Contacts Loaded</h4>
+                        <p>Upload your spreadsheet above to see your contact database here</p>
+                        <small>Your contacts will appear here after uploading</small>
+                    </div>
+                `;
+                return;
+            }
+
             contacts.forEach((contact, index) => {
                 const div = document.createElement('div');
                 div.className = 'contact-item';
-                if (contact.sent) {
-                    div.style.background = contact.success ? '#d4edda' : '#f8d7da';
-                    div.style.borderLeft = contact.success ? '4px solid #28a745' : '4px solid #dc3545';
-                }
                 div.onclick = () => selectContact(index);
 
-                const statusIcon = contact.sent ? (contact.success ? '✅' : '❌') : '⏳';
-
+                // Enhanced display with all contact details
                 div.innerHTML = `
-                    <strong>${contact.firm}</strong> ${statusIcon}<br>
-                    👤 ${contact.contactName}<br>
-                    📧 ${contact.email}<br>
-                    🌍 ${contact.country}<br>
-                    💼 ${contact.businessFocus}<br>
-                    📈 ${contact.marketStrength}
-                    ${contact.sent ? `<br><small style="font-weight: bold;">${contact.success ? '✅ Sent successfully' : '❌ Failed to send'}</small>` : ''}
+                    <div style="display: flex; justify-content: between; align-items: start;">
+                        <div style="flex: 1;">
+                            <strong>${contact.firm}</strong>
+                            ${contact.category ? `<span style="background: #e3f2fd; color: #1976d2; padding: 2px 6px; border-radius: 3px; font-size: 0.8em; margin-left: 8px;">${contact.category}</span>` : ''}
+                            <br>
+                            👤 ${contact.contactName}<br>
+                            📧 ${contact.email}<br>
+                            🌍 ${contact.country}
+                            ${contact.phone ? `<br>📞 ${contact.phone}` : ''}
+                            ${contact.website ? `<br>🌐 ${contact.website}` : ''}
+                            ${contact.address ? `<br>📍 ${contact.address}` : ''}
+                            ${contact.source ? `<br>📊 Source: ${contact.source}` : ''}
+                        </div>
+                    </div>
                 `;
                 container.appendChild(div);
             });
-        }
-
-        function generateBusinessOpportunities(contact) {
-            const opportunities = {
-                "United Kingdom": "• Premium IT peripherals for the growing remote work market\n• Smart home appliances aligned with UK energy efficiency standards\n• Audio solutions for the thriving UK gaming and entertainment sector",
-
-                "United States": "• Advanced home automation and smart appliance solutions\n• High-quality audio systems for the premium consumer market\n• Mobile accessories for the competitive US smartphone market",
-
-                "India": "• Affordable mobile accessories for the massive smartphone user base\n• IT peripherals targeting the growing IT services sector\n• Energy-efficient appliances for price-conscious consumers",
-
-                "Mexico": "• Consumer electronics tailored for the Latin American market\n• Audio solutions for Mexico's vibrant entertainment industry\n• Cost-effective home appliances for the expanding middle class",
-
-                "United Arab Emirates": "• Premium electronics for the affluent GCC market\n• Smart home solutions for modern UAE households\n• High-end audio systems for the luxury consumer segment",
-
-                "Singapore": "• IT peripherals for Singapore's tech-savvy business environment\n• Compact home appliances suitable for urban living\n• Professional audio solutions for the creative industries"
-            };
-
-            return opportunities[contact.country] || "• Customized product solutions based on local market requirements\n• Premium electronics suited for your market demographics\n• Innovative technology products aligned with regional preferences";
         }
 
         function selectContact(index) {
@@ -372,27 +440,32 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
                 item.classList.toggle('selected', i === index);
             });
 
-            // Update email form headers
-            document.getElementById('fromEmail').value = 'vishwas.agarwal@gmail.com';
+            // Extract subject from template and populate dynamically
+            const template = document.getElementById('emailTemplate').value;
+            const lines = template.split('\n');
+            let subjectTemplate = 'Business Partnership Opportunity - Intex Technologies in {country}';
+
+            // Find subject line in template
+            for (let line of lines) {
+                if (line.startsWith('Subject: ')) {
+                    subjectTemplate = line.replace('Subject: ', '').trim();
+                    break;
+                }
+            }
+
+            // Populate email form
             document.getElementById('toEmail').value = contact.email;
-            document.getElementById('subject').value = `Business Partnership Opportunity - Intex Technologies in ${contact.country}`;
+            document.getElementById('subject').value = subjectTemplate.replace(/{country}/g, contact.country)
+                                                                     .replace(/{firm}/g, contact.firm)
+                                                                     .replace(/{email}/g, contact.email);
 
-            // Generate personalized email body from template
-            let template = document.getElementById('emailTemplate').value;
+            // Generate email body from template
+            let body = template.replace(/{email}/g, contact.email)
+                              .replace(/{contactName}/g, contact.contactName)
+                              .replace(/{country}/g, contact.country)
+                              .replace(/{firm}/g, contact.firm);
 
-            // Generate business opportunities specific to this contact
-            const businessOpportunities = generateBusinessOpportunities(contact);
-
-            let body = template
-                .replace(/{email}/g, contact.email)
-                .replace(/{contactName}/g, contact.contactName || 'Valued Prospective Partner')
-                .replace(/{country}/g, contact.country)
-                .replace(/{firm}/g, contact.firm)
-                .replace(/{businessFocus}/g, contact.businessFocus || 'established market presence')
-                .replace(/{marketStrength}/g, contact.marketStrength || 'strong distribution network')
-                .replace(/{businessOpportunities}/g, businessOpportunities);
-
-            // Remove email headers from body for display
+            // Remove email headers from body
             const lines = body.split('\n');
             let bodyStart = 0;
             for (let i = 0; i < lines.length; i++) {
@@ -409,7 +482,7 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
             document.getElementById('messageBody').value = lines.slice(bodyStart).join('\n').trim();
             document.getElementById('sendBtn').disabled = false;
 
-            showAlert(`Selected: ${contact.contactName} from ${contact.firm} (${contact.country})`);
+            showAlert(`Selected: ${contact.contactName} from ${contact.firm}`);
         }
 
         async function sendEmail() {
@@ -427,8 +500,8 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
                 document.getElementById('sendBtn').textContent = '📤 Sending...';
                 document.getElementById('sendBtn').disabled = true;
 
-                // Try to send via working function
-                const response = await fetch('/.netlify/functions/send-email-working', {
+                // Try to send via simple function
+                const response = await fetch('/.netlify/functions/send-email-simple', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -443,37 +516,10 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
 
                 if (result.success) {
                     showAlert(`✅ ${result.message}`);
-
-                    // Mark contact as sent if we have a selected contact
-                    if (selectedContactIndex >= 0) {
-                        contacts[selectedContactIndex].sent = true;
-                        contacts[selectedContactIndex].success = true;
-                        renderContacts();
-                        updateStats();
-                    }
                 } else {
                     showAlert(`ℹ️ ${result.message}`, 'error');
-
-                    // Show troubleshooting if available
-                    if (result.troubleshooting) {
-                        result.troubleshooting.forEach(tip => {
-                            showAlert(`💡 ${tip}`, 'error');
-                        });
-                    }
-
-                    if (result.required_vars) {
-                        showAlert('Required environment variables:', 'error');
-                        result.required_vars.forEach(variable => {
-                            showAlert(`• ${variable}`, 'error');
-                        });
-                    }
-
-                    // Mark contact as failed if we have a selected contact
-                    if (selectedContactIndex >= 0) {
-                        contacts[selectedContactIndex].sent = true;
-                        contacts[selectedContactIndex].success = false;
-                        renderContacts();
-                        updateStats();
+                    if (result.instructions) {
+                        showAlert(result.instructions, 'error');
                     }
                 }
 
@@ -506,129 +552,61 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
             }
         }
 
-        async function sendBulkEmails() {
-            const unsentContacts = contacts.filter(contact => !contact.sent);
+        function extractTemplateHeaders() {
+            const template = document.getElementById('emailTemplate').value;
+            const lines = template.split('\n');
 
-            if (unsentContacts.length === 0) {
-                showAlert('All emails have already been sent!', 'error');
-                return;
-            }
-
-            if (!confirm(`Send emails to ${unsentContacts.length} contacts?\n\nThis will send with a 2-second delay between emails for Zoho rate limiting.`)) {
-                return;
-            }
-
-            const bulkBtn = document.getElementById('bulkBtn');
-            bulkBtn.textContent = '📤 Sending Bulk...';
-            bulkBtn.disabled = true;
-
-            let successCount = 0;
-            let failCount = 0;
-
-            showAlert(`Starting bulk email to ${unsentContacts.length} contacts...`);
-
-            for (let i = 0; i < unsentContacts.length; i++) {
-                const contact = unsentContacts[i];
-                const contactIndex = contacts.findIndex(c => c.email === contact.email);
-
-                try {
-                    showAlert(`Sending ${i + 1}/${unsentContacts.length}: ${contact.contactName}`);
-
-                    // Generate personalized email content for this contact
-                    let template = document.getElementById('emailTemplate').value;
-                    const businessOpportunities = generateBusinessOpportunities(contact);
-
-                    let body = template
-                        .replace(/{email}/g, contact.email)
-                        .replace(/{contactName}/g, contact.contactName || 'Valued Prospective Partner')
-                        .replace(/{country}/g, contact.country)
-                        .replace(/{firm}/g, contact.firm)
-                        .replace(/{businessFocus}/g, contact.businessFocus || 'established market presence')
-                        .replace(/{marketStrength}/g, contact.marketStrength || 'strong distribution network')
-                        .replace(/{businessOpportunities}/g, businessOpportunities);
-
-                    // Remove email headers from body
-                    const lines = body.split('\n');
-                    let bodyStart = 0;
-                    for (let j = 0; j < lines.length; j++) {
-                        if (lines[j].trim() === '' && j > 0) {
-                            bodyStart = j + 1;
-                            break;
-                        }
-                        if (!lines[j].includes(':') || lines[j].startsWith('Dear')) {
-                            bodyStart = j;
-                            break;
-                        }
-                    }
-                    const emailBody = lines.slice(bodyStart).join('\n').trim();
-
-                    // Send email
-                    const response = await fetch('/.netlify/functions/send-email-working', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            from_email: 'vishwas.agarwal@gmail.com',
-                            from_name: 'Intex Technologies',
-                            to_email: contact.email,
-                            subject: `Business Partnership Opportunity - Intex Technologies in ${contact.country}`,
-                            content: emailBody
-                        })
-                    });
-
-                    const result = await response.json();
-
-                    // Update contact status
-                    contacts[contactIndex].sent = true;
-                    contacts[contactIndex].success = result.success;
-
-                    if (result.success) {
-                        successCount++;
-                        showAlert(`✅ Sent to ${contact.contactName}`, 'success');
-                    } else {
-                        failCount++;
-                        showAlert(`❌ Failed: ${contact.contactName} - ${result.message}`, 'error');
-                    }
-
-                    // Update UI
-                    renderContacts();
-                    updateStats();
-
-                    // Rate limiting: 2-second delay between emails (Zoho recommended)
-                    if (i < unsentContacts.length - 1) {
-                        await new Promise(resolve => setTimeout(resolve, 2000));
-                    }
-
-                } catch (error) {
-                    failCount++;
-                    contacts[contactIndex].sent = true;
-                    contacts[contactIndex].success = false;
-                    showAlert(`❌ Network error for ${contact.contactName}: ${error.message}`, 'error');
-                    renderContacts();
-                    updateStats();
+            // Extract headers from template
+            for (let line of lines) {
+                if (line.startsWith('From: ')) {
+                    const fromEmail = line.replace('From: ', '').trim();
+                    document.getElementById('fromEmail').value = fromEmail;
+                }
+                if (line.startsWith('From-Name: ')) {
+                    const fromName = line.replace('From-Name: ', '').trim();
+                    // Store from name for later use
+                    window.defaultFromName = fromName;
                 }
             }
-
-            // Final summary
-            showAlert(`🏁 Bulk email completed! ✅ Sent: ${successCount}, ❌ Failed: ${failCount}`, successCount > 0 ? 'success' : 'error');
-
-            bulkBtn.textContent = '📬 Send All';
-            bulkBtn.disabled = false;
         }
 
-        function updateStats() {
-            const total = contacts.length;
-            const sent = contacts.filter(c => c.sent).length;
-            const remaining = total - sent;
+        function testXLSXLibrary() {
+            if (typeof XLSX === 'undefined') {
+                console.error('XLSX library not loaded');
+                showAlert('⚠️ Excel processing library failed to load. File upload may not work.', 'error');
+                return false;
+            } else {
+                console.log('XLSX library loaded successfully, version:', XLSX.version);
+                return true;
+            }
+        }
 
-            document.getElementById('totalCount').textContent = total;
-            document.getElementById('sentCount').textContent = sent;
-            document.getElementById('remainingCount').textContent = remaining;
+        // Add a simple CSV processor as fallback
+        function parseCSV(text) {
+            const lines = text.split('\n');
+            const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+            const data = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                if (lines[i].trim()) {
+                    const values = lines[i].split(',');
+                    const row = {};
+                    headers.forEach((header, index) => {
+                        row[header] = values[index] ? values[index].trim() : '';
+                    });
+                    data.push(row);
+                }
+            }
+            return { headers, data };
         }
 
         // Initialize on page load - no complex initialization
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Simple email sender loaded');
-            showAlert('Simple Email Sender ready! Click "Load Sample Data" to start.');
+            testXLSXLibrary(); // Test if XLSX library loaded
+            extractTemplateHeaders(); // Extract and populate From field
+            renderContacts(); // Initialize contact list display
+            showAlert('📧 Email Sender Ready! Upload your contact spreadsheet to begin sending personalized emails.');
         });
     </script>
 </body>
