@@ -25,8 +25,8 @@
         }
         .main-content {
             display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 20px;
+            grid-template-columns: 1fr 2fr 1fr;
+            gap: 15px;
         }
         .panel {
             background: white;
@@ -122,85 +122,87 @@
     <div class="main-content">
         <!-- LEFT PANEL: Contact Management -->
         <div class="panel">
-            <h2>📋 Contact Management</h2>
+            <h2 style="font-size: 18px; margin-bottom: 15px;">📋 Contact Management</h2>
 
             <!-- Upload Section -->
-            <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; background: #f8f9fa; margin-bottom: 15px;">
+            <div style="padding: 8px; border: 1px solid #ddd; border-radius: 5px; background: #f8f9fa; margin-bottom: 12px;">
                 <div style="display: flex; align-items: center; justify-content: space-between;">
-                    <span style="font-size: 14px; color: #666;">📁 Upload Contacts:</span>
-                    <label for="fileUpload" class="button" style="background: #28a745; cursor: pointer; padding: 6px 12px; font-size: 12px;">
+                    <span style="font-size: 12px; color: #666;">📁 Upload:</span>
+                    <label for="fileUpload" class="button" style="background: #28a745; cursor: pointer; padding: 4px 8px; font-size: 10px;">
                         Choose File
                     </label>
                 </div>
                 <input type="file" id="fileUpload" accept=".xlsx,.xls,.csv" onchange="handleFileUpload(event)" style="display: none;">
-                <small style="color: #666; font-size: 11px;">Excel (.xlsx, .xls) or CSV files</small>
-                <div id="uploadStats" style="margin-top: 8px; font-size: 11px; color: #007bff; display: none;"></div>
+                <small style="color: #666; font-size: 9px;">Excel/CSV files</small>
+                <div id="uploadStats" style="margin-top: 5px; font-size: 9px; color: #007bff; display: none;"></div>
             </div>
 
             <!-- Contact List with Keyboard Navigation -->
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <h3 style="margin: 0; color: #007bff;">📋 Contact List <small style="color: #666;">(Use ↑↓ arrows)</small></h3>
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <div id="contactCounts" style="font-size: 12px; color: #666; font-weight: bold;">
-                        <span id="totalCount">0 contacts</span> |
-                        <span id="sentCount" style="color: #28a745;">0 sent</span> |
-                        <span id="failedCount" style="color: #dc3545;">0 failed</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <h3 style="margin: 0; color: #007bff; font-size: 14px;">📋 Contact List</h3>
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <div id="contactCounts" style="font-size: 10px; color: #666; font-weight: bold;">
+                        <span id="totalCount">0</span> |
+                        <span id="sentCount" style="color: #28a745;">0✅</span> |
+                        <span id="failedCount" style="color: #dc3545;">0❌</span>
                     </div>
-                    <button id="scrollTopBtn" class="button" onclick="scrollToTop()" style="padding: 5px 10px; font-size: 12px; display: none;">
-                        ⬆️ Top
+                    <button id="scrollTopBtn" class="button" onclick="scrollToTop()" style="padding: 2px 6px; font-size: 10px; display: none;">
+                        ⬆️
                     </button>
                 </div>
             </div>
-            <div id="contactsList" tabindex="0" style="max-height: 600px; overflow-y: auto; border: 2px solid #e3f2fd; border-radius: 8px; padding: 10px; background: #fafafa; outline: none;" onscroll="handleScroll()" onkeydown="handleKeyNavigation(event)">
-                <div style="text-align: center; padding: 40px; color: #999; font-style: italic;">
-                    <h4 style="color: #ccc; margin-bottom: 10px;">📋 No Contacts Loaded</h4>
-                    <p>Upload your spreadsheet above to see your contact database here</p>
-                    <small>Your contacts will appear here after uploading</small>
+            <small style="color: #666; font-size: 10px; margin-bottom: 5px; display: block;">Use ↑↓ arrows, Enter to send</small>
+            <div id="contactsList" tabindex="0" style="max-height: 500px; overflow-y: auto; border: 2px solid #e3f2fd; border-radius: 6px; padding: 8px; background: #fafafa; outline: none;" onscroll="handleScroll()" onkeydown="handleKeyNavigation(event)">
+                <div style="text-align: center; padding: 30px; color: #999; font-style: italic;">
+                    <h4 style="color: #ccc; margin-bottom: 8px; font-size: 14px;">📋 No Contacts</h4>
+                    <p style="font-size: 12px;">Upload spreadsheet to see contacts</p>
                 </div>
             </div>
+        </div>
 
-            <!-- Email Composer -->
-            <h3 style="color: #007bff; margin-top: 25px;">📨 Email Composer</h3>
+        <!-- CENTER PANEL: Email Composer (Main) -->
+        <div class="panel" style="padding: 25px;">
+            <h2 style="color: #007bff; margin-bottom: 20px; text-align: center;">📨 Email Composer</h2>
             <div id="alerts"></div>
 
-            <div style="margin-bottom: 10px;">
-                <label style="font-size: 12px;">From:</label>
-                <input type="email" id="fromEmail" value="info@datanalysisninsights.co.uk" placeholder="Sender email">
-            </div>
-
-            <div style="margin-bottom: 10px;">
-                <label style="font-size: 12px;">To: <small style="color: #28a745;">(Use / or , for multiple emails)</small></label>
-                <input type="text" id="toEmail" placeholder="Select contact or type emails separated by / or ,">
-            </div>
-
-            <div style="margin-bottom: 10px;">
-                <label style="font-size: 12px;">Subject:</label>
-                <input type="text" id="subject" placeholder="Email subject">
+            <div style="margin-bottom: 15px;">
+                <label style="font-size: 14px; font-weight: bold; color: #333;">From:</label>
+                <input type="email" id="fromEmail" value="info@datanalysisninsights.co.uk" placeholder="Sender email" style="font-size: 14px; padding: 10px;">
             </div>
 
             <div style="margin-bottom: 15px;">
-                <label style="font-size: 12px;">Message:</label>
-                <textarea id="messageBody" placeholder="Email content" style="min-height: 200px; font-size: 14px; line-height: 1.5;"></textarea>
+                <label style="font-size: 14px; font-weight: bold; color: #333;">To: <small style="color: #28a745;">(Use / or , for multiple emails)</small></label>
+                <input type="text" id="toEmail" placeholder="Select contact or type emails separated by / or ," style="font-size: 14px; padding: 10px;">
             </div>
 
-            <div>
-                <button class="button" onclick="sendEmail()" id="sendBtn" disabled>📤 Send Email</button>
-                <button class="button" onclick="testConnection()" style="background: #28a745;">🔧 Test SMTP</button>
+            <div style="margin-bottom: 15px;">
+                <label style="font-size: 14px; font-weight: bold; color: #333;">Subject:</label>
+                <input type="text" id="subject" placeholder="Email subject" style="font-size: 14px; padding: 10px;">
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label style="font-size: 14px; font-weight: bold; color: #333;">Message:</label>
+                <textarea id="messageBody" placeholder="Email content" style="min-height: 400px; font-size: 14px; line-height: 1.6; padding: 15px;"></textarea>
+            </div>
+
+            <div style="text-align: center;">
+                <button class="button" onclick="sendEmail()" id="sendBtn" disabled style="padding: 12px 30px; font-size: 16px; margin-right: 10px;">📤 Send Email</button>
+                <button class="button" onclick="testConnection()" style="background: #28a745; padding: 12px 20px; font-size: 14px;">🔧 Test SMTP</button>
             </div>
         </div>
 
         <!-- RIGHT PANEL: Templates & Status -->
-        <div class="panel">
+        <div class="panel" style="padding: 15px;">
             <!-- Email Template Section -->
-            <div style="border: 1px solid #ddd; border-radius: 8px; margin-bottom: 20px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #f8f9fa; border-bottom: 1px solid #ddd;">
-                    <h3 style="margin: 0; color: #007bff; font-size: 16px;">📧 Email Template</h3>
-                    <button onclick="toggleTemplate()" id="templateToggle" class="button" style="padding: 4px 8px; font-size: 12px;">
+            <div style="border: 1px solid #ddd; border-radius: 6px; margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: #f8f9fa; border-bottom: 1px solid #ddd;">
+                    <h3 style="margin: 0; color: #007bff; font-size: 14px;">📧 Template</h3>
+                    <button onclick="toggleTemplate()" id="templateToggle" class="button" style="padding: 3px 6px; font-size: 10px;">
                         📝 Expand
                     </button>
                 </div>
-                <div id="templateContainer" style="display: none; padding: 10px;">
-                    <textarea id="emailTemplate" placeholder="Edit your email template..." style="min-height: 300px; width: 100%; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">From: vishwas.agarwal@gmail.com
+                <div id="templateContainer" style="display: none; padding: 8px;">
+                    <textarea id="emailTemplate" placeholder="Edit your email template..." style="min-height: 200px; width: 100%; border: 1px solid #ddd; border-radius: 4px; font-size: 10px;">From: vishwas.agarwal@gmail.com
 From-Name: Intex Technologies
 To: {email}
 Subject: Business Partnership Opportunity - Intex Technologies in {country}
@@ -257,14 +259,14 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
             </div>
 
             <!-- Contact History/Status Panel -->
-            <div style="border: 1px solid #ddd; border-radius: 8px;">
-                <div style="padding: 10px; background: #f8f9fa; border-bottom: 1px solid #ddd;">
-                    <h3 style="margin: 0; color: #007bff; font-size: 16px;">📊 Email History & Status</h3>
+            <div style="border: 1px solid #ddd; border-radius: 6px;">
+                <div style="padding: 8px; background: #f8f9fa; border-bottom: 1px solid #ddd;">
+                    <h3 style="margin: 0; color: #007bff; font-size: 14px;">📊 Email History</h3>
                 </div>
-                <div id="emailHistory" style="max-height: 400px; overflow-y: auto; padding: 10px;">
-                    <div style="text-align: center; color: #999; padding: 20px;">
-                        <p>📧 Email history will appear here</p>
-                        <small>Send emails to see status tracking</small>
+                <div id="emailHistory" style="max-height: 300px; overflow-y: auto; padding: 8px;">
+                    <div style="text-align: center; color: #999; padding: 15px;">
+                        <p style="font-size: 12px;">📧 Email history will appear here</p>
+                        <small style="font-size: 10px;">Send emails to see status tracking</small>
                     </div>
                 </div>
             </div>
