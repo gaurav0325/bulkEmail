@@ -161,7 +161,26 @@ Email: info@datanalysisninsights.co.uk</textarea>
 
             <div>
                 <button class="button" onclick="sendEmail()" id="sendBtn" disabled>📤 Send Email</button>
+                <button class="button" onclick="sendBulkEmails()" id="bulkBtn" disabled style="background: #dc3545;">📬 Send All</button>
                 <button class="button" onclick="testConnection()" style="background: #28a745;">🔧 Test SMTP</button>
+            </div>
+
+            <div style="margin-top: 20px;">
+                <h3>📊 Statistics</h3>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                    <div style="background: #e7f3ff; padding: 10px; border-radius: 5px; text-align: center;">
+                        <div style="font-size: 1.5em; font-weight: bold;" id="totalCount">0</div>
+                        <div>Total</div>
+                    </div>
+                    <div style="background: #e7ffe7; padding: 10px; border-radius: 5px; text-align: center;">
+                        <div style="font-size: 1.5em; font-weight: bold;" id="sentCount">0</div>
+                        <div>Sent</div>
+                    </div>
+                    <div style="background: #ffe7e7; padding: 10px; border-radius: 5px; text-align: center;">
+                        <div style="font-size: 1.5em; font-weight: bold;" id="remainingCount">0</div>
+                        <div>Remaining</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -177,19 +196,41 @@ Email: info@datanalysisninsights.co.uk</textarea>
                 email: "john.smith@techsolutions.co.uk",
                 contactName: "John Smith",
                 firm: "Tech Solutions UK Ltd",
-                country: "United Kingdom"
+                country: "United Kingdom",
+                sent: false,
+                success: false
             },
             {
                 email: "sarah.jones@innovate.com",
                 contactName: "Sarah Jones",
                 firm: "Innovate Corp",
-                country: "United States"
+                country: "United States",
+                sent: false,
+                success: false
             },
             {
                 email: "raj.patel@globaltech.in",
                 contactName: "Raj Patel",
                 firm: "Global Tech Solutions",
-                country: "India"
+                country: "India",
+                sent: false,
+                success: false
+            },
+            {
+                email: "maria.garcia@techmexico.mx",
+                contactName: "Maria Garcia",
+                firm: "TechMexico Solutions",
+                country: "Mexico",
+                sent: false,
+                success: false
+            },
+            {
+                email: "ahmed.hassan@middleeasttech.ae",
+                contactName: "Ahmed Hassan",
+                firm: "Middle East Tech Hub",
+                country: "United Arab Emirates",
+                sent: false,
+                success: false
             }
         ];
 
@@ -211,6 +252,8 @@ Email: info@datanalysisninsights.co.uk</textarea>
         function loadSampleData() {
             contacts = [...sampleContacts];
             renderContacts();
+            updateStats();
+            document.getElementById('bulkBtn').disabled = false;
             showAlert('Sample contacts loaded successfully!');
         }
 
@@ -221,12 +264,20 @@ Email: info@datanalysisninsights.co.uk</textarea>
             contacts.forEach((contact, index) => {
                 const div = document.createElement('div');
                 div.className = 'contact-item';
+                if (contact.sent) {
+                    div.style.background = contact.success ? '#d4edda' : '#f8d7da';
+                    div.style.borderLeft = contact.success ? '4px solid #28a745' : '4px solid #dc3545';
+                }
                 div.onclick = () => selectContact(index);
+
+                const statusIcon = contact.sent ? (contact.success ? '✅' : '❌') : '⏳';
+
                 div.innerHTML = `
-                    <strong>${contact.firm}</strong><br>
+                    <strong>${contact.firm}</strong> ${statusIcon}<br>
                     👤 ${contact.contactName}<br>
                     📧 ${contact.email}<br>
                     🌍 ${contact.country}
+                    ${contact.sent ? `<br><small>${contact.success ? 'Sent successfully' : 'Failed to send'}</small>` : ''}
                 `;
                 container.appendChild(div);
             });
@@ -286,8 +337,8 @@ Email: info@datanalysisninsights.co.uk</textarea>
                 document.getElementById('sendBtn').textContent = '📤 Sending...';
                 document.getElementById('sendBtn').disabled = true;
 
-                // Try to send via simple function
-                const response = await fetch('/.netlify/functions/send-email-simple', {
+                // Try to send via working function
+                const response = await fetch('/.netlify/functions/send-email-working', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -302,10 +353,37 @@ Email: info@datanalysisninsights.co.uk</textarea>
 
                 if (result.success) {
                     showAlert(`✅ ${result.message}`);
+
+                    // Mark contact as sent if we have a selected contact
+                    if (selectedContactIndex >= 0) {
+                        contacts[selectedContactIndex].sent = true;
+                        contacts[selectedContactIndex].success = true;
+                        renderContacts();
+                        updateStats();
+                    }
                 } else {
                     showAlert(`ℹ️ ${result.message}`, 'error');
-                    if (result.instructions) {
-                        showAlert(result.instructions, 'error');
+
+                    // Show troubleshooting if available
+                    if (result.troubleshooting) {
+                        result.troubleshooting.forEach(tip => {
+                            showAlert(`💡 ${tip}`, 'error');
+                        });
+                    }
+
+                    if (result.required_vars) {
+                        showAlert('Required environment variables:', 'error');
+                        result.required_vars.forEach(variable => {
+                            showAlert(`• ${variable}`, 'error');
+                        });
+                    }
+
+                    // Mark contact as failed if we have a selected contact
+                    if (selectedContactIndex >= 0) {
+                        contacts[selectedContactIndex].sent = true;
+                        contacts[selectedContactIndex].success = false;
+                        renderContacts();
+                        updateStats();
                     }
                 }
 
@@ -336,6 +414,118 @@ Email: info@datanalysisninsights.co.uk</textarea>
                 document.getElementById('status').textContent = '❌ Server Issues';
                 document.getElementById('status').className = 'status error';
             }
+        }
+
+        async function sendBulkEmails() {
+            const unsentContacts = contacts.filter(contact => !contact.sent);
+
+            if (unsentContacts.length === 0) {
+                showAlert('All emails have already been sent!', 'error');
+                return;
+            }
+
+            if (!confirm(`Send emails to ${unsentContacts.length} contacts?\n\nThis will send with a 2-second delay between emails for Zoho rate limiting.`)) {
+                return;
+            }
+
+            const bulkBtn = document.getElementById('bulkBtn');
+            bulkBtn.textContent = '📤 Sending Bulk...';
+            bulkBtn.disabled = true;
+
+            let successCount = 0;
+            let failCount = 0;
+
+            showAlert(`Starting bulk email to ${unsentContacts.length} contacts...`);
+
+            for (let i = 0; i < unsentContacts.length; i++) {
+                const contact = unsentContacts[i];
+                const contactIndex = contacts.findIndex(c => c.email === contact.email);
+
+                try {
+                    showAlert(`Sending ${i + 1}/${unsentContacts.length}: ${contact.contactName}`);
+
+                    // Generate email content for this contact
+                    let template = document.getElementById('emailTemplate').value;
+                    let body = template.replace(/{email}/g, contact.email)
+                                      .replace(/{contactName}/g, contact.contactName)
+                                      .replace(/{country}/g, contact.country);
+
+                    // Remove email headers from body
+                    const lines = body.split('\n');
+                    let bodyStart = 0;
+                    for (let j = 0; j < lines.length; j++) {
+                        if (lines[j].trim() === '' && j > 0) {
+                            bodyStart = j + 1;
+                            break;
+                        }
+                        if (!lines[j].includes(':') || lines[j].startsWith('Dear')) {
+                            bodyStart = j;
+                            break;
+                        }
+                    }
+                    const emailBody = lines.slice(bodyStart).join('\n').trim();
+
+                    // Send email
+                    const response = await fetch('/.netlify/functions/send-email-working', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            from_email: 'info@datanalysisninsights.co.uk',
+                            from_name: 'Data Analysis Insights',
+                            to_email: contact.email,
+                            subject: `Business Partnership Opportunity - ${contact.country}`,
+                            content: emailBody
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    // Update contact status
+                    contacts[contactIndex].sent = true;
+                    contacts[contactIndex].success = result.success;
+
+                    if (result.success) {
+                        successCount++;
+                        showAlert(`✅ Sent to ${contact.contactName}`, 'success');
+                    } else {
+                        failCount++;
+                        showAlert(`❌ Failed: ${contact.contactName} - ${result.message}`, 'error');
+                    }
+
+                    // Update UI
+                    renderContacts();
+                    updateStats();
+
+                    // Rate limiting: 2-second delay between emails (Zoho recommended)
+                    if (i < unsentContacts.length - 1) {
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                    }
+
+                } catch (error) {
+                    failCount++;
+                    contacts[contactIndex].sent = true;
+                    contacts[contactIndex].success = false;
+                    showAlert(`❌ Network error for ${contact.contactName}: ${error.message}`, 'error');
+                    renderContacts();
+                    updateStats();
+                }
+            }
+
+            // Final summary
+            showAlert(`🏁 Bulk email completed! ✅ Sent: ${successCount}, ❌ Failed: ${failCount}`, successCount > 0 ? 'success' : 'error');
+
+            bulkBtn.textContent = '📬 Send All';
+            bulkBtn.disabled = false;
+        }
+
+        function updateStats() {
+            const total = contacts.length;
+            const sent = contacts.filter(c => c.sent).length;
+            const remaining = total - sent;
+
+            document.getElementById('totalCount').textContent = total;
+            document.getElementById('sentCount').textContent = sent;
+            document.getElementById('remainingCount').textContent = remaining;
         }
 
         // Initialize on page load - no complex initialization
