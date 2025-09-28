@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bulk Email Sender - Data Analysis Insights v2.1</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.5/dist/purify.min.js"></script>
     <meta name="cache-control" content="no-cache">
     <meta name="version" content="2.1-contact-enhancements">
     <style>
@@ -29,6 +30,33 @@
             gap: 15px;
             height: 100vh;
             max-height: 900px;
+        }
+
+        /* Mobile Responsive Design */
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto auto auto;
+                gap: 10px;
+                height: auto;
+            }
+            .left-panel, .right-panel {
+                max-width: none;
+                min-width: auto;
+            }
+            .center-panel {
+                min-width: auto;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+            .button {
+                padding: 8px 12px !important;
+                font-size: 12px !important;
+            }
         }
         .panel {
             background: white;
@@ -130,12 +158,17 @@
             <h3 style="margin: 0; color: #007bff;">📧 Bulk Email Sender</h3>
             <small style="color: #666;">Data Analysis Insights - Professional Email Campaign Tool</small>
         </div>
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <div id="status" class="status ready" style="margin: 0; padding: 6px 10px; font-size: 11px;">✅ System Ready</div>
-            <button class="button" onclick="testConnection()" style="background: #28a745; padding: 8px 12px; font-size: 12px;">🔧 Test SMTP</button>
-            <button class="button" onclick="sendEmail()" id="sendBtn" disabled style="padding: 10px 20px; font-size: 14px; font-weight: bold;">📤 Send Email</button>
-            <button class="button" onclick="confirmBulkEmail()" id="bulkSendBtn" disabled style="background: #dc3545; padding: 10px 20px; font-size: 14px; font-weight: bold;">📧 Bulk Email</button>
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <label style="display: flex; align-items: center; gap: 5px; font-size: 12px; color: #666;">
+                <input type="checkbox" id="testMode" checked onchange="toggleTestMode()" aria-describedby="testModeDesc">
+                🧪 Test Mode (No Real Emails)
+            </label>
+            <div id="status" class="status ready" style="margin: 0; padding: 6px 10px; font-size: 11px;" role="status" aria-live="polite">✅ System Ready</div>
+            <button class="button" onclick="testConnection()" style="background: #28a745; padding: 8px 12px; font-size: 12px;" aria-label="Test SMTP Connection">🔧 Test SMTP</button>
+            <button class="button" onclick="sendEmail()" id="sendBtn" disabled style="padding: 10px 20px; font-size: 14px; font-weight: bold;" aria-label="Send Email to Selected Contact">📤 Send Email</button>
+            <button class="button" onclick="confirmBulkEmail()" id="bulkSendBtn" disabled style="background: #dc3545; padding: 10px 20px; font-size: 14px; font-weight: bold;" aria-label="Send Bulk Email to All Contacts">📧 Bulk Email</button>
         </div>
+        <div id="testModeDesc" style="font-size: 10px; color: #999; margin-top: 5px; display: block;">Test mode prevents real emails from being sent and shows simulation results instead</div>
     </div>
 
     <div class="main-content">
@@ -144,16 +177,22 @@
             <h2 style="font-size: 18px; margin-bottom: 15px;">📋 Contact Management</h2>
 
             <!-- Upload Section -->
-            <div style="padding: 8px; border: 1px solid #ddd; border-radius: 5px; background: #f8f9fa; margin-bottom: 12px;">
+            <div style="padding: 8px; border: 1px solid #ddd; border-radius: 5px; background: #f8f9fa; margin-bottom: 12px;" role="region" aria-label="File Upload">
                 <div style="display: flex; align-items: center; justify-content: space-between;">
-                    <span style="font-size: 12px; color: #666;">📁 Upload:</span>
-                    <label for="fileUpload" class="button" style="background: #28a745; cursor: pointer; padding: 4px 8px; font-size: 10px;">
+                    <span style="font-size: 12px; color: #666;">📁 Upload Contacts:</span>
+                    <label for="fileUpload" class="button" style="background: #28a745; cursor: pointer; padding: 4px 8px; font-size: 10px;" aria-describedby="fileUploadDesc">
                         Choose File
                     </label>
                 </div>
-                <input type="file" id="fileUpload" accept=".xlsx,.xls,.csv" onchange="handleFileUpload(event)" style="display: none;">
-                <small style="color: #666; font-size: 9px;">Excel/CSV files</small>
-                <div id="uploadStats" style="margin-top: 5px; font-size: 9px; color: #007bff; display: none;"></div>
+                <input type="file" id="fileUpload" accept=".xlsx,.xls,.csv" onchange="handleFileUpload(event)" style="display: none;" aria-label="Upload Contact File" aria-describedby="fileUploadDesc">
+                <small id="fileUploadDesc" style="color: #666; font-size: 9px;">Excel/CSV files (max 10MB)</small>
+                <div id="uploadProgress" style="margin-top: 5px; display: none;">
+                    <div style="background: #e9ecef; border-radius: 3px; height: 4px;">
+                        <div id="progressBar" style="background: #007bff; height: 100%; border-radius: 3px; width: 0%; transition: width 0.3s;"></div>
+                    </div>
+                    <small id="progressText" style="font-size: 8px; color: #666;"></small>
+                </div>
+                <div id="uploadStats" style="margin-top: 5px; font-size: 9px; color: #007bff; display: none;" role="status" aria-live="polite"></div>
             </div>
 
             <!-- Contact List with Keyboard Navigation -->
@@ -170,8 +209,11 @@
                     </button>
                 </div>
             </div>
-            <small style="color: #666; font-size: 10px; margin-bottom: 5px; display: block;">Use ↑↓ arrows, Enter to send</small>
-            <div id="contactsList" tabindex="0" style="max-height: 400px; min-height: 200px; overflow-y: auto; border: 2px solid #e3f2fd; border-radius: 6px; padding: 6px; background: #fafafa; outline: none; font-size: 11px;" onscroll="handleScroll()" onkeydown="handleKeyNavigation(event)">
+            <div style="margin-bottom: 8px;">
+                <input type="text" id="contactSearch" placeholder="🔍 Search contacts..." style="width: 100%; padding: 4px 8px; font-size: 10px; border: 1px solid #ddd; border-radius: 3px;" oninput="filterContacts()" aria-label="Search contacts">
+            </div>
+            <small style="color: #666; font-size: 10px; margin-bottom: 5px; display: block;">Use ↑↓ arrows, Enter to send, Esc to clear selection</small>
+            <div id="contactsList" tabindex="0" role="listbox" aria-label="Contact List" style="max-height: 350px; min-height: 200px; overflow-y: auto; border: 2px solid #e3f2fd; border-radius: 6px; padding: 6px; background: #fafafa; outline: 2px solid transparent; font-size: 11px;" onscroll="handleScroll()" onkeydown="handleKeyNavigation(event)" onfocus="this.style.outline='2px solid #007bff'" onblur="this.style.outline='2px solid transparent'">
                 <div style="text-align: center; padding: 30px; color: #999; font-style: italic;">
                     <h4 style="color: #ccc; margin-bottom: 8px; font-size: 14px;">📋 No Contacts</h4>
                     <p style="font-size: 12px;">Upload spreadsheet to see contacts</p>
@@ -185,23 +227,29 @@
             <div id="alerts"></div>
 
             <div style="margin-bottom: 15px;">
-                <label style="font-size: 14px; font-weight: bold; color: #333;">From:</label>
-                <input type="email" id="fromEmail" value="info@datanalysisninsights.co.uk" placeholder="Sender email" style="font-size: 14px; padding: 10px;">
+                <label for="fromEmail" style="font-size: 14px; font-weight: bold; color: #333; display: block; margin-bottom: 5px;">From:</label>
+                <input type="email" id="fromEmail" value="info@datanalysisninsights.co.uk" placeholder="Sender email" style="font-size: 14px; padding: 10px; width: 100%; border: 1px solid #ddd; border-radius: 4px;" aria-required="true" oninput="validateEmail(this)">
+                <div id="fromEmailError" style="color: #dc3545; font-size: 12px; margin-top: 2px; display: none;" role="alert"></div>
             </div>
 
             <div style="margin-bottom: 15px;">
-                <label style="font-size: 14px; font-weight: bold; color: #333;">To: <small style="color: #28a745;">(Use / or , for multiple emails)</small></label>
-                <input type="text" id="toEmail" placeholder="Select contact or type emails separated by / or ," style="font-size: 14px; padding: 10px;">
+                <label for="toEmail" style="font-size: 14px; font-weight: bold; color: #333; display: block; margin-bottom: 5px;">To: <small style="color: #28a745;">(Use / or , for multiple emails)</small></label>
+                <input type="text" id="toEmail" placeholder="Select contact or type emails separated by / or ," style="font-size: 14px; padding: 10px; width: 100%; border: 1px solid #ddd; border-radius: 4px;" aria-required="true" oninput="validateEmailList(this)" aria-describedby="toEmailDesc">
+                <small id="toEmailDesc" style="color: #666; font-size: 11px;">Separate multiple emails with commas, semicolons, or forward slashes</small>
+                <div id="toEmailError" style="color: #dc3545; font-size: 12px; margin-top: 2px; display: none;" role="alert"></div>
             </div>
 
             <div style="margin-bottom: 15px;">
-                <label style="font-size: 14px; font-weight: bold; color: #333;">Subject:</label>
-                <input type="text" id="subject" placeholder="Email subject" style="font-size: 14px; padding: 10px;">
+                <label for="subject" style="font-size: 14px; font-weight: bold; color: #333; display: block; margin-bottom: 5px;">Subject:</label>
+                <input type="text" id="subject" placeholder="Email subject" style="font-size: 14px; padding: 10px; width: 100%; border: 1px solid #ddd; border-radius: 4px;" aria-required="true" maxlength="255" oninput="validateSubject(this)">
+                <div id="subjectError" style="color: #dc3545; font-size: 12px; margin-top: 2px; display: none;" role="alert"></div>
             </div>
 
             <div style="margin-bottom: 20px;">
-                <label style="font-size: 14px; font-weight: bold; color: #333;">Message:</label>
-                <textarea id="messageBody" placeholder="Email content" style="min-height: 400px; font-size: 14px; line-height: 1.6; padding: 15px;"></textarea>
+                <label for="messageBody" style="font-size: 14px; font-weight: bold; color: #333; display: block; margin-bottom: 5px;">Message:</label>
+                <textarea id="messageBody" placeholder="Email content" style="min-height: 400px; font-size: 14px; line-height: 1.6; padding: 15px; width: 100%; border: 1px solid #ddd; border-radius: 4px; resize: vertical;" aria-required="true" oninput="validateMessage(this)"></textarea>
+                <div id="messageError" style="color: #dc3545; font-size: 12px; margin-top: 2px; display: none;" role="alert"></div>
+                <small style="color: #666; font-size: 11px;">Use {contactName}, {firm}, {country}, {email} for personalization</small>
             </div>
 
             <div style="text-align: center; color: #666; font-style: italic; margin-top: 20px;">
@@ -293,8 +341,9 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
     </div>
 
     <script>
-        // Simple global variables - no classes to avoid complexity
+        // Global variables with security and performance improvements
         let contacts = [];
+        let filteredContacts = []; // For search functionality
         let selectedContactIndex = -1;
         let emailStatusCounts = {
             total: 0,
@@ -304,6 +353,310 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
         };
         let emailHistory = []; // Track email sending history
         let uploadStats = { total: 0, read: 0, unread: 0 }; // Track upload statistics
+        let isTestMode = true; // Start in test mode for safety
+        let currentUploadProgress = null; // Track upload progress
+
+        // Security: Email validation regex
+        const EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+
+        // Performance: Constants
+        const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+        const MAX_CONTACTS = 10000; // Limit contact count
+        const CHUNK_SIZE = 100; // Process in chunks
+
+        // Security Functions
+        function sanitizeHTML(str) {
+            if (typeof DOMPurify !== 'undefined') {
+                return DOMPurify.sanitize(str);
+            }
+            // Fallback if DOMPurify isn't loaded
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function sanitizeInput(input) {
+            return input.replace(/[<>\"'&]/g, function(match) {
+                const escape = {
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#x27;',
+                    '&': '&amp;'
+                };
+                return escape[match];
+            });
+        }
+
+        function validateEmail(input) {
+            const email = input.value.trim();
+            const errorDiv = document.getElementById(input.id + 'Error');
+
+            if (!email) {
+                hideError(errorDiv);
+                input.style.borderColor = '#ddd';
+                return false;
+            }
+
+            if (!EMAIL_REGEX.test(email)) {
+                showError(errorDiv, 'Please enter a valid email address');
+                input.style.borderColor = '#dc3545';
+                return false;
+            }
+
+            hideError(errorDiv);
+            input.style.borderColor = '#28a745';
+            return true;
+        }
+
+        function validateEmailList(input) {
+            const emailList = input.value.trim();
+            const errorDiv = document.getElementById('toEmailError');
+
+            if (!emailList) {
+                hideError(errorDiv);
+                input.style.borderColor = '#ddd';
+                return false;
+            }
+
+            const emails = parseMultipleEmails(emailList);
+            const invalidEmails = emails.filter(email => !EMAIL_REGEX.test(email));
+
+            if (invalidEmails.length > 0) {
+                showError(errorDiv, `Invalid email addresses: ${invalidEmails.join(', ')}`);
+                input.style.borderColor = '#dc3545';
+                return false;
+            }
+
+            if (emails.length === 0) {
+                showError(errorDiv, 'Please enter at least one valid email address');
+                input.style.borderColor = '#dc3545';
+                return false;
+            }
+
+            hideError(errorDiv);
+            input.style.borderColor = '#28a745';
+            return true;
+        }
+
+        function validateSubject(input) {
+            const subject = input.value.trim();
+            const errorDiv = document.getElementById('subjectError');
+
+            if (!subject) {
+                showError(errorDiv, 'Subject is required');
+                input.style.borderColor = '#dc3545';
+                return false;
+            }
+
+            if (subject.length > 255) {
+                showError(errorDiv, 'Subject too long (max 255 characters)');
+                input.style.borderColor = '#dc3545';
+                return false;
+            }
+
+            // Check for potential email header injection
+            if (/[\r\n]/.test(subject)) {
+                showError(errorDiv, 'Subject cannot contain line breaks');
+                input.style.borderColor = '#dc3545';
+                return false;
+            }
+
+            hideError(errorDiv);
+            input.style.borderColor = '#28a745';
+            return true;
+        }
+
+        function validateMessage(input) {
+            const message = input.value.trim();
+            const errorDiv = document.getElementById('messageError');
+
+            if (!message) {
+                showError(errorDiv, 'Message is required');
+                input.style.borderColor = '#dc3545';
+                return false;
+            }
+
+            if (message.length > 50000) {
+                showError(errorDiv, 'Message too long (max 50,000 characters)');
+                input.style.borderColor = '#dc3545';
+                return false;
+            }
+
+            hideError(errorDiv);
+            input.style.borderColor = '#28a745';
+            return true;
+        }
+
+        function showError(errorDiv, message) {
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            errorDiv.setAttribute('aria-live', 'polite');
+        }
+
+        function hideError(errorDiv) {
+            errorDiv.style.display = 'none';
+            errorDiv.textContent = '';
+        }
+
+        // Test Mode Functions
+        function simulateEmailSend(emails, subject, status = 'sent') {
+            const timestamp = Date.now();
+
+            emails.forEach(email => {
+                // Simulate random success/failure for realism
+                const finalStatus = Math.random() > 0.1 ? 'sent' : 'failed'; // 90% success rate
+                addToEmailHistory(email, subject, finalStatus, timestamp);
+
+                // Update contact status if it's in the contact list
+                const contactIndex = contacts.findIndex(c => c.email === email);
+                if (contactIndex >= 0) {
+                    contacts[contactIndex].emailStatus = finalStatus;
+                }
+            });
+
+            const successCount = emails.filter((_, i) => Math.random() > 0.1).length;
+            const failureCount = emails.length - successCount;
+
+            setTimeout(() => {
+                showAlert(`🧪 SIMULATION COMPLETE: ${successCount} simulated as sent, ${failureCount} simulated as failed`, 'success');
+                renderContacts();
+                updateContactCounts();
+            }, 1000 + Math.random() * 2000); // Realistic delay
+        }
+
+        function simulateBulkEmailSend(contactsToEmail) {
+            let successCount = 0;
+            let failureCount = 0;
+            const subject = document.getElementById('subject').value;
+
+            contactsToEmail.forEach((contact, index) => {
+                setTimeout(() => {
+                    // Simulate random success/failure
+                    const success = Math.random() > 0.15; // 85% success rate for bulk
+                    const status = success ? 'sent' : 'failed';
+
+                    contact.emailStatus = status;
+                    if (success) successCount++; else failureCount++;
+
+                    addToEmailHistory(contact.email, subject, status, Date.now());
+
+                    // Update progress
+                    const bulkBtn = document.getElementById('bulkSendBtn');
+                    bulkBtn.textContent = `🧪 Simulating ${index + 1}/${contactsToEmail.length}...`;
+
+                    // Final update
+                    if (index === contactsToEmail.length - 1) {
+                        setTimeout(() => {
+                            showAlert(`🧪 BULK SIMULATION COMPLETE: ${successCount} sent, ${failureCount} failed`, 'success');
+                            renderContacts();
+                            updateContactCounts();
+                            bulkBtn.textContent = '📧 Bulk Email';
+                            bulkBtn.disabled = false;
+                            document.getElementById('sendBtn').disabled = false;
+                        }, 500);
+                    }
+                }, index * 100); // Stagger for realistic effect
+            });
+        }
+
+        function toggleTestMode() {
+            isTestMode = document.getElementById('testMode').checked;
+            const status = document.getElementById('status');
+            if (isTestMode) {
+                status.textContent = '🧪 Test Mode Active';
+                status.className = 'status ready';
+                status.style.background = '#fff3cd';
+                status.style.color = '#856404';
+            } else {
+                status.textContent = '⚠️ Live Mode - Real Emails';
+                status.className = 'status error';
+            }
+            showAlert(isTestMode ? 'Test mode enabled - no real emails will be sent' : 'Live mode enabled - REAL EMAILS WILL BE SENT!', isTestMode ? 'success' : 'error');
+        }
+
+        // Search and Filter Functions
+        function filterContacts() {
+            const searchTerm = document.getElementById('contactSearch').value.toLowerCase().trim();
+
+            if (!searchTerm) {
+                filteredContacts = [...contacts];
+            } else {
+                filteredContacts = contacts.filter(contact =>
+                    contact.firm.toLowerCase().includes(searchTerm) ||
+                    contact.contactName.toLowerCase().includes(searchTerm) ||
+                    contact.email.toLowerCase().includes(searchTerm) ||
+                    contact.country.toLowerCase().includes(searchTerm) ||
+                    (contact.category && contact.category.toLowerCase().includes(searchTerm))
+                );
+            }
+
+            renderContacts();
+            selectedContactIndex = -1; // Reset selection
+        }
+
+        // Performance: Progress tracking
+        function showProgress(current, total, text) {
+            const progressDiv = document.getElementById('uploadProgress');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+
+            if (progressDiv && progressBar && progressText) {
+                progressDiv.style.display = 'block';
+                const percentage = Math.round((current / total) * 100);
+                progressBar.style.width = percentage + '%';
+                progressText.textContent = text || `${current}/${total} (${percentage}%)`;
+            }
+        }
+
+        function hideProgress() {
+            const progressDiv = document.getElementById('uploadProgress');
+            if (progressDiv) {
+                progressDiv.style.display = 'none';
+            }
+        }
+
+        // File Upload Security
+        function validateFileUpload(file) {
+            // File size check
+            if (file.size > MAX_FILE_SIZE) {
+                showAlert(`File too large! Maximum size is ${Math.round(MAX_FILE_SIZE / 1024 / 1024)}MB. Your file is ${Math.round(file.size / 1024 / 1024)}MB.`, 'error');
+                return false;
+            }
+
+            // File type check
+            const allowedExtensions = ['.csv', '.xlsx', '.xls'];
+            const fileName = file.name.toLowerCase();
+            const isValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
+
+            if (!isValidExtension) {
+                showAlert('Invalid file type! Please upload a CSV or Excel file.', 'error');
+                return false;
+            }
+
+            // File name sanitization check
+            const suspiciousChars = /[<>:"\\|?*\x00-\x1f]/;
+            if (suspiciousChars.test(file.name)) {
+                showAlert('Invalid file name! Please rename your file and try again.', 'error');
+                return false;
+            }
+
+            return true;
+        }
+
+        // Memory Management
+        function cleanupContacts() {
+            // Limit contact count for performance
+            if (contacts.length > MAX_CONTACTS) {
+                showAlert(`Too many contacts! Only the first ${MAX_CONTACTS} contacts will be loaded for performance reasons.`, 'error');
+                contacts = contacts.slice(0, MAX_CONTACTS);
+            }
+
+            // Clean up old data
+            if (emailHistory.length > 1000) {
+                emailHistory = emailHistory.slice(0, 500); // Keep most recent 500
+            }
+        }
 
         // New functionality functions
         function toggleTemplate() {
@@ -320,12 +673,13 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
         }
 
         function handleKeyNavigation(event) {
-            if (contacts.length === 0) return;
+            const contactCount = filteredContacts.length || contacts.length;
+            if (contactCount === 0) return;
 
             switch(event.key) {
                 case 'ArrowDown':
                     event.preventDefault();
-                    if (selectedContactIndex < contacts.length - 1) {
+                    if (selectedContactIndex < contactCount - 1) {
                         selectContact(selectedContactIndex + 1);
                     }
                     break;
@@ -339,6 +693,27 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
                     event.preventDefault();
                     if (selectedContactIndex >= 0) {
                         document.getElementById('sendBtn').click();
+                    }
+                    break;
+                case 'Escape':
+                    event.preventDefault();
+                    selectedContactIndex = -1;
+                    document.querySelectorAll('.contact-item').forEach(item => {
+                        item.classList.remove('selected');
+                    });
+                    document.getElementById('sendBtn').disabled = true;
+                    showAlert('Selection cleared');
+                    break;
+                case 'Home':
+                    event.preventDefault();
+                    if (contactCount > 0) {
+                        selectContact(0);
+                    }
+                    break;
+                case 'End':
+                    event.preventDefault();
+                    if (contactCount > 0) {
+                        selectContact(contactCount - 1);
                     }
                     break;
             }
@@ -440,6 +815,11 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
                 return;
             }
 
+            // Security: File validation
+            if (!validateFileUpload(file)) {
+                return;
+            }
+
             // Check if XLSX library is loaded for Excel files
             if (!file.name.toLowerCase().endsWith('.csv') && typeof XLSX === 'undefined') {
                 showAlert('Error: Excel processing library not loaded. Please refresh the page.', 'error');
@@ -448,10 +828,16 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
 
             console.log('=== FILE UPLOAD STARTED ===');
             console.log('File selected:', file.name, file.type, file.size);
-            showAlert(`Processing ${file.name}...`, 'success');
+            showAlert(`Processing ${sanitizeInput(file.name)}...`, 'success');
 
             try {
-                contacts = []; // Clear existing contacts
+                // Clear existing data
+                contacts = [];
+                filteredContacts = [];
+                selectedContactIndex = -1;
+                currentUploadProgress = { current: 0, total: 0 };
+
+                showProgress(0, 100, 'Starting file processing...');
                 let totalProcessed = 0;
 
                 // Handle CSV files differently
@@ -570,20 +956,49 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
                     console.log(`Total contacts loaded: ${contacts.length}`);
                 }
 
+                // Performance: Cleanup and optimize
+                cleanupContacts();
+                filteredContacts = [...contacts];
+
                 // Update upload statistics
                 uploadStats.read = contacts.length;
                 uploadStats.unread = uploadStats.total - uploadStats.read;
                 updateUploadStats();
+                hideProgress();
 
                 console.log('About to render contacts. Array length:', contacts.length);
                 renderContacts();
-                showAlert(`✅ Loaded ${contacts.length} contacts${file.name.toLowerCase().endsWith('.csv') ? '' : ` from multiple countries`}!`);
+                showAlert(`✅ Loaded ${contacts.length} contacts${file.name.toLowerCase().endsWith('.csv') ? '' : ` from multiple countries`}!`, 'success');
 
             } catch (error) {
-                showAlert(`Error processing file: ${error.message}`, 'error');
+                hideProgress();
+                const sanitizedError = sanitizeInput(error.message);
+                showAlert(`Error processing file: ${sanitizedError}`, 'error');
                 console.error('File processing error:', error);
+            } finally {
+                // Reset file input for reuse
+                document.getElementById('fileUpload').value = '';
             }
         }
+
+        // Initialize application
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Bulk Email Sender Application Initialized');
+
+            // Set up initial state
+            toggleTestMode(); // Initialize test mode
+
+            // Initialize filtered contacts
+            filteredContacts = [...contacts];
+
+            // Set focus to first interactive element for accessibility
+            const firstButton = document.querySelector('button:not([disabled])');
+            if (firstButton) {
+                firstButton.focus();
+            }
+
+            console.log('Application ready for use');
+        });
 
         function findColumnIndex(headers, possibleNames) {
             for (let name of possibleNames) {
@@ -640,11 +1055,16 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
             }
 
             console.log('Rendering individual contacts...');
-            contacts.forEach((contact, index) => {
+            const contactsToRender = filteredContacts.length > 0 ? filteredContacts : contacts;
+
+            contactsToRender.forEach((contact, index) => {
                 console.log(`Rendering contact ${index + 1}:`, contact);
                 const div = document.createElement('div');
                 div.className = 'contact-item';
                 div.onclick = () => selectContact(index);
+                div.setAttribute('role', 'option');
+                div.setAttribute('aria-selected', 'false');
+                div.setAttribute('tabindex', '-1');
 
                 // Add status-based styling
                 let statusColor = '';
@@ -661,25 +1081,72 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
 
                 div.style.cssText += statusColor;
 
-                // Enhanced display with all contact details
-                div.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: start;">
-                        <div style="flex: 1;">
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <strong>${contact.firm}</strong>
-                                ${contact.category ? `<span style="background: #e3f2fd; color: #1976d2; padding: 2px 6px; border-radius: 3px; font-size: 0.8em;">${contact.category}</span>` : ''}
-                            </div>
-                            👤 ${contact.contactName}<br>
-                            📧 ${contact.email}<br>
-                            🌍 ${contact.country}
-                            ${contact.phone ? `<br>📞 ${contact.phone}` : ''}
-                            ${contact.website ? `<br>🌐 ${contact.website}` : ''}
-                            ${contact.address ? `<br>📍 ${contact.address}` : ''}
-                            ${contact.source ? `<br>📊 Source: ${contact.source}` : ''}
-                        </div>
-                        <div style="font-size: 20px;">${statusIcon}</div>
-                    </div>
-                `;
+                // Security: Sanitize all contact data before display
+                const sanitizedContact = {
+                    firm: sanitizeHTML(contact.firm || ''),
+                    contactName: sanitizeHTML(contact.contactName || ''),
+                    email: sanitizeHTML(contact.email || ''),
+                    country: sanitizeHTML(contact.country || ''),
+                    phone: sanitizeHTML(contact.phone || ''),
+                    website: sanitizeHTML(contact.website || ''),
+                    address: sanitizeHTML(contact.address || ''),
+                    source: sanitizeHTML(contact.source || ''),
+                    category: sanitizeHTML(contact.category || '')
+                };
+
+                // Create safe HTML structure without innerHTML
+                const flexContainer = document.createElement('div');
+                flexContainer.style.cssText = 'display: flex; justify-content: space-between; align-items: start;';
+
+                const contentDiv = document.createElement('div');
+                contentDiv.style.cssText = 'flex: 1;';
+
+                // Header with firm name and category
+                const headerDiv = document.createElement('div');
+                headerDiv.style.cssText = 'display: flex; align-items: center; gap: 8px; margin-bottom: 4px;';
+
+                const firmStrong = document.createElement('strong');
+                firmStrong.textContent = sanitizedContact.firm;
+                headerDiv.appendChild(firmStrong);
+
+                if (sanitizedContact.category) {
+                    const categorySpan = document.createElement('span');
+                    categorySpan.style.cssText = 'background: #e3f2fd; color: #1976d2; padding: 2px 6px; border-radius: 3px; font-size: 0.8em;';
+                    categorySpan.textContent = sanitizedContact.category;
+                    headerDiv.appendChild(categorySpan);
+                }
+
+                contentDiv.appendChild(headerDiv);
+
+                // Contact details
+                const details = [
+                    `👤 ${sanitizedContact.contactName}`,
+                    `📧 ${sanitizedContact.email}`,
+                    `🌍 ${sanitizedContact.country}`
+                ];
+
+                if (sanitizedContact.phone) details.push(`📞 ${sanitizedContact.phone}`);
+                if (sanitizedContact.website) details.push(`🌐 ${sanitizedContact.website}`);
+                if (sanitizedContact.address) details.push(`📍 ${sanitizedContact.address}`);
+                if (sanitizedContact.source) details.push(`📊 Source: ${sanitizedContact.source}`);
+
+                details.forEach(detail => {
+                    const detailDiv = document.createElement('div');
+                    detailDiv.textContent = detail;
+                    detailDiv.style.fontSize = '10px';
+                    detailDiv.style.marginBottom = '2px';
+                    contentDiv.appendChild(detailDiv);
+                });
+
+                // Status icon
+                const statusDiv = document.createElement('div');
+                statusDiv.style.cssText = 'font-size: 20px;';
+                statusDiv.textContent = statusIcon;
+
+                flexContainer.appendChild(contentDiv);
+                flexContainer.appendChild(statusDiv);
+                div.appendChild(flexContainer);
+
                 container.appendChild(div);
                 console.log(`Contact ${index + 1} added to DOM`);
             });
@@ -783,22 +1250,45 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
 
         async function sendEmail() {
             console.log('=== EMAIL SENDING STARTED ===');
-            const fromEmail = document.getElementById('fromEmail').value;
-            const toEmailField = document.getElementById('toEmail').value;
-            const subject = document.getElementById('subject').value;
-            const body = document.getElementById('messageBody').value;
+
+            // Validate all inputs first
+            const fromEmailValid = validateEmail(document.getElementById('fromEmail'));
+            const toEmailValid = validateEmailList(document.getElementById('toEmail'));
+            const subjectValid = validateSubject(document.getElementById('subject'));
+            const messageValid = validateMessage(document.getElementById('messageBody'));
+
+            if (!fromEmailValid || !toEmailValid || !subjectValid || !messageValid) {
+                showAlert('Please fix all validation errors before sending', 'error');
+                return;
+            }
+
+            const fromEmail = document.getElementById('fromEmail').value.trim();
+            const toEmailField = document.getElementById('toEmail').value.trim();
+            const subject = document.getElementById('subject').value.trim();
+            const body = document.getElementById('messageBody').value.trim();
 
             // Parse multiple emails
             const toEmails = parseMultipleEmails(toEmailField);
             console.log('Email details:', { fromEmail, toEmails, subject: subject.substring(0, 50) + '...' });
 
-            if (toEmails.length === 0 || !subject || !body) {
-                showAlert('Please fill in all fields with valid email addresses', 'error');
+            if (toEmails.length === 0) {
+                showAlert('Please enter at least one valid email address', 'error');
                 return;
             }
 
+            // Security: Sanitize inputs
+            const sanitizedSubject = sanitizeInput(subject);
+            const sanitizedBody = sanitizeInput(body);
+
             if (toEmails.length > 1) {
                 showAlert(`Sending to ${toEmails.length} email addresses...`, 'success');
+            }
+
+            // Test Mode Check
+            if (isTestMode) {
+                showAlert('🧪 TEST MODE: Simulating email send (no real emails sent)', 'success');
+                simulateEmailSend(toEmails, sanitizedSubject, 'sent');
+                return;
             }
 
             try {
@@ -916,6 +1406,15 @@ Click OK to proceed or Cancel to abort.`;
         async function bulkSendEmails(contactsToEmail) {
             if (contactsToEmail.length === 0) return;
 
+            // Validate inputs first
+            const subjectValid = validateSubject(document.getElementById('subject'));
+            const messageValid = validateMessage(document.getElementById('messageBody'));
+
+            if (!subjectValid || !messageValid) {
+                showAlert('Please fix validation errors before sending bulk emails', 'error');
+                return;
+            }
+
             showAlert(`🚀 Starting bulk email to ${contactsToEmail.length} contacts...`, 'success');
 
             const bulkBtn = document.getElementById('bulkSendBtn');
@@ -927,6 +1426,16 @@ Click OK to proceed or Cancel to abort.`;
 
             let successCount = 0;
             let failureCount = 0;
+
+            // Test Mode Check
+            if (isTestMode) {
+                showAlert('🧪 TEST MODE: Simulating bulk email send (no real emails sent)', 'success');
+                simulateBulkEmailSend(contactsToEmail);
+                bulkBtn.textContent = '📧 Bulk Email';
+                bulkBtn.disabled = false;
+                sendBtn.disabled = false;
+                return;
+            }
 
             try {
                 for (let i = 0; i < contactsToEmail.length; i++) {
