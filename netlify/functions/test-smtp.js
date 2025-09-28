@@ -37,8 +37,8 @@ exports.handler = async (event, context) => {
             step1: 'Go to Netlify Dashboard → Site Settings → Environment Variables',
             step2: 'Add the following variables:',
             variables: {
-              SMTP_SERVER: 'smtppro.zoho.com',
-              SMTP_PORT: '587',
+              SMTP_SERVER: 'smtppro.zoho.eu (for EU) or smtppro.zoho.com',
+              SMTP_PORT: '465 (SSL) or 587 (TLS)',
               SMTP_USERNAME: 'info@datanalysisninsights.co.uk',
               SMTP_PASSWORD: 'Your Zoho App Password (not regular password)'
             },
@@ -52,7 +52,7 @@ exports.handler = async (event, context) => {
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_SERVER,
       port: parseInt(process.env.SMTP_PORT),
-      secure: false, // true for 465, false for other ports
+      secure: parseInt(process.env.SMTP_PORT) === 465, // true for 465 (SSL), false for 587 (TLS)
       auth: {
         user: process.env.SMTP_USERNAME,
         pass: process.env.SMTP_PASSWORD
