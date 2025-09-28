@@ -214,7 +214,7 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
 
             <div>
                 <button class="button" onclick="sendEmail()" id="sendBtn" disabled>📤 Send Email</button>
-                <button class="button" onclick="testConnection()" style="background: #28a745;">🔧 Test SMTP</button>
+                <button class="button" onclick="testConnection()" style="background: #28a745;">🔧 Test SMTP Connection</button>
             </div>
         </div>
     </div>
@@ -568,21 +568,44 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
 
         async function testConnection() {
             try {
-                showAlert('Testing SMTP connection...', 'success');
+                console.log('=== SMTP CONNECTION TEST STARTED ===');
+                showAlert('Testing SMTP credentials and connection...', 'success');
 
-                const response = await fetch('/.netlify/functions/health');
+                document.getElementById('status').textContent = '🔄 Testing SMTP...';
+                document.getElementById('status').className = 'status ready';
+
+                const response = await fetch('/.netlify/functions/test-smtp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
                 const result = await response.json();
+                console.log('SMTP test result:', result);
 
-                if (result.status === 'ok') {
-                    showAlert('✅ Server connection successful!');
-                    document.getElementById('status').textContent = '✅ Server Connected';
+                if (result.success) {
+                    showAlert(`${result.message}`, 'success');
+                    showAlert(`Connected to: ${result.smtp_config.server}:${result.smtp_config.port}`, 'success');
+                    document.getElementById('status').textContent = '✅ SMTP Ready';
                     document.getElementById('status').className = 'status ready';
                 } else {
-                    throw new Error('Health check failed');
+                    showAlert(`${result.message}`, 'error');
+
+                    if (result.troubleshooting && result.troubleshooting.length > 0) {
+                        showAlert(`Troubleshooting: ${result.troubleshooting.join(', ')}`, 'error');
+                    }
+
+                    if (result.instructions) {
+                        console.log('SMTP Setup Instructions:', result.instructions);
+                        showAlert('Check console for detailed setup instructions', 'error');
+                    }
+
+                    document.getElementById('status').textContent = '❌ SMTP Issues';
+                    document.getElementById('status').className = 'status error';
                 }
             } catch (error) {
-                showAlert('❌ Server connection failed', 'error');
-                document.getElementById('status').textContent = '❌ Server Issues';
+                console.error('SMTP test error:', error);
+                showAlert('❌ SMTP test failed - network error', 'error');
+                document.getElementById('status').textContent = '❌ SMTP Error';
                 document.getElementById('status').className = 'status error';
             }
         }
