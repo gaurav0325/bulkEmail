@@ -602,8 +602,8 @@ We are pleased to introduce Intex Technologies, a globally recognized brand with
                     console.log('API response status:', response.status);
 
                     if (response.ok) {
-                        document.getElementById('apiStatus').innerHTML = '✅ API Connected - Ready to send emails';
-                        document.getElementById('apiStatus').style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+                        // Also check if Zoho SMTP is configured
+                        this.checkZohoStatus();
                     } else {
                         console.error('API response not ok:', response.status, response.statusText);
                         throw new Error(`API responded with ${response.status}`);
@@ -617,6 +617,34 @@ We are pleased to introduce Intex Technologies, a globally recognized brand with
                     setTimeout(() => {
                         this.checkApiStatus();
                     }, 3000);
+                }
+            }
+
+            async checkZohoStatus() {
+                try {
+                    // Test Zoho Mail configuration with a simple check
+                    const testResponse = await fetch(`${this.apiBaseUrl}/send-email-zoho`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            to_email: 'test@example.com',
+                            subject: 'Configuration Test',
+                            content: 'Test'
+                        })
+                    });
+
+                    const result = await testResponse.json();
+
+                    if (result.setup_required) {
+                        document.getElementById('apiStatus').innerHTML = '⚙️ API Connected - Configure Zoho Mail SMTP';
+                        document.getElementById('apiStatus').style.background = 'linear-gradient(135deg, #ffc107 0%, #fd7e14 100%)';
+                    } else {
+                        document.getElementById('apiStatus').innerHTML = '✅ Zoho Mail Ready - smtppro.zoho.com configured';
+                        document.getElementById('apiStatus').style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+                    }
+                } catch (error) {
+                    document.getElementById('apiStatus').innerHTML = '✅ API Connected - Ready to send emails';
+                    document.getElementById('apiStatus').style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
                 }
             }
 
@@ -1030,7 +1058,7 @@ We are pleased to introduce Intex Technologies, a globally recognized brand with
                         };
                     });
 
-                    const response = await fetch(`${this.apiBaseUrl}/send-bulk-emails`, {
+                    const response = await fetch(`${this.apiBaseUrl}/send-bulk-emails-zoho`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ emails: emailsToSend })
@@ -1039,20 +1067,39 @@ We are pleased to introduce Intex Technologies, a globally recognized brand with
                     const result = await response.json();
 
                     if (result.success) {
-                        // Update contact statuses
-                        result.results.forEach((emailResult, index) => {
-                            const contact = unsentContacts[index];
-                            contact.sent = true;
-                            contact.success = emailResult.success;
-                            this.sentCount++;
-                            if (emailResult.success) this.successCount++;
+                        // Update contact statuses using the results array
+                        result.results.forEach((emailResult) => {
+                            const contact = unsentContacts[emailResult.index || 0];
+                            if (contact) {
+                                contact.sent = true;
+                                contact.success = emailResult.success;
+                                this.sentCount++;
+                                if (emailResult.success) this.successCount++;
+                            }
                         });
 
                         this.renderContactsList();
                         this.updateStats();
-                        this.showAlert('success', `Bulk email sending completed! Sent: ${result.results.filter(r => r.success).length}, Failed: ${result.results.filter(r => !r.success).length}`);
+
+                        // Show detailed results
+                        if (result.summary) {
+                            this.showAlert('success', `Zoho Mail bulk sending completed!\n✅ Sent: ${result.summary.sent}\n❌ Failed: ${result.summary.failed}\n📊 Success Rate: ${result.summary.success_rate}%`);
+                        } else {
+                            this.showAlert('success', `Bulk email completed via ${result.provider || 'Zoho Mail'}`);
+                        }
+
+                        // Show any errors if present
+                        const failures = result.results.filter(r => !r.success);
+                        if (failures.length > 0) {
+                            console.log('Failed emails:', failures);
+                        }
                     } else {
                         this.showAlert('error', 'Bulk email sending failed: ' + result.message);
+
+                        // Show troubleshooting if available
+                        if (result.troubleshooting) {
+                            this.showAlert('info', 'Troubleshooting:\n' + result.troubleshooting.join('\n'));
+                        }
                     }
 
                 } catch (error) {
