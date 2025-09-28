@@ -112,10 +112,14 @@
         <div class="panel">
             <h2>📂 Contacts & Template</h2>
 
-            <div style="margin-bottom: 15px;">
-                <label for="fileUpload" style="display: block; margin-bottom: 5px;">📁 Upload Contact Spreadsheet:</label>
-                <input type="file" id="fileUpload" accept=".xlsx,.xls,.csv" onchange="handleFileUpload(event)" style="margin-bottom: 10px;">
-                <small style="color: #666;">Supports Excel (.xlsx, .xls) and CSV files. Each tab/sheet represents a country.</small>
+            <div style="margin-bottom: 15px; padding: 15px; border: 2px dashed #007bff; border-radius: 8px; background: #f8f9fa;">
+                <label for="fileUpload" style="display: block; margin-bottom: 5px; font-weight: bold; color: #007bff;">📁 Upload Contact Spreadsheet:</label>
+                <input type="file" id="fileUpload" accept=".xlsx,.xls,.csv" onchange="handleFileUpload(event)" style="margin-bottom: 10px; width: 100%; padding: 8px;">
+                <small style="color: #666; display: block;">
+                    ✓ Supports Excel (.xlsx, .xls) and CSV files<br>
+                    ✓ Each tab/sheet represents a country<br>
+                    ✓ Expected columns: firm name, address, contact number, contact person, email, website, source, category
+                </small>
             </div>
 
             <button class="button" onclick="loadSampleData()">📋 Load Sample Data</button>
@@ -264,13 +268,18 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
             const file = event.target.files[0];
             if (!file) return;
 
-            showAlert('Processing spreadsheet...', 'success');
+            console.log('File selected:', file.name, file.type, file.size);
+            showAlert(`Processing ${file.name}...`, 'success');
 
             try {
                 const data = await file.arrayBuffer();
+                console.log('File read, size:', data.byteLength);
+
                 const workbook = XLSX.read(data, { type: 'array' });
+                console.log('Workbook loaded, sheets:', workbook.SheetNames);
 
                 contacts = []; // Clear existing contacts
+                let totalProcessed = 0;
 
                 // Process each worksheet (tab) as a country
                 workbook.SheetNames.forEach(sheetName => {
@@ -315,10 +324,14 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
                         // Only add if email exists
                         if (contact.email && contact.email.includes('@')) {
                             contacts.push(contact);
+                            totalProcessed++;
                         }
                     });
+
+                    console.log(`Processed sheet "${sheetName}": ${jsonData.length - 1} rows`);
                 });
 
+                console.log(`Total contacts loaded: ${contacts.length}`);
                 renderContacts();
                 showAlert(`✅ Loaded ${contacts.length} contacts from ${workbook.SheetNames.length} countries!`);
 
@@ -536,7 +549,8 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Simple email sender loaded');
             extractTemplateHeaders(); // Extract and populate From field
-            showAlert('Simple Email Sender ready! Click "Load Sample Data" to start.');
+            renderContacts(); // Initialize contact list display
+            showAlert('Simple Email Sender ready! Upload a spreadsheet or click "Load Sample Data" to start.');
         });
     </script>
 </body>
