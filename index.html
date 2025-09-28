@@ -215,7 +215,8 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
 
             <div style="margin-bottom: 15px;">
                 <label>From:</label>
-                <input type="email" id="fromEmail" value="Intex Technologies <info@datanalysisninsights.co.uk>">
+                <input type="email" id="fromEmail" value="info@datanalysisninsights.co.uk" placeholder="info@datanalysisninsights.co.uk">
+                <small style="display: block; color: #666; margin-top: 5px;">Will be sent as: Intex Technologies &lt;info@datanalysisninsights.co.uk&gt;</small>
             </div>
 
             <div style="margin-bottom: 15px;">
@@ -712,15 +713,21 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
             const template = document.getElementById('emailTemplate').value;
             const headerLines = template.split('\n');
 
-            // Extract headers from template
+            // Set default values
+            document.getElementById('fromEmail').value = 'info@datanalysisninsights.co.uk';
+            window.defaultFromName = 'Intex Technologies';
+
+            // Extract headers from template if present
             for (let line of headerLines) {
                 if (line.startsWith('From: ')) {
                     const fromEmail = line.replace('From: ', '').trim();
-                    document.getElementById('fromEmail').value = fromEmail;
+                    // Only use template email if it's a valid email address
+                    if (fromEmail.includes('@')) {
+                        document.getElementById('fromEmail').value = fromEmail;
+                    }
                 }
                 if (line.startsWith('From-Name: ')) {
                     const fromName = line.replace('From-Name: ', '').trim();
-                    // Store from name for later use
                     window.defaultFromName = fromName;
                 }
             }
