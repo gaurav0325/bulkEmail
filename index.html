@@ -281,6 +281,118 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
             failed: 0,
             pending: 0
         };
+        let emailHistory = []; // Track email sending history
+        let uploadStats = { total: 0, read: 0, unread: 0 }; // Track upload statistics
+
+        // New functionality functions
+        function toggleTemplate() {
+            const container = document.getElementById('templateContainer');
+            const button = document.getElementById('templateToggle');
+
+            if (container.style.display === 'none') {
+                container.style.display = 'block';
+                button.textContent = '📝 Collapse';
+            } else {
+                container.style.display = 'none';
+                button.textContent = '📝 Expand';
+            }
+        }
+
+        function handleKeyNavigation(event) {
+            if (contacts.length === 0) return;
+
+            switch(event.key) {
+                case 'ArrowDown':
+                    event.preventDefault();
+                    if (selectedContactIndex < contacts.length - 1) {
+                        selectContact(selectedContactIndex + 1);
+                    }
+                    break;
+                case 'ArrowUp':
+                    event.preventDefault();
+                    if (selectedContactIndex > 0) {
+                        selectContact(selectedContactIndex - 1);
+                    }
+                    break;
+                case 'Enter':
+                    event.preventDefault();
+                    if (selectedContactIndex >= 0) {
+                        document.getElementById('sendBtn').click();
+                    }
+                    break;
+            }
+        }
+
+        function updateUploadStats() {
+            const statsDiv = document.getElementById('uploadStats');
+            if (uploadStats.total > 0) {
+                statsDiv.style.display = 'block';
+                statsDiv.innerHTML = `
+                    📊 Total: ${uploadStats.total} |
+                    ✅ Read: ${uploadStats.read} |
+                    ❌ Unread: ${uploadStats.unread}
+                `;
+            }
+        }
+
+        function addToEmailHistory(toEmails, subject, status, timestamp) {
+            const historyItem = {
+                id: Date.now(),
+                toEmails: Array.isArray(toEmails) ? toEmails : [toEmails],
+                subject: subject,
+                status: status, // 'sent', 'failed'
+                timestamp: timestamp,
+                content: document.getElementById('messageBody').value.substring(0, 100) + '...'
+            };
+            emailHistory.unshift(historyItem); // Add to beginning
+            updateEmailHistory();
+        }
+
+        function updateEmailHistory() {
+            const historyDiv = document.getElementById('emailHistory');
+
+            if (emailHistory.length === 0) {
+                historyDiv.innerHTML = `
+                    <div style="text-align: center; color: #999; padding: 20px;">
+                        <p>📧 Email history will appear here</p>
+                        <small>Send emails to see status tracking</small>
+                    </div>
+                `;
+                return;
+            }
+
+            let historyHTML = '';
+            emailHistory.slice(0, 20).forEach(item => { // Show last 20 items
+                const statusColor = item.status === 'sent' ? '#28a745' : '#dc3545';
+                const statusIcon = item.status === 'sent' ? '✅' : '❌';
+
+                historyHTML += `
+                    <div style="border-bottom: 1px solid #eee; padding: 8px; margin-bottom: 8px;">
+                        <div style="display: flex; justify-content: between; align-items: start;">
+                            <div style="flex: 1;">
+                                <strong style="color: ${statusColor};">${statusIcon} ${item.status.toUpperCase()}</strong>
+                                <div style="font-size: 12px; color: #666; margin-top: 2px;">
+                                    To: ${item.toEmails.join(', ')}<br>
+                                    Subject: ${item.subject}<br>
+                                    ${new Date(item.timestamp).toLocaleString()}<br>
+                                    <small>${item.content}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            historyDiv.innerHTML = historyHTML;
+        }
+
+        function parseMultipleEmails(emailString) {
+            // Handle multiple delimiters: comma, semicolon, forward slash
+            return emailString
+                .split(/[,;\/]/)
+                .map(email => email.trim())
+                .filter(email => email && email.includes('@'));
+        }
 
         // No sample data - users must upload their own spreadsheets
 
@@ -331,6 +443,9 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
                     console.log('CSV parsed, headers:', csvData.headers);
                     console.log('CSV data rows:', csvData.data.length);
 
+                    // Track total rows for statistics
+                    uploadStats.total = csvData.data.length;
+
                     // Process CSV data
                     csvData.data.forEach((row, index) => {
                         console.log(`Processing row ${index + 1}:`, row);
@@ -369,6 +484,16 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
 
                     const workbook = XLSX.read(data, { type: 'array' });
                     console.log('Workbook loaded, sheets:', workbook.SheetNames);
+
+                    // Calculate total rows across all sheets
+                    uploadStats.total = 0;
+                    workbook.SheetNames.forEach(sheetName => {
+                        const worksheet = workbook.Sheets[sheetName];
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                        if (jsonData.length > 1) {
+                            uploadStats.total += jsonData.length - 1; // Exclude header row
+                        }
+                    });
 
                     // Process each worksheet (tab) as a country
                     workbook.SheetNames.forEach(sheetName => {
@@ -423,6 +548,11 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
 
                     console.log(`Total contacts loaded: ${contacts.length}`);
                 }
+
+                // Update upload statistics
+                uploadStats.read = contacts.length;
+                uploadStats.unread = uploadStats.total - uploadStats.read;
+                updateUploadStats();
 
                 console.log('About to render contacts. Array length:', contacts.length);
                 renderContacts();
@@ -626,58 +756,77 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
         async function sendEmail() {
             console.log('=== EMAIL SENDING STARTED ===');
             const fromEmail = document.getElementById('fromEmail').value;
-            const toEmail = document.getElementById('toEmail').value;
+            const toEmailField = document.getElementById('toEmail').value;
             const subject = document.getElementById('subject').value;
             const body = document.getElementById('messageBody').value;
 
-            console.log('Email details:', { fromEmail, toEmail, subject: subject.substring(0, 50) + '...' });
+            // Parse multiple emails
+            const toEmails = parseMultipleEmails(toEmailField);
+            console.log('Email details:', { fromEmail, toEmails, subject: subject.substring(0, 50) + '...' });
 
-            if (!toEmail || !subject || !body) {
-                showAlert('Please fill in all fields', 'error');
+            if (toEmails.length === 0 || !subject || !body) {
+                showAlert('Please fill in all fields with valid email addresses', 'error');
                 return;
+            }
+
+            if (toEmails.length > 1) {
+                showAlert(`Sending to ${toEmails.length} email addresses...`, 'success');
             }
 
             try {
                 document.getElementById('sendBtn').textContent = '📤 Sending...';
                 document.getElementById('sendBtn').disabled = true;
 
-                // Try to send via working function with real SMTP
-                console.log('Sending request to Netlify function...');
-                const response = await fetch('/.netlify/functions/send-email-working', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        from_email: fromEmail,
-                        from_name: 'Intex Technologies',
-                        to_email: toEmail,
-                        subject: subject,
-                        content: body
-                    })
-                });
+                // Send to each email address (for multiple emails, send individually)
+                let successCount = 0;
+                let failureCount = 0;
 
-                console.log('Response status:', response.status);
-                const result = await response.json();
-                console.log('Response result:', result);
+                for (const toEmail of toEmails) {
+                    console.log(`Sending to: ${toEmail}`);
 
-                if (result.success) {
-                    showAlert(`✅ ${result.message}`);
+                    try {
+                        const response = await fetch('/.netlify/functions/send-email-working', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                from_email: fromEmail,
+                                from_name: 'Intex Technologies',
+                                to_email: toEmail,
+                                subject: subject,
+                                content: body
+                            })
+                        });
 
-                    // Update contact status to sent
-                    if (selectedContactIndex >= 0) {
-                        contacts[selectedContactIndex].emailStatus = 'sent';
-                        renderContacts(); // Re-render to show green color
+                        const result = await response.json();
+                        console.log(`Response for ${toEmail}:`, result);
+
+                        if (result.success) {
+                            successCount++;
+                            addToEmailHistory(toEmail, subject, 'sent', Date.now());
+                        } else {
+                            failureCount++;
+                            addToEmailHistory(toEmail, subject, 'failed', Date.now());
+                        }
+                    } catch (emailError) {
+                        console.error(`Error sending to ${toEmail}:`, emailError);
+                        failureCount++;
+                        addToEmailHistory(toEmail, subject, 'failed', Date.now());
                     }
+                }
+
+                // Show summary results
+                if (successCount > 0 && failureCount === 0) {
+                    showAlert(`✅ Successfully sent to all ${successCount} email(s)`);
+                } else if (successCount > 0 && failureCount > 0) {
+                    showAlert(`⚠️ Sent to ${successCount}, failed to ${failureCount} email(s)`);
                 } else {
-                    showAlert(`ℹ️ ${result.message}`, 'error');
-                    if (result.instructions) {
-                        showAlert(result.instructions, 'error');
-                    }
+                    showAlert(`❌ Failed to send to all ${failureCount} email(s)`, 'error');
+                }
 
-                    // Update contact status to failed
-                    if (selectedContactIndex >= 0) {
-                        contacts[selectedContactIndex].emailStatus = 'failed';
-                        renderContacts(); // Re-render to show red color
-                    }
+                // Update contact status if single contact selected
+                if (selectedContactIndex >= 0 && toEmails.length === 1) {
+                    contacts[selectedContactIndex].emailStatus = successCount > 0 ? 'sent' : 'failed';
+                    renderContacts(); // Re-render to show color
                 }
 
             } catch (error) {
