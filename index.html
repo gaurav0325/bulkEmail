@@ -159,16 +159,11 @@
             <small style="color: #666;">Data Analysis Insights - Professional Email Campaign Tool</small>
         </div>
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-            <label style="display: flex; align-items: center; gap: 5px; font-size: 12px; color: #666;">
-                <input type="checkbox" id="testMode" checked onchange="toggleTestMode()" aria-describedby="testModeDesc">
-                🧪 Test Mode (No Real Emails)
-            </label>
             <div id="status" class="status ready" style="margin: 0; padding: 6px 10px; font-size: 11px;" role="status" aria-live="polite">✅ System Ready</div>
             <button class="button" onclick="testConnection()" style="background: #28a745; padding: 8px 12px; font-size: 12px;" aria-label="Test SMTP Connection">🔧 Test SMTP</button>
             <button class="button" onclick="sendEmail()" id="sendBtn" disabled style="padding: 10px 20px; font-size: 14px; font-weight: bold;" aria-label="Send Email to Selected Contact">📤 Send Email</button>
             <button class="button" onclick="confirmBulkEmail()" id="bulkSendBtn" disabled style="background: #dc3545; padding: 10px 20px; font-size: 14px; font-weight: bold;" aria-label="Send Bulk Email to All Contacts">📧 Bulk Email</button>
         </div>
-        <div id="testModeDesc" style="font-size: 10px; color: #999; margin-top: 5px; display: block;">Test mode prevents real emails from being sent and shows simulation results instead</div>
     </div>
 
     <div class="main-content">
@@ -234,6 +229,9 @@
 
             <div style="margin-bottom: 15px;">
                 <label for="toEmail" style="font-size: 14px; font-weight: bold; color: #333; display: block; margin-bottom: 5px;">To: <small style="color: #28a745;">(Use / or , for multiple emails)</small></label>
+                <div style="background: #e8f4fd; border: 1px solid #b3d9ff; border-radius: 4px; padding: 8px; margin-bottom: 5px; font-size: 12px; color: #0056b3;">
+                    📧 <strong>Emails will be sent from:</strong> Intex Technologies &lt;info@datanalysisninsights.co.uk&gt;
+                </div>
                 <input type="text" id="toEmail" placeholder="Select contact or type emails separated by / or ," style="font-size: 14px; padding: 10px; width: 100%; border: 1px solid #ddd; border-radius: 4px;" aria-required="true" oninput="validateEmailList(this)" aria-describedby="toEmailDesc">
                 <small id="toEmailDesc" style="color: #666; font-size: 11px;">Separate multiple emails with commas, semicolons, or forward slashes</small>
                 <div id="toEmailError" style="color: #dc3545; font-size: 12px; margin-top: 2px; display: none;" role="alert"></div>
@@ -246,8 +244,13 @@
             </div>
 
             <div style="margin-bottom: 20px;">
-                <label for="messageBody" style="font-size: 14px; font-weight: bold; color: #333; display: block; margin-bottom: 5px;">Message:</label>
-                <textarea id="messageBody" placeholder="Email content" style="min-height: 400px; font-size: 14px; line-height: 1.6; padding: 15px; width: 100%; border: 1px solid #ddd; border-radius: 4px; resize: vertical;" aria-required="true" oninput="validateMessage(this)"></textarea>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                    <label for="messageBody" style="font-size: 14px; font-weight: bold; color: #333;">Message:</label>
+                    <button onclick="toggleMessageExpand()" id="messageExpandBtn" class="button" style="padding: 3px 8px; font-size: 11px; background: #f8f9fa; color: #333; border: 1px solid #ddd;" aria-label="Expand message area">
+                        📄 Expand
+                    </button>
+                </div>
+                <textarea id="messageBody" placeholder="Email content" style="min-height: 400px; font-size: 14px; line-height: 1.6; padding: 15px; width: 100%; border: 1px solid #ddd; border-radius: 4px; resize: vertical; transition: min-height 0.3s ease;" aria-required="true" oninput="validateMessage(this)"></textarea>
                 <div id="messageError" style="color: #dc3545; font-size: 12px; margin-top: 2px; display: none;" role="alert"></div>
                 <small style="color: #666; font-size: 11px;">Use {contactName}, {firm}, {country}, {email} for personalization</small>
             </div>
@@ -353,8 +356,9 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
         };
         let emailHistory = []; // Track email sending history
         let uploadStats = { total: 0, read: 0, unread: 0 }; // Track upload statistics
-        let isTestMode = true; // Start in test mode for safety
         let currentUploadProgress = null; // Track upload progress
+        let uploadedSpreadsheetData = []; // Track original spreadsheet data with status
+        let messageExpanded = false; // Track message area expansion
 
         // Security: Email validation regex
         const EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
@@ -499,80 +503,44 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
             errorDiv.textContent = '';
         }
 
-        // Test Mode Functions
-        function simulateEmailSend(emails, subject, status = 'sent') {
-            const timestamp = Date.now();
-
-            emails.forEach(email => {
-                // Simulate random success/failure for realism
-                const finalStatus = Math.random() > 0.1 ? 'sent' : 'failed'; // 90% success rate
-                addToEmailHistory(email, subject, finalStatus, timestamp);
-
-                // Update contact status if it's in the contact list
-                const contactIndex = contacts.findIndex(c => c.email === email);
-                if (contactIndex >= 0) {
-                    contacts[contactIndex].emailStatus = finalStatus;
-                }
-            });
-
-            const successCount = emails.filter((_, i) => Math.random() > 0.1).length;
-            const failureCount = emails.length - successCount;
-
-            setTimeout(() => {
-                showAlert(`🧪 SIMULATION COMPLETE: ${successCount} simulated as sent, ${failureCount} simulated as failed`, 'success');
-                renderContacts();
-                updateContactCounts();
-            }, 1000 + Math.random() * 2000); // Realistic delay
-        }
-
-        function simulateBulkEmailSend(contactsToEmail) {
-            let successCount = 0;
-            let failureCount = 0;
-            const subject = document.getElementById('subject').value;
-
-            contactsToEmail.forEach((contact, index) => {
-                setTimeout(() => {
-                    // Simulate random success/failure
-                    const success = Math.random() > 0.15; // 85% success rate for bulk
-                    const status = success ? 'sent' : 'failed';
-
-                    contact.emailStatus = status;
-                    if (success) successCount++; else failureCount++;
-
-                    addToEmailHistory(contact.email, subject, status, Date.now());
-
-                    // Update progress
-                    const bulkBtn = document.getElementById('bulkSendBtn');
-                    bulkBtn.textContent = `🧪 Simulating ${index + 1}/${contactsToEmail.length}...`;
-
-                    // Final update
-                    if (index === contactsToEmail.length - 1) {
-                        setTimeout(() => {
-                            showAlert(`🧪 BULK SIMULATION COMPLETE: ${successCount} sent, ${failureCount} failed`, 'success');
-                            renderContacts();
-                            updateContactCounts();
-                            bulkBtn.textContent = '📧 Bulk Email';
-                            bulkBtn.disabled = false;
-                            document.getElementById('sendBtn').disabled = false;
-                        }, 500);
-                    }
-                }, index * 100); // Stagger for realistic effect
-            });
-        }
-
-        function toggleTestMode() {
-            isTestMode = document.getElementById('testMode').checked;
-            const status = document.getElementById('status');
-            if (isTestMode) {
-                status.textContent = '🧪 Test Mode Active';
-                status.className = 'status ready';
-                status.style.background = '#fff3cd';
-                status.style.color = '#856404';
-            } else {
-                status.textContent = '⚠️ Live Mode - Real Emails';
-                status.className = 'status error';
+        // Spreadsheet Status Tracking
+        function updateSpreadsheetStatus(originalRowIndex, status, contactData) {
+            if (uploadedSpreadsheetData[originalRowIndex]) {
+                uploadedSpreadsheetData[originalRowIndex].status = status;
+                uploadedSpreadsheetData[originalRowIndex].processedContact = contactData;
             }
-            showAlert(isTestMode ? 'Test mode enabled - no real emails will be sent' : 'Live mode enabled - REAL EMAILS WILL BE SENT!', isTestMode ? 'success' : 'error');
+        }
+
+        function generateStatusReport() {
+            const totalRows = uploadedSpreadsheetData.length;
+            const successfulRows = uploadedSpreadsheetData.filter(row => row.status === 'uploaded').length;
+            const failedRows = totalRows - successfulRows;
+
+            return {
+                total: totalRows,
+                successful: successfulRows,
+                failed: failedRows,
+                data: uploadedSpreadsheetData
+            };
+        }
+
+        function showUploadStatusReport(statusReport) {
+            const uploadStatsDiv = document.getElementById('uploadStats');
+            if (!uploadStatsDiv) return;
+
+            if (statusReport.total === 0) {
+                uploadStatsDiv.style.display = 'none';
+                return;
+            }
+
+            uploadStatsDiv.style.display = 'block';
+            uploadStatsDiv.innerHTML = `
+                📊 <strong>Upload Status:</strong>
+                <span style="color: #28a745;">${statusReport.successful} uploaded</span> |
+                <span style="color: #dc3545;">${statusReport.failed} failed</span> |
+                Total: ${statusReport.total} rows
+                ${statusReport.failed > 0 ? `<br><small style="color: #dc3545;">Failed rows: Missing emails or invalid data</small>` : ''}
+            `;
         }
 
         // Search and Filter Functions
@@ -658,7 +626,24 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
             }
         }
 
-        // New functionality functions
+        // UI Enhancement Functions
+        function toggleMessageExpand() {
+            const messageBody = document.getElementById('messageBody');
+            const expandBtn = document.getElementById('messageExpandBtn');
+
+            if (messageExpanded) {
+                messageBody.style.minHeight = '400px';
+                expandBtn.textContent = '📄 Expand';
+                expandBtn.setAttribute('aria-label', 'Expand message area');
+                messageExpanded = false;
+            } else {
+                messageBody.style.minHeight = '600px';
+                expandBtn.textContent = '📄 Collapse';
+                expandBtn.setAttribute('aria-label', 'Collapse message area');
+                messageExpanded = true;
+            }
+        }
+
         function toggleTemplate() {
             const container = document.getElementById('templateContainer');
             const button = document.getElementById('templateToggle');
@@ -835,6 +820,7 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
                 contacts = [];
                 filteredContacts = [];
                 selectedContactIndex = -1;
+                uploadedSpreadsheetData = [];
                 currentUploadProgress = { current: 0, total: 0 };
 
                 showProgress(0, 100, 'Starting file processing...');
@@ -925,8 +911,18 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
                     };
 
                     // Process each row
-                    rows.forEach(row => {
-                        if (!row || row.length === 0) return;
+                    rows.forEach((row, rowIndex) => {
+                        if (!row || row.length === 0) {
+                            // Track empty rows as failed
+                            uploadedSpreadsheetData.push({
+                                originalRowIndex: rowIndex + 1, // +1 for header
+                                originalData: row,
+                                status: 'failed',
+                                reason: 'Empty row',
+                                sheetName: sheetName
+                            });
+                            return;
+                        }
 
                         const contact = {
                             country: sheetName, // Use sheet name as country
@@ -943,11 +939,26 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
                             emailStatus: 'pending' // pending, sent, failed
                         };
 
+                        // Track in spreadsheet data
+                        const spreadsheetEntry = {
+                            originalRowIndex: rowIndex + 1, // +1 for header
+                            originalData: row,
+                            sheetName: sheetName,
+                            processedContact: contact
+                        };
+
                         // Only add if email exists
                         if (contact.email && contact.email.includes('@')) {
                             contacts.push(contact);
+                            spreadsheetEntry.status = 'uploaded';
+                            spreadsheetEntry.reason = 'Successfully uploaded';
                             totalProcessed++;
+                        } else {
+                            spreadsheetEntry.status = 'failed';
+                            spreadsheetEntry.reason = 'Missing or invalid email address';
                         }
+
+                        uploadedSpreadsheetData.push(spreadsheetEntry);
                     });
 
                         console.log(`Processed sheet "${sheetName}": ${jsonData.length - 1} rows`);
@@ -966,9 +977,13 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
                 updateUploadStats();
                 hideProgress();
 
+                // Show upload status report
+                const statusReport = generateStatusReport();
+                showUploadStatusReport(statusReport);
+
                 console.log('About to render contacts. Array length:', contacts.length);
                 renderContacts();
-                showAlert(`✅ Loaded ${contacts.length} contacts${file.name.toLowerCase().endsWith('.csv') ? '' : ` from multiple countries`}!`, 'success');
+                showAlert(`✅ Loaded ${contacts.length} contacts${file.name.toLowerCase().endsWith('.csv') ? '' : ` from multiple countries`}! (${statusReport.failed} rows had issues)`, statusReport.failed > 0 ? 'error' : 'success');
 
             } catch (error) {
                 hideProgress();
@@ -985,9 +1000,6 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Bulk Email Sender Application Initialized');
 
-            // Set up initial state
-            toggleTestMode(); // Initialize test mode
-
             // Initialize filtered contacts
             filteredContacts = [...contacts];
 
@@ -997,7 +1009,7 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
                 firstButton.focus();
             }
 
-            console.log('Application ready for use');
+            console.log('Application ready for use - Live mode active');
         });
 
         function findColumnIndex(headers, possibleNames) {
@@ -1284,13 +1296,6 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
                 showAlert(`Sending to ${toEmails.length} email addresses...`, 'success');
             }
 
-            // Test Mode Check
-            if (isTestMode) {
-                showAlert('🧪 TEST MODE: Simulating email send (no real emails sent)', 'success');
-                simulateEmailSend(toEmails, sanitizedSubject, 'sent');
-                return;
-            }
-
             try {
                 document.getElementById('sendBtn').textContent = '📤 Sending...';
                 document.getElementById('sendBtn').disabled = true;
@@ -1426,16 +1431,6 @@ Click OK to proceed or Cancel to abort.`;
 
             let successCount = 0;
             let failureCount = 0;
-
-            // Test Mode Check
-            if (isTestMode) {
-                showAlert('🧪 TEST MODE: Simulating bulk email send (no real emails sent)', 'success');
-                simulateBulkEmailSend(contactsToEmail);
-                bulkBtn.textContent = '📧 Bulk Email';
-                bulkBtn.disabled = false;
-                sendBtn.disabled = false;
-                return;
-            }
 
             try {
                 for (let i = 0; i < contactsToEmail.length; i++) {
