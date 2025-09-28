@@ -182,8 +182,20 @@ Website: www.intex.in
 
 P.S. We are also interested in exploring private label manufacturing opportunities and joint ventures for established brands in the {country} market. Please let us know if {firm} has any interest in such collaborations.</textarea>
 
-            <h3>Contact List</h3>
-            <div id="contactsList">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h3 style="margin: 0;">Contact List</h3>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div id="contactCounts" style="font-size: 12px; color: #666;">
+                        <span id="totalCount">0 contacts</span> |
+                        <span id="sentCount" style="color: #28a745;">0 sent</span> |
+                        <span id="failedCount" style="color: #dc3545;">0 failed</span>
+                    </div>
+                    <button id="scrollTopBtn" class="button" onclick="scrollToTop()" style="padding: 5px 10px; font-size: 12px; display: none;">
+                        ⬆️ Top
+                    </button>
+                </div>
+            </div>
+            <div id="contactsList" style="max-height: 400px; overflow-y: auto;" onscroll="handleScroll()">
                 <p>Click "Load Sample Data" to see contacts</p>
             </div>
         </div>
@@ -223,6 +235,12 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
         // Simple global variables - no classes to avoid complexity
         let contacts = [];
         let selectedContactIndex = -1;
+        let emailStatusCounts = {
+            total: 0,
+            sent: 0,
+            failed: 0,
+            pending: 0
+        };
 
         // No sample data - users must upload their own spreadsheets
 
@@ -287,7 +305,8 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
                             source: row.source || row['lead source'] || '',
                             category: row.category || row.type || row.sector || '',
                             businessFocus: generateBusinessFocus(row.category || row.type || ''),
-                            marketStrength: 'Medium'
+                            marketStrength: 'Medium',
+                            emailStatus: 'pending' // pending, sent, failed
                         };
 
                         console.log('Contact created:', contact);
@@ -348,7 +367,8 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
                             source: getCellValue(row, columnMap.source) || '',
                             category: getCellValue(row, columnMap.category) || '',
                             businessFocus: generateBusinessFocus(getCellValue(row, columnMap.category)),
-                            marketStrength: 'High'
+                            marketStrength: 'High',
+                            emailStatus: 'pending' // pending, sent, failed
                         };
 
                         // Only add if email exists
@@ -435,13 +455,29 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
                 div.className = 'contact-item';
                 div.onclick = () => selectContact(index);
 
+                // Add status-based styling
+                let statusColor = '';
+                let statusIcon = '';
+                if (contact.emailStatus === 'sent') {
+                    statusColor = 'background: #d4edda; border-color: #28a745;';
+                    statusIcon = '✅';
+                } else if (contact.emailStatus === 'failed') {
+                    statusColor = 'background: #f8d7da; border-color: #dc3545;';
+                    statusIcon = '❌';
+                } else {
+                    statusIcon = '📧';
+                }
+
+                div.style.cssText += statusColor;
+
                 // Enhanced display with all contact details
                 div.innerHTML = `
-                    <div style="display: flex; justify-content: between; align-items: start;">
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
                         <div style="flex: 1;">
-                            <strong>${contact.firm}</strong>
-                            ${contact.category ? `<span style="background: #e3f2fd; color: #1976d2; padding: 2px 6px; border-radius: 3px; font-size: 0.8em; margin-left: 8px;">${contact.category}</span>` : ''}
-                            <br>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <strong>${contact.firm}</strong>
+                                ${contact.category ? `<span style="background: #e3f2fd; color: #1976d2; padding: 2px 6px; border-radius: 3px; font-size: 0.8em;">${contact.category}</span>` : ''}
+                            </div>
                             👤 ${contact.contactName}<br>
                             📧 ${contact.email}<br>
                             🌍 ${contact.country}
@@ -450,12 +486,47 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
                             ${contact.address ? `<br>📍 ${contact.address}` : ''}
                             ${contact.source ? `<br>📊 Source: ${contact.source}` : ''}
                         </div>
+                        <div style="font-size: 20px;">${statusIcon}</div>
                     </div>
                 `;
                 container.appendChild(div);
                 console.log(`Contact ${index + 1} added to DOM`);
             });
+
+            // Update counts
+            updateContactCounts();
             console.log('=== CONTACT RENDERING COMPLETE ===');
+        }
+
+        function updateContactCounts() {
+            emailStatusCounts.total = contacts.length;
+            emailStatusCounts.sent = contacts.filter(c => c.emailStatus === 'sent').length;
+            emailStatusCounts.failed = contacts.filter(c => c.emailStatus === 'failed').length;
+            emailStatusCounts.pending = contacts.filter(c => c.emailStatus === 'pending').length;
+
+            document.getElementById('totalCount').textContent = `${emailStatusCounts.total} contacts`;
+            document.getElementById('sentCount').textContent = `${emailStatusCounts.sent} sent`;
+            document.getElementById('failedCount').textContent = `${emailStatusCounts.failed} failed`;
+        }
+
+        function handleScroll() {
+            const contactsList = document.getElementById('contactsList');
+            const scrollTopBtn = document.getElementById('scrollTopBtn');
+
+            // Show scroll to top button when scrolled down more than 100px
+            if (contactsList.scrollTop > 100) {
+                scrollTopBtn.style.display = 'block';
+            } else {
+                scrollTopBtn.style.display = 'none';
+            }
+        }
+
+        function scrollToTop() {
+            const contactsList = document.getElementById('contactsList');
+            contactsList.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
         }
 
         function selectContact(index) {
@@ -550,16 +621,34 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
 
                 if (result.success) {
                     showAlert(`✅ ${result.message}`);
+
+                    // Update contact status to sent
+                    if (selectedContactIndex >= 0) {
+                        contacts[selectedContactIndex].emailStatus = 'sent';
+                        renderContacts(); // Re-render to show green color
+                    }
                 } else {
                     showAlert(`ℹ️ ${result.message}`, 'error');
                     if (result.instructions) {
                         showAlert(result.instructions, 'error');
+                    }
+
+                    // Update contact status to failed
+                    if (selectedContactIndex >= 0) {
+                        contacts[selectedContactIndex].emailStatus = 'failed';
+                        renderContacts(); // Re-render to show red color
                     }
                 }
 
             } catch (error) {
                 console.error('Email sending error:', error);
                 showAlert(`Network error: ${error.message}`, 'error');
+
+                // Update contact status to failed on network error
+                if (selectedContactIndex >= 0) {
+                    contacts[selectedContactIndex].emailStatus = 'failed';
+                    renderContacts(); // Re-render to show red color
+                }
             } finally {
                 document.getElementById('sendBtn').textContent = '📤 Send Email';
                 document.getElementById('sendBtn').disabled = false;
