@@ -56,7 +56,7 @@ exports.handler = async (event, context) => {
     }
 
     // Configure Zoho Pro SMTP transport with optimized settings
-    const transporter = nodemailer.createTransporter({
+    const transporter = nodemailer.createTransport({
       host: 'smtppro.zoho.com', // Force use of professional server
       port: 587,
       secure: false, // Use STARTTLS
