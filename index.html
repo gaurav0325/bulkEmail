@@ -150,6 +150,33 @@
             background: #f8d7da;
             color: #721c24;
         }
+
+        /* Formatting Toolbar Styles */
+        .format-btn {
+            transition: all 0.2s ease;
+        }
+        .format-btn:hover {
+            background: #007bff !important;
+            color: white !important;
+            transform: translateY(-1px);
+        }
+        .format-btn:active {
+            transform: translateY(0);
+        }
+
+        /* Attachment Styles */
+        #attachmentContainer {
+            animation: slideDown 0.3s ease;
+        }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Formatting Toolbar Animation */
+        #formattingToolbar {
+            animation: slideDown 0.3s ease;
+        }
     </style>
 </head>
 <body>
@@ -244,13 +271,77 @@
             <div style="margin-bottom: 20px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
                     <label for="messageBody" style="font-size: 14px; font-weight: bold; color: #333;">Message:</label>
-                    <button onclick="toggleMessageExpand()" id="messageExpandBtn" class="button" style="padding: 3px 8px; font-size: 11px; background: #f8f9fa; color: #333; border: 1px solid #ddd;" aria-label="Expand message area">
-                        📄 Expand
-                    </button>
+                    <div style="display: flex; gap: 5px;">
+                        <button onclick="toggleFormatting()" id="formatToggle" class="button" style="padding: 3px 8px; font-size: 11px; background: #f8f9fa; color: #333; border: 1px solid #ddd;" aria-label="Toggle formatting tools">
+                            🎨 Format
+                        </button>
+                        <button onclick="toggleMessageExpand()" id="messageExpandBtn" class="button" style="padding: 3px 8px; font-size: 11px; background: #f8f9fa; color: #333; border: 1px solid #ddd;" aria-label="Expand message area">
+                            📄 Expand
+                        </button>
+                    </div>
                 </div>
+
+                <!-- Formatting Toolbar -->
+                <div id="formattingToolbar" style="display: none; padding: 8px; background: #f8f9fa; border: 1px solid #ddd; border-bottom: none; border-radius: 4px 4px 0 0; margin-bottom: 0;">
+                    <div style="display: flex; flex-wrap: wrap; gap: 5px; align-items: center;">
+                        <button onclick="formatText('bold')" class="format-btn" style="padding: 4px 8px; font-size: 11px; background: white; border: 1px solid #ccc; border-radius: 3px; cursor: pointer;" title="Bold">
+                            <strong>B</strong>
+                        </button>
+                        <button onclick="formatText('italic')" class="format-btn" style="padding: 4px 8px; font-size: 11px; background: white; border: 1px solid #ccc; border-radius: 3px; cursor: pointer;" title="Italic">
+                            <em>I</em>
+                        </button>
+                        <button onclick="formatText('underline')" class="format-btn" style="padding: 4px 8px; font-size: 11px; background: white; border: 1px solid #ccc; border-radius: 3px; cursor: pointer;" title="Underline">
+                            <u>U</u>
+                        </button>
+                        <span style="color: #ccc;">|</span>
+                        <button onclick="formatText('bullet')" class="format-btn" style="padding: 4px 8px; font-size: 11px; background: white; border: 1px solid #ccc; border-radius: 3px; cursor: pointer;" title="Bullet List">
+                            • List
+                        </button>
+                        <button onclick="formatText('number')" class="format-btn" style="padding: 4px 8px; font-size: 11px; background: white; border: 1px solid #ccc; border-radius: 3px; cursor: pointer;" title="Numbered List">
+                            1. List
+                        </button>
+                        <span style="color: #ccc;">|</span>
+                        <button onclick="insertPersonalization()" class="format-btn" style="padding: 4px 8px; font-size: 11px; background: white; border: 1px solid #ccc; border-radius: 3px; cursor: pointer;" title="Insert Personalization">
+                            📝 Variables
+                        </button>
+                        <button onclick="insertBusinessOpportunity()" class="format-btn" style="padding: 4px 8px; font-size: 11px; background: white; border: 1px solid #ccc; border-radius: 3px; cursor: pointer;" title="Insert Business Opportunity">
+                            💼 Opportunities
+                        </button>
+                    </div>
+                </div>
+
                 <textarea id="messageBody" placeholder="Email content" style="min-height: 400px; font-size: 14px; line-height: 1.6; padding: 15px; width: 100%; border: 1px solid #ddd; border-radius: 4px; resize: vertical; transition: min-height 0.3s ease;" aria-required="true" oninput="validateMessage(this)"></textarea>
                 <div id="messageError" style="color: #dc3545; font-size: 12px; margin-top: 2px; display: none;" role="alert"></div>
                 <small style="color: #666; font-size: 11px;">Use {contactName}, {firm}, {country}, {email} for personalization</small>
+            </div>
+
+            <!-- Email Attachments Section -->
+            <div style="margin-bottom: 20px; border: 1px solid #ddd; border-radius: 6px; background: #fafafa;">
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #f8f9fa; border-bottom: 1px solid #ddd; border-radius: 6px 6px 0 0;">
+                    <label style="font-size: 14px; font-weight: bold; color: #333; margin: 0;">📎 Email Attachments</label>
+                    <button onclick="toggleAttachments()" id="attachmentToggle" class="button" style="padding: 3px 8px; font-size: 11px; background: #f8f9fa; color: #333; border: 1px solid #ddd;" aria-label="Toggle attachment section">
+                        📁 Add Files
+                    </button>
+                </div>
+                <div id="attachmentContainer" style="display: none; padding: 15px;">
+                    <div style="margin-bottom: 15px;">
+                        <input type="file" id="attachmentFiles" multiple accept=".pdf,.doc,.docx,.txt,.xlsx,.xls,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.zip,.rar" style="display: none;" onchange="handleAttachmentUpload(event)">
+                        <button onclick="document.getElementById('attachmentFiles').click()" class="button" style="padding: 8px 15px; font-size: 12px; background: #007bff; color: white;">
+                            📎 Choose Files
+                        </button>
+                        <small style="color: #666; font-size: 11px; margin-left: 10px;">Max 5 files, 25MB total</small>
+                    </div>
+
+                    <div id="attachmentList" style="min-height: 50px;">
+                        <div id="attachmentEmpty" style="text-align: center; color: #999; font-style: italic; padding: 20px;">
+                            No attachments selected
+                        </div>
+                    </div>
+
+                    <div style="background: #e8f4fd; border: 1px solid #b3d9ff; border-radius: 4px; padding: 8px; margin-top: 10px; font-size: 11px; color: #0056b3;">
+                        📋 <strong>Supported formats:</strong> PDF, Word, Excel, PowerPoint, Images, Text files, ZIP/RAR archives
+                    </div>
+                </div>
             </div>
 
             <div style="text-align: center; color: #666; font-style: italic; margin-top: 20px;">
@@ -657,6 +748,234 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
                 container.style.display = 'none';
                 button.textContent = '📝 Expand';
             }
+        }
+
+        // Message Formatting Functions
+        function toggleFormatting() {
+            const toolbar = document.getElementById('formattingToolbar');
+            const button = document.getElementById('formatToggle');
+            const messageBody = document.getElementById('messageBody');
+
+            if (toolbar.style.display === 'none') {
+                toolbar.style.display = 'block';
+                button.textContent = '🎨 Hide';
+                messageBody.style.borderRadius = '0 0 4px 4px';
+            } else {
+                toolbar.style.display = 'none';
+                button.textContent = '🎨 Format';
+                messageBody.style.borderRadius = '4px';
+            }
+        }
+
+        function formatText(type) {
+            const textarea = document.getElementById('messageBody');
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const selectedText = textarea.value.substring(start, end);
+            let replacement = '';
+
+            switch (type) {
+                case 'bold':
+                    replacement = selectedText ? `**${selectedText}**` : '**bold text**';
+                    break;
+                case 'italic':
+                    replacement = selectedText ? `*${selectedText}*` : '*italic text*';
+                    break;
+                case 'underline':
+                    replacement = selectedText ? `_${selectedText}_` : '_underlined text_';
+                    break;
+                case 'bullet':
+                    const bulletLines = selectedText ? selectedText.split('\n').map(line => `• ${line}`).join('\n') : '• Bullet point 1\n• Bullet point 2\n• Bullet point 3';
+                    replacement = bulletLines;
+                    break;
+                case 'number':
+                    const numberLines = selectedText ? selectedText.split('\n').map((line, index) => `${index + 1}. ${line}`).join('\n') : '1. First item\n2. Second item\n3. Third item';
+                    replacement = numberLines;
+                    break;
+            }
+
+            const newValue = textarea.value.substring(0, start) + replacement + textarea.value.substring(end);
+            textarea.value = newValue;
+            textarea.focus();
+            textarea.setSelectionRange(start, start + replacement.length);
+        }
+
+        function insertPersonalization() {
+            const textarea = document.getElementById('messageBody');
+            const start = textarea.selectionStart;
+            const options = [
+                '{contactName}',
+                '{firm}',
+                '{country}',
+                '{email}',
+                '{phone}',
+                '{website}',
+                '{address}'
+            ];
+
+            const selection = prompt('Choose personalization variable:\n\n' +
+                options.map((opt, index) => `${index + 1}. ${opt}`).join('\n') +
+                '\n\nEnter number (1-7):');
+
+            if (selection && !isNaN(selection) && selection >= 1 && selection <= options.length) {
+                const variable = options[selection - 1];
+                const newValue = textarea.value.substring(0, start) + variable + textarea.value.substring(start);
+                textarea.value = newValue;
+                textarea.focus();
+                textarea.setSelectionRange(start + variable.length, start + variable.length);
+            }
+        }
+
+        function insertBusinessOpportunity() {
+            const textarea = document.getElementById('messageBody');
+            const start = textarea.selectionStart;
+
+            const businessOpportunities = `
+Potential Business Opportunities for {firm}:
+
+• **Product Distribution**: Exclusive distribution rights for Intex consumer electronics in {country}
+• **Retail Partnership**: Establish Intex branded sections in your existing retail locations
+• **E-commerce Integration**: Online sales partnership through your digital platforms
+• **Corporate Sales**: B2B sales of IT peripherals and office equipment to local businesses
+• **Service Center Network**: Authorized service and support center for Intex products
+• **Market Development**: Joint marketing campaigns and brand awareness initiatives
+
+Market Advantages:
+✓ High-demand consumer electronics market
+✓ Growing adoption of smart home technologies
+✓ Increasing demand for quality IT peripherals
+✓ Strong potential for mobile accessories sales
+✓ Expanding home appliance market in {country}`;
+
+            const newValue = textarea.value.substring(0, start) + businessOpportunities + textarea.value.substring(start);
+            textarea.value = newValue;
+            textarea.focus();
+            textarea.setSelectionRange(start + businessOpportunities.length, start + businessOpportunities.length);
+        }
+
+        // Email Attachment Functions
+        const attachments = [];
+        const MAX_ATTACHMENTS = 5;
+        const MAX_TOTAL_SIZE = 25 * 1024 * 1024; // 25MB
+
+        function toggleAttachments() {
+            const container = document.getElementById('attachmentContainer');
+            const button = document.getElementById('attachmentToggle');
+
+            if (container.style.display === 'none') {
+                container.style.display = 'block';
+                button.textContent = '📁 Hide';
+            } else {
+                container.style.display = 'none';
+                button.textContent = '📁 Add Files';
+            }
+        }
+
+        function handleAttachmentUpload(event) {
+            const files = Array.from(event.target.files);
+
+            if (files.length === 0) return;
+
+            // Check attachment limits
+            if (attachments.length + files.length > MAX_ATTACHMENTS) {
+                showAlert(`Maximum ${MAX_ATTACHMENTS} attachments allowed. You can add ${MAX_ATTACHMENTS - attachments.length} more files.`, 'error');
+                return;
+            }
+
+            // Check total size
+            const currentSize = attachments.reduce((sum, att) => sum + att.size, 0);
+            const newSize = files.reduce((sum, file) => sum + file.size, 0);
+
+            if (currentSize + newSize > MAX_TOTAL_SIZE) {
+                const maxMB = Math.round(MAX_TOTAL_SIZE / 1024 / 1024);
+                const currentMB = Math.round(currentSize / 1024 / 1024);
+                showAlert(`Total attachment size cannot exceed ${maxMB}MB. Current size: ${currentMB}MB`, 'error');
+                return;
+            }
+
+            // Add files to attachments array
+            files.forEach(file => {
+                const attachment = {
+                    id: Date.now() + Math.random(),
+                    file: file,
+                    name: file.name,
+                    size: file.size,
+                    type: file.type || 'application/octet-stream'
+                };
+                attachments.push(attachment);
+            });
+
+            renderAttachments();
+            showAlert(`Added ${files.length} attachment(s)`, 'success');
+
+            // Reset file input
+            event.target.value = '';
+        }
+
+        function renderAttachments() {
+            const container = document.getElementById('attachmentList');
+            const emptyState = document.getElementById('attachmentEmpty');
+
+            if (attachments.length === 0) {
+                container.innerHTML = '<div id="attachmentEmpty" style="text-align: center; color: #999; font-style: italic; padding: 20px;">No attachments selected</div>';
+                return;
+            }
+
+            const attachmentHTML = attachments.map(attachment => {
+                const sizeKB = Math.round(attachment.size / 1024);
+                const sizeText = sizeKB < 1024 ? `${sizeKB} KB` : `${Math.round(sizeKB / 1024)} MB`;
+
+                return `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: white; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 5px;">
+                        <div style="display: flex; align-items: center; flex: 1;">
+                            <span style="margin-right: 8px;">${getFileIcon(attachment.name)}</span>
+                            <div>
+                                <div style="font-size: 12px; font-weight: bold; color: #333;">${sanitizeInput(attachment.name)}</div>
+                                <div style="font-size: 10px; color: #666;">${sizeText}</div>
+                            </div>
+                        </div>
+                        <button onclick="removeAttachment('${attachment.id}')" style="padding: 2px 6px; font-size: 10px; background: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer;" title="Remove attachment">
+                            ✕
+                        </button>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = attachmentHTML;
+
+            // Show total size
+            const totalSize = attachments.reduce((sum, att) => sum + att.size, 0);
+            const totalMB = Math.round(totalSize / 1024 / 1024 * 100) / 100;
+            const maxMB = Math.round(MAX_TOTAL_SIZE / 1024 / 1024);
+
+            container.innerHTML += `
+                <div style="padding: 8px; background: #f8f9fa; border-radius: 4px; margin-top: 10px; font-size: 11px; color: #666; text-align: center;">
+                    Total: ${totalMB} MB of ${maxMB} MB used (${attachments.length}/${MAX_ATTACHMENTS} files)
+                </div>
+            `;
+        }
+
+        function removeAttachment(attachmentId) {
+            const index = attachments.findIndex(att => att.id == attachmentId);
+            if (index !== -1) {
+                const removedAttachment = attachments.splice(index, 1)[0];
+                renderAttachments();
+                showAlert(`Removed "${removedAttachment.name}"`, 'info');
+            }
+        }
+
+        function getFileIcon(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            const iconMap = {
+                'pdf': '📄',
+                'doc': '📝', 'docx': '📝',
+                'xls': '📊', 'xlsx': '📊',
+                'ppt': '📽️', 'pptx': '📽️',
+                'txt': '📄',
+                'jpg': '🖼️', 'jpeg': '🖼️', 'png': '🖼️', 'gif': '🖼️',
+                'zip': '📦', 'rar': '📦'
+            };
+            return iconMap[ext] || '📁';
         }
 
         function handleKeyNavigation(event) {
