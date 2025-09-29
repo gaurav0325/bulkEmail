@@ -9,12 +9,16 @@
     <meta name="cache-control" content="no-cache">
     <meta name="version" content="2.1-contact-enhancements">
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
-            background: #f5f5f5;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: #374151;
+            line-height: 1.6;
         }
         .header {
             background: white;
@@ -151,17 +155,46 @@
             color: #721c24;
         }
 
-        /* Formatting Toolbar Styles */
-        .format-btn {
-            transition: all 0.2s ease;
+        /* Modern Button Styles */
+        .modern-btn {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 500;
+            letter-spacing: 0.025em;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
         }
-        .format-btn:hover {
-            background: #007bff !important;
+        .modern-btn:hover {
+            background: #3b82f6 !important;
             color: white !important;
             transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+        .modern-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+        }
+
+        /* Formatting Toolbar Styles */
+        .format-btn {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 500;
+            border: 1px solid #e5e7eb;
+            background: white;
+            color: #374151;
+        }
+        .format-btn:hover {
+            background: #3b82f6 !important;
+            color: white !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+            border-color: #3b82f6;
         }
         .format-btn:active {
             transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
         }
 
         /* Attachment Styles */
@@ -271,7 +304,10 @@
             <div style="margin-bottom: 20px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
                     <label for="messageBody" style="font-size: 14px; font-weight: bold; color: #333;">Message:</label>
-                    <div style="display: flex; gap: 5px;">
+                    <div style="display: flex; gap: 5px; align-items: center;">
+                        <button onclick="toggleAttachments()" id="attachmentBtn" class="modern-btn" style="padding: 6px 8px; font-size: 12px; background: white; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; color: #6b7280;" title="Add Attachments">
+                            📎
+                        </button>
                         <button onclick="toggleFormatting()" id="formatToggle" class="button" style="padding: 3px 8px; font-size: 11px; background: #f8f9fa; color: #333; border: 1px solid #ddd;" aria-label="Toggle formatting tools">
                             🎨 Format
                         </button>
@@ -281,68 +317,106 @@
                     </div>
                 </div>
 
+                <!-- Attachment Section (moved to top) -->
+                <div id="attachmentContainer" style="display: none; margin-bottom: 10px; padding: 12px; background: #f8f9fa; border: 1px solid #e5e7eb; border-radius: 6px;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                        <input type="file" id="attachmentFiles" multiple accept=".pdf,.doc,.docx,.txt,.xlsx,.xls,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.zip,.rar" style="display: none;" onchange="handleAttachmentUpload(event)">
+                        <button onclick="document.getElementById('attachmentFiles').click()" class="modern-btn" style="padding: 6px 12px; font-size: 11px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                            📎 Choose Files
+                        </button>
+                        <small style="color: #6b7280; font-size: 11px;">Max 5 files, 25MB total</small>
+                    </div>
+                    <div id="attachmentList" style="min-height: 40px;">
+                        <div id="attachmentEmpty" style="text-align: center; color: #9ca3af; font-style: italic; padding: 15px; font-size: 11px;">
+                            No attachments selected
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Formatting Toolbar -->
-                <div id="formattingToolbar" style="display: none; padding: 8px; background: #f8f9fa; border: 1px solid #ddd; border-bottom: none; border-radius: 4px 4px 0 0; margin-bottom: 0;">
-                    <div style="display: flex; flex-wrap: wrap; gap: 5px; align-items: center;">
-                        <button onclick="formatText('bold')" class="format-btn" style="padding: 4px 8px; font-size: 11px; background: white; border: 1px solid #ccc; border-radius: 3px; cursor: pointer;" title="Bold">
+                <div id="formattingToolbar" style="display: none; padding: 12px; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border: 1px solid #dee2e6; border-bottom: none; border-radius: 6px 6px 0 0; margin-bottom: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
+                        <!-- Text Formatting -->
+                        <button onclick="formatText('bold')" class="format-btn modern-btn" style="padding: 6px 10px; font-size: 12px; background: white; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-weight: 600;" title="Bold">
                             <strong>B</strong>
                         </button>
-                        <button onclick="formatText('italic')" class="format-btn" style="padding: 4px 8px; font-size: 11px; background: white; border: 1px solid #ccc; border-radius: 3px; cursor: pointer;" title="Italic">
+                        <button onclick="formatText('italic')" class="format-btn modern-btn" style="padding: 6px 10px; font-size: 12px; background: white; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer;" title="Italic">
                             <em>I</em>
                         </button>
-                        <button onclick="formatText('underline')" class="format-btn" style="padding: 4px 8px; font-size: 11px; background: white; border: 1px solid #ccc; border-radius: 3px; cursor: pointer;" title="Underline">
+                        <button onclick="formatText('underline')" class="format-btn modern-btn" style="padding: 6px 10px; font-size: 12px; background: white; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer;" title="Underline">
                             <u>U</u>
                         </button>
-                        <span style="color: #ccc;">|</span>
-                        <button onclick="formatText('bullet')" class="format-btn" style="padding: 4px 8px; font-size: 11px; background: white; border: 1px solid #ccc; border-radius: 3px; cursor: pointer;" title="Bullet List">
+
+                        <div style="width: 1px; height: 20px; background: #d1d5db; margin: 0 4px;"></div>
+
+                        <!-- Color Highlighting -->
+                        <button onclick="showColorPicker()" class="format-btn modern-btn" style="padding: 6px 10px; font-size: 12px; background: white; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; position: relative;" title="Text Color">
+                            🎨 Color
+                        </button>
+                        <div id="colorPicker" style="display: none; position: absolute; z-index: 1000; background: white; border: 1px solid #d1d5db; border-radius: 6px; padding: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-top: 5px;">
+                            <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px;">
+                                <div onclick="applyColor('#000000')" style="width: 20px; height: 20px; background: #000000; border-radius: 3px; cursor: pointer;" title="Black"></div>
+                                <div onclick="applyColor('#dc2626')" style="width: 20px; height: 20px; background: #dc2626; border-radius: 3px; cursor: pointer;" title="Red"></div>
+                                <div onclick="applyColor('#ea580c')" style="width: 20px; height: 20px; background: #ea580c; border-radius: 3px; cursor: pointer;" title="Orange"></div>
+                                <div onclick="applyColor('#ca8a04')" style="width: 20px; height: 20px; background: #ca8a04; border-radius: 3px; cursor: pointer;" title="Yellow"></div>
+                                <div onclick="applyColor('#16a34a')" style="width: 20px; height: 20px; background: #16a34a; border-radius: 3px; cursor: pointer;" title="Green"></div>
+                                <div onclick="applyColor('#2563eb')" style="width: 20px; height: 20px; background: #2563eb; border-radius: 3px; cursor: pointer;" title="Blue"></div>
+                                <div onclick="applyColor('#7c3aed')" style="width: 20px; height: 20px; background: #7c3aed; border-radius: 3px; cursor: pointer;" title="Purple"></div>
+                                <div onclick="applyColor('#be185d')" style="width: 20px; height: 20px; background: #be185d; border-radius: 3px; cursor: pointer;" title="Pink"></div>
+                                <div onclick="applyColor('#374151')" style="width: 20px; height: 20px; background: #374151; border-radius: 3px; cursor: pointer;" title="Gray"></div>
+                                <div onclick="applyColor('#0891b2')" style="width: 20px; height: 20px; background: #0891b2; border-radius: 3px; cursor: pointer;" title="Cyan"></div>
+                                <div onclick="applyColor('#059669')" style="width: 20px; height: 20px; background: #059669; border-radius: 3px; cursor: pointer;" title="Emerald"></div>
+                                <div onclick="applyColor('#7c2d12')" style="width: 20px; height: 20px; background: #7c2d12; border-radius: 3px; cursor: pointer;" title="Brown"></div>
+                            </div>
+                        </div>
+
+                        <div style="width: 1px; height: 20px; background: #d1d5db; margin: 0 4px;"></div>
+
+                        <!-- Lists and Indentation -->
+                        <button onclick="formatText('bullet')" class="format-btn modern-btn" style="padding: 6px 10px; font-size: 12px; background: white; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer;" title="Bullet List">
                             • List
                         </button>
-                        <button onclick="formatText('number')" class="format-btn" style="padding: 4px 8px; font-size: 11px; background: white; border: 1px solid #ccc; border-radius: 3px; cursor: pointer;" title="Numbered List">
+                        <button onclick="formatText('number')" class="format-btn modern-btn" style="padding: 6px 10px; font-size: 12px; background: white; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer;" title="Numbered List">
                             1. List
                         </button>
-                        <span style="color: #ccc;">|</span>
-                        <button onclick="insertPersonalization()" class="format-btn" style="padding: 4px 8px; font-size: 11px; background: white; border: 1px solid #ccc; border-radius: 3px; cursor: pointer;" title="Insert Personalization">
-                            📝 Variables
+                        <button onclick="formatText('indent')" class="format-btn modern-btn" style="padding: 6px 10px; font-size: 12px; background: white; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer;" title="Indent">
+                            ⇥ Indent
                         </button>
-                        <button onclick="insertBusinessOpportunity()" class="format-btn" style="padding: 4px 8px; font-size: 11px; background: white; border: 1px solid #ccc; border-radius: 3px; cursor: pointer;" title="Insert Business Opportunity">
+
+                        <div style="width: 1px; height: 20px; background: #d1d5db; margin: 0 4px;"></div>
+
+                        <!-- Link -->
+                        <button onclick="formatText('link')" class="format-btn modern-btn" style="padding: 6px 10px; font-size: 12px; background: white; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer;" title="Insert Link">
+                            🔗 Link
+                        </button>
+
+                        <div style="width: 1px; height: 20px; background: #d1d5db; margin: 0 4px;"></div>
+
+                        <!-- Undo and Clear -->
+                        <button onclick="undoFormat()" class="format-btn modern-btn" style="padding: 6px 10px; font-size: 12px; background: white; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer;" title="Undo">
+                            ↶ Undo
+                        </button>
+                        <button onclick="clearFormatting()" class="format-btn modern-btn" style="padding: 6px 10px; font-size: 12px; background: white; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer;" title="Clear Formatting">
+                            🧹 Clear
+                        </button>
+
+                        <div style="width: 1px; height: 20px; background: #d1d5db; margin: 0 4px;"></div>
+
+                        <!-- Personalization -->
+                        <button onclick="insertPersonalization()" class="format-btn modern-btn" style="padding: 6px 10px; font-size: 12px; background: white; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer;" title="Insert Personalization">
+                            👤 Variables
+                        </button>
+                        <button onclick="insertBusinessOpportunity()" class="format-btn modern-btn" style="padding: 6px 10px; font-size: 12px; background: white; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer;" title="Insert Business Opportunity">
                             💼 Opportunities
                         </button>
                     </div>
                 </div>
 
-                <textarea id="messageBody" placeholder="Email content" style="min-height: 400px; font-size: 14px; line-height: 1.6; padding: 15px; width: 100%; border: 1px solid #ddd; border-radius: 4px; resize: vertical; transition: min-height 0.3s ease;" aria-required="true" oninput="validateMessage(this)"></textarea>
+                <textarea id="messageBody" placeholder="Email content" style="min-height: 400px; font-size: 12px; line-height: 1.6; padding: 15px; width: 100%; border: 1px solid #ddd; border-radius: 4px; resize: vertical; transition: min-height 0.3s ease;" aria-required="true" oninput="validateMessage(this)"></textarea>
                 <div id="messageError" style="color: #dc3545; font-size: 12px; margin-top: 2px; display: none;" role="alert"></div>
                 <small style="color: #666; font-size: 11px;">Use {contactName}, {firm}, {country}, {email} for personalization</small>
             </div>
 
-            <!-- Email Attachments Section -->
-            <div style="margin-bottom: 20px; border: 1px solid #ddd; border-radius: 6px; background: #fafafa;">
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #f8f9fa; border-bottom: 1px solid #ddd; border-radius: 6px 6px 0 0;">
-                    <label style="font-size: 14px; font-weight: bold; color: #333; margin: 0;">📎 Email Attachments</label>
-                    <button onclick="toggleAttachments()" id="attachmentToggle" class="button" style="padding: 3px 8px; font-size: 11px; background: #f8f9fa; color: #333; border: 1px solid #ddd;" aria-label="Toggle attachment section">
-                        📁 Add Files
-                    </button>
-                </div>
-                <div id="attachmentContainer" style="display: none; padding: 15px;">
-                    <div style="margin-bottom: 15px;">
-                        <input type="file" id="attachmentFiles" multiple accept=".pdf,.doc,.docx,.txt,.xlsx,.xls,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.zip,.rar" style="display: none;" onchange="handleAttachmentUpload(event)">
-                        <button onclick="document.getElementById('attachmentFiles').click()" class="button" style="padding: 8px 15px; font-size: 12px; background: #007bff; color: white;">
-                            📎 Choose Files
-                        </button>
-                        <small style="color: #666; font-size: 11px; margin-left: 10px;">Max 5 files, 25MB total</small>
-                    </div>
-
-                    <div id="attachmentList" style="min-height: 50px;">
-                        <div id="attachmentEmpty" style="text-align: center; color: #999; font-style: italic; padding: 20px;">
-                            No attachments selected
-                        </div>
-                    </div>
-
-                    <div style="background: #e8f4fd; border: 1px solid #b3d9ff; border-radius: 4px; padding: 8px; margin-top: 10px; font-size: 11px; color: #0056b3;">
-                        📋 <strong>Supported formats:</strong> PDF, Word, Excel, PowerPoint, Images, Text files, ZIP/RAR archives
-                    </div>
-                </div>
-            </div>
 
             <div style="text-align: center; color: #666; font-style: italic; margin-top: 20px;">
                 <p>📤 Use the Send Email or Bulk Email buttons in the top-right corner</p>
@@ -417,15 +491,101 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
                 </div>
             </div>
 
-            <!-- Contact History/Status Panel -->
-            <div style="border: 1px solid #ddd; border-radius: 6px;">
-                <div style="padding: 8px; background: #f8f9fa; border-bottom: 1px solid #ddd;">
-                    <h3 style="margin: 0; color: #007bff; font-size: 14px;">📊 Email History</h3>
+            <!-- Email Analytics Dashboard -->
+            <div style="border: 1px solid #ddd; border-radius: 6px; margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: #f8f9fa; border-bottom: 1px solid #ddd;">
+                    <h3 style="margin: 0; color: #007bff; font-size: 14px;">📊 Email Analytics</h3>
+                    <button onclick="toggleAnalytics()" id="analyticsToggle" class="modern-btn" style="padding: 3px 6px; font-size: 10px; background: white; border: 1px solid #d1d5db; border-radius: 4px;">
+                        📈 Expand
+                    </button>
                 </div>
-                <div id="emailHistory" style="max-height: 300px; overflow-y: auto; padding: 8px;">
+                <div id="analyticsContainer" style="display: none; padding: 12px;">
+                    <!-- Quick Stats -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+                        <div style="background: #ecfdf5; border: 1px solid #d1fae5; border-radius: 6px; padding: 8px; text-align: center;">
+                            <div style="font-size: 18px; font-weight: 600; color: #065f46;" id="sentCount">0</div>
+                            <div style="font-size: 10px; color: #374151;">Sent</div>
+                        </div>
+                        <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 8px; text-align: center;">
+                            <div style="font-size: 18px; font-weight: 600; color: #dc2626;" id="failedCount">0</div>
+                            <div style="font-size: 10px; color: #374151;">Failed</div>
+                        </div>
+                    </div>
+
+                    <!-- Filters -->
+                    <div style="display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap;">
+                        <select id="countryFilter" onchange="filterEmailHistory()" style="font-size: 10px; padding: 4px; border: 1px solid #d1d5db; border-radius: 4px; background: white;">
+                            <option value="">All Countries</option>
+                        </select>
+                        <select id="dateFilter" onchange="filterEmailHistory()" style="font-size: 10px; padding: 4px; border: 1px solid #d1d5db; border-radius: 4px; background: white;">
+                            <option value="">All Time</option>
+                            <option value="today">Today</option>
+                            <option value="week">This Week</option>
+                            <option value="month">This Month</option>
+                        </select>
+                    </div>
+
+                    <!-- Top Countries -->
+                    <div style="margin-bottom: 12px;">
+                        <h4 style="margin: 0 0 6px 0; font-size: 11px; color: #374151;">Top Countries</h4>
+                        <div id="topCountries" style="font-size: 10px; color: #6b7280;">
+                            No data yet
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Email History Log -->
+            <div style="border: 1px solid #ddd; border-radius: 6px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: #f8f9fa; border-bottom: 1px solid #ddd;">
+                    <h3 style="margin: 0; color: #007bff; font-size: 14px;">📧 Email History</h3>
+                    <button onclick="clearEmailHistory()" class="modern-btn" style="padding: 3px 6px; font-size: 10px; background: white; border: 1px solid #d1d5db; border-radius: 4px; color: #dc2626;">
+                        🗑️ Clear
+                    </button>
+                </div>
+                <div id="emailHistory" style="max-height: 250px; overflow-y: auto; padding: 8px;">
                     <div style="text-align: center; color: #999; padding: 15px;">
                         <p style="font-size: 12px;">📧 Email history will appear here</p>
                         <small style="font-size: 10px;">Send emails to see status tracking</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom-right Response Email Management -->
+    <div id="responseEmailManager" style="position: fixed; bottom: 20px; right: 20px; z-index: 1000;">
+        <button onclick="toggleResponseManager()" id="responseBtn" class="modern-btn" style="width: 50px; height: 50px; border-radius: 50%; background: #3b82f6; color: white; border: none; font-size: 20px; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); cursor: pointer;" title="Response Email Manager">
+            💬
+        </button>
+
+        <div id="responsePanel" style="display: none; position: absolute; bottom: 60px; right: 0; width: 300px; background: white; border: 1px solid #d1d5db; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); overflow: hidden;">
+            <div style="padding: 12px; background: #f8f9fa; border-bottom: 1px solid #e5e7eb;">
+                <h4 style="margin: 0; font-size: 14px; color: #374151;">📬 Response Email Manager</h4>
+            </div>
+
+            <div style="padding: 12px; max-height: 250px; overflow-y: auto;">
+                <div style="margin-bottom: 12px;">
+                    <button onclick="checkResponseEmails()" class="modern-btn" style="width: 100%; padding: 8px; font-size: 12px; background: #3b82f6; color: white; border: none; border-radius: 6px;">
+                        🔄 Check for Responses
+                    </button>
+                </div>
+
+                <div id="responseList" style="font-size: 12px;">
+                    <div style="text-align: center; color: #6b7280; padding: 20px;">
+                        <div style="font-size: 24px; margin-bottom: 8px;">📭</div>
+                        <div>No responses yet</div>
+                        <small style="font-size: 10px;">Response emails will appear here</small>
+                    </div>
+                </div>
+
+                <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e7eb;">
+                    <label style="font-size: 11px; color: #6b7280; display: block; margin-bottom: 4px;">Auto-redirect responses to:</label>
+                    <div style="display: flex; gap: 6px;">
+                        <input type="email" id="redirectEmail" value="vishwas.agarwal@gmail.com" style="flex: 1; font-size: 11px; padding: 6px; border: 1px solid #d1d5db; border-radius: 4px;" readonly>
+                        <button onclick="toggleAutoRedirect()" id="redirectBtn" class="modern-btn" style="padding: 6px 8px; font-size: 10px; background: #10b981; color: white; border: none; border-radius: 4px;">
+                            ✓ ON
+                        </button>
                     </div>
                 </div>
             </div>
@@ -851,6 +1011,180 @@ Market Advantages:
             textarea.value = newValue;
             textarea.focus();
             textarea.setSelectionRange(start + businessOpportunities.length, start + businessOpportunities.length);
+        }
+
+        // Enhanced Formatting Functions
+        let undoStack = [];
+
+        function saveUndoState() {
+            const textarea = document.getElementById('messageBody');
+            undoStack.push(textarea.value);
+            if (undoStack.length > 10) {
+                undoStack.shift(); // Keep only last 10 states
+            }
+        }
+
+        function undoFormat() {
+            if (undoStack.length > 0) {
+                const textarea = document.getElementById('messageBody');
+                textarea.value = undoStack.pop();
+                textarea.focus();
+                showAlert('Undo successful', 'info');
+            } else {
+                showAlert('Nothing to undo', 'warning');
+            }
+        }
+
+        function clearFormatting() {
+            const textarea = document.getElementById('messageBody');
+            if (textarea.value.trim() === '') {
+                showAlert('Message is already empty', 'info');
+                return;
+            }
+
+            saveUndoState();
+            textarea.value = '';
+            textarea.focus();
+            showAlert('Message cleared', 'info');
+        }
+
+        function showColorPicker() {
+            const colorPicker = document.getElementById('colorPicker');
+            if (colorPicker.style.display === 'none') {
+                colorPicker.style.display = 'block';
+            } else {
+                colorPicker.style.display = 'none';
+            }
+        }
+
+        function applyColor(color) {
+            const textarea = document.getElementById('messageBody');
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const selectedText = textarea.value.substring(start, end);
+
+            saveUndoState();
+
+            let replacement;
+            if (selectedText) {
+                replacement = `<span style="color: ${color};">${selectedText}</span>`;
+            } else {
+                replacement = `<span style="color: ${color};">colored text</span>`;
+            }
+
+            const newValue = textarea.value.substring(0, start) + replacement + textarea.value.substring(end);
+            textarea.value = newValue;
+            textarea.focus();
+            textarea.setSelectionRange(start, start + replacement.length);
+
+            // Hide color picker
+            document.getElementById('colorPicker').style.display = 'none';
+        }
+
+        // Enhanced formatText function with new options
+        function formatText(type) {
+            const textarea = document.getElementById('messageBody');
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const selectedText = textarea.value.substring(start, end);
+            let replacement = '';
+
+            saveUndoState();
+
+            switch (type) {
+                case 'bold':
+                    replacement = selectedText ? `**${selectedText}**` : '**bold text**';
+                    break;
+                case 'italic':
+                    replacement = selectedText ? `*${selectedText}*` : '*italic text*';
+                    break;
+                case 'underline':
+                    replacement = selectedText ? `_${selectedText}_` : '_underlined text_';
+                    break;
+                case 'bullet':
+                    const bulletLines = selectedText ? selectedText.split('\n').map(line => `• ${line}`).join('\n') : '• Bullet point 1\n• Bullet point 2\n• Bullet point 3';
+                    replacement = bulletLines;
+                    break;
+                case 'number':
+                    const numberLines = selectedText ? selectedText.split('\n').map((line, index) => `${index + 1}. ${line}`).join('\n') : '1. First item\n2. Second item\n3. Third item';
+                    replacement = numberLines;
+                    break;
+                case 'indent':
+                    const indentLines = selectedText ? selectedText.split('\n').map(line => `    ${line}`).join('\n') : '    Indented text';
+                    replacement = indentLines;
+                    break;
+                case 'link':
+                    const url = prompt('Enter URL:');
+                    if (url) {
+                        const linkText = selectedText || 'Link text';
+                        replacement = `[${linkText}](${url})`;
+                    } else {
+                        return;
+                    }
+                    break;
+            }
+
+            const newValue = textarea.value.substring(0, start) + replacement + textarea.value.substring(end);
+            textarea.value = newValue;
+            textarea.focus();
+            textarea.setSelectionRange(start, start + replacement.length);
+        }
+
+        // Contact Personalization Auto-Population
+        function populatePersonalizationData() {
+            if (selectedContactIndex === -1 || !contacts[selectedContactIndex]) {
+                return;
+            }
+
+            const contact = contacts[selectedContactIndex];
+            const subjectField = document.getElementById('subject');
+            const messageBody = document.getElementById('messageBody');
+
+            // Auto-populate subject if empty or contains template
+            if (!subjectField.value || subjectField.value.includes('{')) {
+                subjectField.value = `Business Partnership Opportunity - Intex Technologies in ${contact.country}`;
+            }
+
+            // Auto-populate message if empty or contains template variables
+            if (!messageBody.value || messageBody.value.includes('{')) {
+                const personalizedMessage = `Dear ${contact.contactName},
+
+We are pleased to introduce Intex Technologies to ${contact.firm}.
+
+Since our inception in 1996, we have been at the forefront of innovation in consumer electronics and technology sectors. We believe ${contact.firm}, with its established market presence in ${contact.country}, would be an ideal partner for expanding our reach.
+
+Our Product Portfolio:
+• IT Peripherals: Speakers, keyboards, mice, webcams, and computer accessories
+• Home Appliances: Air coolers, room heaters, water purifiers, and kitchen appliances
+• Mobile Accessories: Power banks, chargers, cables, and smartphone accessories
+• Audio Solutions: Wireless speakers, headphones, and sound systems
+
+We are actively seeking distribution partners in ${contact.country} who share our vision of delivering high-quality, innovative products to consumers.
+
+What We Offer Our Partners:
+✓ Competitive pricing with attractive profit margins
+✓ Comprehensive marketing support and co-branding opportunities
+✓ Technical training and ongoing product support
+✓ Flexible payment terms and credit facilities
+✓ Exclusive territory rights (subject to discussion)
+✓ Access to our complete product catalog and new launches
+
+We would welcome the opportunity to discuss how we can work together to bring Intex Technologies' innovative products to the ${contact.country} market through ${contact.firm}.
+
+Please feel free to contact us at your earliest convenience to explore this exciting business opportunity.
+
+Best regards,
+
+Vishwas Agarwal
+Business Development Manager
+Intex Technologies
+Email: vishwas.agarwal@gmail.com
+Phone: +91-XXXXXXXXXX`;
+
+                messageBody.value = personalizedMessage;
+            }
+
+            showAlert(`Personalized content for ${contact.firm} from ${contact.country}`, 'success');
         }
 
         // Email Attachment Functions
@@ -1858,45 +2192,11 @@ Market Advantages:
                 item.classList.toggle('selected', i === index);
             });
 
-            // Extract subject from template and populate dynamically
-            const template = document.getElementById('emailTemplate').value;
-            const templateLines = template.split('\n');
-            let subjectTemplate = 'Business Partnership Opportunity - Intex Technologies in {country}';
-
-            // Find subject line in template
-            for (let line of templateLines) {
-                if (line.startsWith('Subject: ')) {
-                    subjectTemplate = line.replace('Subject: ', '').trim();
-                    break;
-                }
-            }
-
             // Populate email form
             document.getElementById('toEmail').value = contact.email;
-            document.getElementById('subject').value = subjectTemplate.replace(/{firm}/g, contact.firm)
-                                                                     .replace(/{contactName}/g, contact.contactName)
-                                                                     .replace(/{email}/g, contact.email);
 
-            // Generate email body from template - let user decide about country context
-            let body = template.replace(/{email}/g, contact.email)
-                              .replace(/{contactName}/g, contact.contactName)
-                              .replace(/{firm}/g, contact.firm);
-
-            // Remove email headers from body
-            const bodyLines = body.split('\n');
-            let bodyStart = 0;
-            for (let i = 0; i < bodyLines.length; i++) {
-                if (bodyLines[i].trim() === '' && i > 0) {
-                    bodyStart = i + 1;
-                    break;
-                }
-                if (!bodyLines[i].includes(':') || bodyLines[i].startsWith('Dear')) {
-                    bodyStart = i;
-                    break;
-                }
-            }
-
-            document.getElementById('messageBody').value = bodyLines.slice(bodyStart).join('\n').trim();
+            // Auto-populate personalized content
+            populatePersonalizationData();
             document.getElementById('sendBtn').disabled = false;
 
             showAlert(`Selected: ${contact.contactName} from ${contact.firm}`);
@@ -2075,6 +2375,292 @@ Market Advantages:
             renderContacts(); // Initialize contact list display
             showAlert('📧 Email Sender Ready! Upload your contact spreadsheet to begin sending personalized emails.');
         });
+        // Email Analytics Dashboard Functions
+        let emailHistory = [];
+        let autoRedirectEnabled = true;
+
+        function toggleAnalytics() {
+            const container = document.getElementById('analyticsContainer');
+            const button = document.getElementById('analyticsToggle');
+
+            if (container.style.display === 'none') {
+                container.style.display = 'block';
+                button.textContent = '📈 Collapse';
+                updateAnalytics();
+            } else {
+                container.style.display = 'none';
+                button.textContent = '📈 Expand';
+            }
+        }
+
+        function updateAnalytics() {
+            const sentCount = emailHistory.filter(email => email.status === 'sent').length;
+            const failedCount = emailHistory.filter(email => email.status === 'failed').length;
+
+            document.getElementById('sentCount').textContent = sentCount;
+            document.getElementById('failedCount').textContent = failedCount;
+
+            // Update country filter options
+            const countries = [...new Set(emailHistory.map(email => email.country))];
+            const countryFilter = document.getElementById('countryFilter');
+            countryFilter.innerHTML = '<option value="">All Countries</option>';
+            countries.forEach(country => {
+                countryFilter.innerHTML += `<option value="${country}">${country}</option>`;
+            });
+
+            // Update top countries
+            const countryStats = countries.map(country => {
+                const countryEmails = emailHistory.filter(email => email.country === country);
+                return {
+                    country,
+                    sent: countryEmails.filter(email => email.status === 'sent').length,
+                    total: countryEmails.length
+                };
+            }).sort((a, b) => b.total - a.total).slice(0, 3);
+
+            const topCountriesDiv = document.getElementById('topCountries');
+            if (countryStats.length === 0) {
+                topCountriesDiv.textContent = 'No data yet';
+            } else {
+                topCountriesDiv.innerHTML = countryStats.map(stat =>
+                    `<div style="margin-bottom: 4px;">${stat.country}: ${stat.sent}/${stat.total} sent</div>`
+                ).join('');
+            }
+        }
+
+        function filterEmailHistory() {
+            const countryFilter = document.getElementById('countryFilter').value;
+            const dateFilter = document.getElementById('dateFilter').value;
+
+            let filteredHistory = [...emailHistory];
+
+            // Filter by country
+            if (countryFilter) {
+                filteredHistory = filteredHistory.filter(email => email.country === countryFilter);
+            }
+
+            // Filter by date
+            if (dateFilter) {
+                const now = new Date();
+                const startDate = new Date();
+
+                switch (dateFilter) {
+                    case 'today':
+                        startDate.setHours(0, 0, 0, 0);
+                        break;
+                    case 'week':
+                        startDate.setDate(now.getDate() - 7);
+                        break;
+                    case 'month':
+                        startDate.setMonth(now.getMonth() - 1);
+                        break;
+                }
+
+                filteredHistory = filteredHistory.filter(email => new Date(email.timestamp) >= startDate);
+            }
+
+            // Update displayed history
+            renderEmailHistory(filteredHistory);
+        }
+
+        function addEmailToHistory(email, status, country) {
+            const historyEntry = {
+                id: Date.now(),
+                email,
+                status,
+                country,
+                timestamp: new Date().toISOString(),
+                date: new Date().toLocaleDateString(),
+                time: new Date().toLocaleTimeString()
+            };
+
+            emailHistory.unshift(historyEntry);
+            renderEmailHistory();
+            updateAnalytics();
+        }
+
+        function renderEmailHistory(customHistory = null) {
+            const history = customHistory || emailHistory;
+            const container = document.getElementById('emailHistory');
+
+            if (history.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; color: #999; padding: 15px;">
+                        <p style="font-size: 12px;">📧 Email history will appear here</p>
+                        <small style="font-size: 10px;">Send emails to see status tracking</small>
+                    </div>
+                `;
+                return;
+            }
+
+            const historyHTML = history.slice(0, 20).map(entry => {
+                const statusIcon = entry.status === 'sent' ? '✅' : '❌';
+                const statusColor = entry.status === 'sent' ? '#10b981' : '#ef4444';
+
+                return `
+                    <div style="padding: 8px; margin-bottom: 6px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;">
+                        <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 4px;">
+                            <span style="font-size: 11px; font-weight: 500; color: #374151;">${entry.email}</span>
+                            <span style="font-size: 10px; color: ${statusColor};">${statusIcon}</span>
+                        </div>
+                        <div style="font-size: 10px; color: #6b7280;">
+                            ${entry.country} • ${entry.time}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = historyHTML;
+        }
+
+        function clearEmailHistory() {
+            if (confirm('Clear all email history? This cannot be undone.')) {
+                emailHistory = [];
+                renderEmailHistory();
+                updateAnalytics();
+                showAlert('Email history cleared', 'info');
+            }
+        }
+
+        // Response Email Manager Functions
+        let responseEmails = [];
+
+        function toggleResponseManager() {
+            const panel = document.getElementById('responsePanel');
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+                // Auto-check for responses when opened
+                checkResponseEmails();
+            } else {
+                panel.style.display = 'none';
+            }
+        }
+
+        function checkResponseEmails() {
+            // Simulate checking for response emails
+            showAlert('Checking for response emails...', 'info');
+
+            setTimeout(() => {
+                // Simulate some responses (in real implementation, this would fetch from email server)
+                const newResponses = [
+                    {
+                        id: Date.now() + 1,
+                        from: 'john.smith@abc-corp.com',
+                        subject: 'Re: Business Partnership Opportunity',
+                        timestamp: new Date(),
+                        content: 'Thank you for your email. We are interested in discussing this partnership opportunity.'
+                    }
+                ];
+
+                if (Math.random() > 0.7) { // 30% chance of new responses
+                    responseEmails = [...newResponses, ...responseEmails];
+                    renderResponseEmails();
+
+                    if (autoRedirectEnabled) {
+                        newResponses.forEach(response => {
+                            redirectResponseEmail(response);
+                        });
+                    }
+
+                    showAlert(`Found ${newResponses.length} new response(s)`, 'success');
+                } else {
+                    showAlert('No new responses found', 'info');
+                }
+            }, 1000);
+        }
+
+        function renderResponseEmails() {
+            const container = document.getElementById('responseList');
+
+            if (responseEmails.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; color: #6b7280; padding: 20px;">
+                        <div style="font-size: 24px; margin-bottom: 8px;">📭</div>
+                        <div>No responses yet</div>
+                        <small style="font-size: 10px;">Response emails will appear here</small>
+                    </div>
+                `;
+                return;
+            }
+
+            const responsesHTML = responseEmails.slice(0, 5).map(response => `
+                <div style="padding: 8px; margin-bottom: 8px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px;">
+                    <div style="font-weight: 500; font-size: 11px; color: #0369a1; margin-bottom: 2px;">
+                        ${response.from}
+                    </div>
+                    <div style="font-size: 10px; color: #374151; margin-bottom: 4px;">
+                        ${response.subject}
+                    </div>
+                    <div style="font-size: 9px; color: #6b7280;">
+                        ${response.timestamp.toLocaleString()}
+                    </div>
+                    <div style="margin-top: 6px;">
+                        <button onclick="redirectResponseEmail(${JSON.stringify(response).replace(/"/g, '&quot;')})" class="modern-btn" style="padding: 4px 8px; font-size: 9px; background: #3b82f6; color: white; border: none; border-radius: 4px;">
+                            📤 Forward
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+
+            container.innerHTML = responsesHTML;
+        }
+
+        function redirectResponseEmail(response) {
+            const redirectEmail = document.getElementById('redirectEmail').value;
+
+            // Simulate email redirection
+            showAlert(`Redirecting response from ${response.from} to ${redirectEmail}`, 'success');
+
+            // In real implementation, this would actually forward the email
+            console.log('Redirecting email:', {
+                from: response.from,
+                to: redirectEmail,
+                subject: `Fwd: ${response.subject}`,
+                content: response.content
+            });
+        }
+
+        function toggleAutoRedirect() {
+            autoRedirectEnabled = !autoRedirectEnabled;
+            const button = document.getElementById('redirectBtn');
+
+            if (autoRedirectEnabled) {
+                button.textContent = '✓ ON';
+                button.style.background = '#10b981';
+                showAlert('Auto-redirect enabled', 'success');
+            } else {
+                button.textContent = '✗ OFF';
+                button.style.background = '#6b7280';
+                showAlert('Auto-redirect disabled', 'info');
+            }
+        }
+
+        // Click outside to close panels
+        document.addEventListener('click', function(event) {
+            // Close color picker when clicking outside
+            const colorPicker = document.getElementById('colorPicker');
+            if (colorPicker && !event.target.closest('#colorPicker') && !event.target.closest('[onclick*="showColorPicker"]')) {
+                colorPicker.style.display = 'none';
+            }
+
+            // Close response panel when clicking outside
+            const responsePanel = document.getElementById('responsePanel');
+            const responseManager = document.getElementById('responseEmailManager');
+            if (responsePanel && !responseManager.contains(event.target)) {
+                responsePanel.style.display = 'none';
+            }
+        });
+
+        // Initialize analytics on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Simulate some initial email history for demo
+            setTimeout(() => {
+                addEmailToHistory('contact@abc-corp.com', 'sent', 'USA');
+                addEmailToHistory('info@xyz-industries.net', 'sent', 'Canada');
+                addEmailToHistory('hello@globalservices.org', 'failed', 'UK');
+            }, 2000);
+        });
+
     </script>
 </body>
 </html>
