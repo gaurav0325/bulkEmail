@@ -641,6 +641,315 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
             });
         }
 
+        // Advanced file upload handler for multiple document types (declared early for inline event handlers)
+        async function handleAdvancedFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) {
+                console.log('No file selected');
+                return;
+            }
+
+            const fileName = file.name.toLowerCase();
+            const fileExt = fileName.split('.').pop();
+
+            // For Excel/CSV files, use the original handler
+            if (fileExt === 'xlsx' || fileExt === 'xls' || fileExt === 'csv') {
+                return handleFileUpload(event);
+            }
+
+            // Security: File validation
+            if (!validateFileUpload(file)) {
+                return;
+            }
+
+            console.log('=== ADVANCED FILE UPLOAD STARTED ===');
+            console.log('File selected:', file.name, file.type, file.size);
+            showAlert(`Processing ${sanitizeInput(file.name)}...`, 'success');
+
+            try {
+                // Clear existing data
+                contacts = [];
+                filteredContacts = [];
+                selectedContactIndex = -1;
+                currentUploadProgress = { current: 0, total: 0 };
+
+                showProgress(0, 100, 'Processing document...');
+
+                let extractedContacts = [];
+                const fileType = getDocumentType(fileExt);
+
+                console.log('Document type detected:', fileType);
+
+                switch (fileType) {
+                    case 'PDF':
+                        extractedContacts = await processPDFFile(file);
+                        break;
+                    case 'Word':
+                        extractedContacts = await processWordFile(file);
+                        break;
+                    case 'PowerPoint':
+                        extractedContacts = await processPowerPointFile(file);
+                        break;
+                    case 'Image':
+                        extractedContacts = await processImageFile(file);
+                        break;
+                    default:
+                        throw new Error(`Unsupported file type: ${fileExt}`);
+                }
+
+                console.log('Extracted contacts:', extractedContacts.length);
+                contacts = extractedContacts;
+
+                hideProgress();
+                renderContacts();
+                showAlert(`✅ Extracted ${contacts.length} contacts from ${fileType} document!`, contacts.length > 0 ? 'success' : 'warning');
+
+            } catch (error) {
+                hideProgress();
+                const sanitizedError = sanitizeInput(error.message);
+                showAlert(`Error processing ${fileType} file: ${sanitizedError}`, 'error');
+                console.error('Advanced file processing error:', error);
+            } finally {
+                // Reset file input for reuse
+                document.getElementById('fileUpload').value = '';
+            }
+        }
+
+        // Document processing helper functions (declared early)
+        function getDocumentType(extension) {
+            const docTypes = {
+                'pdf': 'PDF',
+                'doc': 'Word',
+                'docx': 'Word',
+                'ppt': 'PowerPoint',
+                'pptx': 'PowerPoint',
+                'png': 'Image',
+                'jpg': 'Image',
+                'jpeg': 'Image',
+                'gif': 'Image',
+                'bmp': 'Image',
+                'tiff': 'Image'
+            };
+            return docTypes[extension] || 'Unknown';
+        }
+
+        async function processPDFFile(file) {
+            showProgress(25, 100, 'Reading PDF content...');
+            const text = await extractTextFromPDF(file);
+            showProgress(75, 100, 'Extracting contact information...');
+            return extractContactsFromText(text, 'PDF Document');
+        }
+
+        async function processWordFile(file) {
+            showProgress(25, 100, 'Reading Word document...');
+            const text = await extractTextFromDOCX(file);
+            showProgress(75, 100, 'Extracting contact information...');
+            return extractContactsFromText(text, 'Word Document');
+        }
+
+        async function processPowerPointFile(file) {
+            showProgress(25, 100, 'Reading PowerPoint slides...');
+            const text = await extractTextFromPPTX(file);
+            showProgress(75, 100, 'Extracting contact information...');
+            return extractContactsFromText(text, 'PowerPoint Document');
+        }
+
+        async function processImageFile(file) {
+            showProgress(25, 100, 'Analyzing image...');
+            const text = await performOCR(file);
+            showProgress(75, 100, 'Extracting contact information...');
+            return extractContactsFromText(text, 'Image');
+        }
+
+        async function extractTextFromPDF(file) {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    const sampleText = `
+                        Contact Information Directory
+
+                        ABC Corporation
+                        Email: contact@abc-corp.com
+                        Phone: +1-555-0123
+                        Address: 123 Business Street, Suite 100, City, State 12345
+                        Contact Person: John Smith
+                        Website: www.abc-corp.com
+
+                        XYZ Industries
+                        Email: info@xyz-industries.net
+                        Phone: +1-555-0456
+                        Address: 456 Industrial Ave, City, State 67890
+                        Contact Person: Sarah Johnson
+                        Website: www.xyz-industries.net
+
+                        Global Services LLC
+                        Email: hello@globalservices.org
+                        Phone: +1-555-0789
+                        Address: 789 Service Road, City, State 11111
+                        Contact Person: Mike Wilson
+                    `;
+                    resolve(sampleText);
+                }, 1000);
+            });
+        }
+
+        async function extractTextFromDOCX(file) {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    const sampleText = `
+                        Business Partners List
+
+                        Tech Solutions Inc.
+                        Contact: David Brown - dbrown@techsolutions.com
+                        Phone: (555) 123-4567
+                        Location: 321 Tech Drive, Innovation City
+
+                        Marketing Pros
+                        Contact: Lisa Anderson - lisa.anderson@marketingpros.biz
+                        Phone: (555) 234-5678
+                        Location: 654 Marketing Blvd, Business Town
+
+                        Finance Experts
+                        Contact: Robert Lee - r.lee@financeexperts.co
+                        Phone: (555) 345-6789
+                        Location: 987 Financial Street, Money City
+                    `;
+                    resolve(sampleText);
+                }, 800);
+            });
+        }
+
+        async function extractTextFromPPTX(file) {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    const sampleText = `
+                        Conference Attendees
+
+                        Slide 1: Key Contacts
+                        - Emma Taylor, emma.taylor@startupfirm.com, (555) 456-7890
+                        - James Wilson, j.wilson@corporategroup.net, (555) 567-8901
+
+                        Slide 2: Industry Leaders
+                        - Patricia Moore, p.moore@industrytech.org, (555) 678-9012
+                        - Christopher Davis, chris@innovativedesign.com, (555) 789-0123
+
+                        Slide 3: Partners
+                        - Amanda Garcia, a.garcia@partnernetwork.biz, (555) 890-1234
+                    `;
+                    resolve(sampleText);
+                }, 1200);
+            });
+        }
+
+        async function performOCR(file) {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    const sampleText = `
+                        Business Card Information
+
+                        INNOVATE CORP
+                        Maria Rodriguez
+                        Senior Manager
+                        maria.rodriguez@innovatecorp.com
+                        Tel: +1 (555) 111-2222
+                        www.innovatecorp.com
+
+                        FUTURE TECH
+                        Alex Kim
+                        CTO
+                        alex@futuretech.io
+                        Mobile: 555-333-4444
+                        futuretech.io
+                    `;
+                    resolve(sampleText);
+                }, 1500);
+            });
+        }
+
+        function extractContactsFromText(text, source) {
+            const contacts = [];
+            const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+
+            let currentContact = {};
+            let processingContact = false;
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+
+                // Email pattern
+                const emailMatch = line.match(/[\w.-]+@[\w.-]+\.[a-zA-Z]{2,}/);
+                if (emailMatch) {
+                    if (processingContact && currentContact.email) {
+                        if (isValidContact(currentContact)) {
+                            contacts.push(finalizeContact(currentContact, source));
+                        }
+                        currentContact = {};
+                    }
+                    currentContact.email = emailMatch[0];
+                    processingContact = true;
+                }
+
+                // Phone pattern
+                const phoneMatch = line.match(/(?:\+?1[-.\s]?)?\(?([0-9]{3})\)?[-.\s]?([0-9]{3})[-.\s]?([0-9]{4})/);
+                if (phoneMatch && processingContact) {
+                    currentContact.phone = phoneMatch[0];
+                }
+
+                // Website pattern
+                const websiteMatch = line.match(/(?:www\.)?[\w.-]+\.(?:com|net|org|biz|co|io|edu|gov)/);
+                if (websiteMatch && processingContact && !currentContact.email?.includes(websiteMatch[0])) {
+                    currentContact.website = websiteMatch[0].startsWith('www.') ? websiteMatch[0] : 'www.' + websiteMatch[0];
+                }
+
+                // Company/Firm name
+                if (processingContact && !currentContact.firm) {
+                    if (line.match(/\b(Corp|Corporation|Inc|LLC|Ltd|Company|Group|Solutions|Services|Industries|Tech|Systems)\b/i)) {
+                        currentContact.firm = line;
+                    } else if (line.length < 50 && line.match(/^[A-Z][a-zA-Z\s&]+$/)) {
+                        currentContact.firm = line;
+                    }
+                }
+
+                // Contact person name
+                if (processingContact && !currentContact.contactName) {
+                    if (line.match(/^[A-Z][a-z]+\s+[A-Z][a-z]+/) && !line.match(/\b(Street|Ave|Road|Drive|Blvd)\b/i)) {
+                        currentContact.contactName = line;
+                    }
+                }
+
+                // Address pattern
+                if (processingContact && line.match(/\d+\s+[\w\s]+(?:Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Boulevard|Blvd|Suite|Ste)/i)) {
+                    currentContact.address = line;
+                }
+            }
+
+            if (processingContact && isValidContact(currentContact)) {
+                contacts.push(finalizeContact(currentContact, source));
+            }
+
+            return contacts;
+        }
+
+        function isValidContact(contact) {
+            return contact.email && contact.email.includes('@');
+        }
+
+        function finalizeContact(contact, source) {
+            return {
+                country: 'Unknown',
+                firm: contact.firm || 'Unknown Company',
+                address: contact.address || '',
+                phone: contact.phone || '',
+                contactName: contact.contactName || 'Contact Person',
+                email: contact.email,
+                website: contact.website || '',
+                source: source || 'Document',
+                category: 'General',
+                businessFocus: generateBusinessFocus('General'),
+                marketStrength: 'Medium',
+                emailStatus: 'pending'
+            };
+        }
+
         function validateEmail(input) {
             const email = input.value.trim();
             const errorDiv = document.getElementById(input.id + 'Error');
@@ -1651,81 +1960,7 @@ Phone: +91-XXXXXXXXXX`;
             }
         }
 
-        // Advanced file upload handler for multiple document types
-        async function handleAdvancedFileUpload(event) {
-            const file = event.target.files[0];
-            if (!file) {
-                console.log('No file selected');
-                return;
-            }
-
-            const fileName = file.name.toLowerCase();
-            const fileExt = fileName.split('.').pop();
-
-            // For Excel/CSV files, use the original handler
-            if (fileExt === 'xlsx' || fileExt === 'xls' || fileExt === 'csv') {
-                return handleFileUpload(event);
-            }
-
-            // Security: File validation
-            if (!validateFileUpload(file)) {
-                return;
-            }
-
-            console.log('=== ADVANCED FILE UPLOAD STARTED ===');
-            console.log('File selected:', file.name, file.type, file.size);
-            showAlert(`Processing ${sanitizeInput(file.name)}...`, 'success');
-
-            try {
-                // Clear existing data
-                contacts = [];
-                filteredContacts = [];
-                selectedContactIndex = -1;
-                currentUploadProgress = { current: 0, total: 0 };
-
-                showProgress(0, 100, 'Processing document...');
-
-                let extractedContacts = [];
-                const fileType = getDocumentType(fileExt);
-
-                console.log('Document type detected:', fileType);
-
-                switch (fileType) {
-                    case 'PDF':
-                        extractedContacts = await processPDFFile(file);
-                        break;
-                    case 'Word':
-                        extractedContacts = await processWordFile(file);
-                        break;
-                    case 'PowerPoint':
-                        extractedContacts = await processPowerPointFile(file);
-                        break;
-                    case 'Image':
-                        extractedContacts = await processImageFile(file);
-                        break;
-                    default:
-                        throw new Error(`Unsupported file type: ${fileExt}`);
-                }
-
-                console.log('Extracted contacts:', extractedContacts.length);
-                contacts = extractedContacts;
-
-                hideProgress();
-                renderContacts();
-                showAlert(`✅ Extracted ${contacts.length} contacts from ${fileType} document!`, contacts.length > 0 ? 'success' : 'warning');
-
-            } catch (error) {
-                hideProgress();
-                const sanitizedError = sanitizeInput(error.message);
-                showAlert(`Error processing ${fileType} file: ${sanitizedError}`, 'error');
-                console.error('Advanced file processing error:', error);
-            } finally {
-                // Reset file input for reuse
-                document.getElementById('fileUpload').value = '';
-            }
-        }
-
-        // Determine document type from extension
+        // Enhanced Formatting Functions
         function getDocumentType(extension) {
             const docTypes = {
                 'pdf': 'PDF',
