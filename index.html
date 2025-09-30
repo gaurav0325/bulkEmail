@@ -173,8 +173,10 @@
             background: #f8f9fa;
         }
         .contact-item.selected {
-            background: #007bff;
-            color: white;
+            background: #0056b3 !important;
+            color: white !important;
+            font-weight: 600 !important;
+            border: 2px solid #004085 !important;
         }
         .alert {
             padding: 15px;
@@ -1870,7 +1872,10 @@ Market Advantages:
             editor.focus();
 
             const selection = window.getSelection();
-            if (selection.rangeCount === 0) return;
+            if (selection.rangeCount === 0) {
+                showAlert('Please select text first to change its color', 'info');
+                return;
+            }
 
             const range = selection.getRangeAt(0);
 
@@ -1878,18 +1883,28 @@ Market Advantages:
                 // No text selected, just return without doing anything
                 showAlert('Please select text first to change its color', 'info');
                 return;
-            } else {
-                // Apply color to selected text
-                const span = document.createElement('span');
-                span.style.color = color;
+            }
 
-                try {
-                    span.appendChild(range.extractContents());
-                    range.insertNode(span);
-                } catch (e) {
-                    // Fallback: use execCommand
-                    document.execCommand('foreColor', false, color);
-                }
+            // Apply color to selected text
+            const span = document.createElement('span');
+            span.style.color = color;
+
+            try {
+                const contents = range.extractContents();
+                span.appendChild(contents);
+                range.insertNode(span);
+
+                // Restore selection to show the colored text
+                const newRange = document.createRange();
+                newRange.selectNodeContents(span);
+                selection.removeAllRanges();
+                selection.addRange(newRange);
+
+                showAlert(`Text color changed to ${color}`, 'success');
+            } catch (e) {
+                // Fallback: use execCommand if modern approach fails
+                console.log('Using fallback execCommand for color');
+                document.execCommand('foreColor', false, color);
             }
 
             updateHiddenTextarea();
