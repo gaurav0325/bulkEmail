@@ -6,7 +6,8 @@
       "Bash(git push:*)",
       "WebFetch(domain:bulkemailvishwas.netlify.app)",
       "WebFetch(domain:www.datanalysisninsights.co.uk)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(node:*)"
     ],
     "deny": [],
     "ask": []

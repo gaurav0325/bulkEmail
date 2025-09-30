@@ -277,6 +277,17 @@
         </div>
     </div>
 
+    <!-- EMERGENCY TEST BUTTON FOR DEBUGGING -->
+    <div style="text-align: center; margin: 20px auto; padding: 20px; background: #ffe6e6; border: 3px dashed #ff0000; max-width: 600px;">
+        <h2 style="color: #ff0000; margin: 0 0 10px 0;">🚨 DEBUGGING SECTION 🚨</h2>
+        <button onclick="testPersonalization()" style="padding: 15px 30px; font-size: 18px; background: #ff0000; color: white; border: 3px solid #000; border-radius: 15px; cursor: pointer; font-weight: bold; box-shadow: 0 6px 12px rgba(0,0,0,0.4);">
+            ⚠️ TEST CONTACT PERSONALIZATION ⚠️
+        </button>
+        <div style="margin-top: 10px; font-size: 12px; color: #666;">
+            Upload a file, select a contact, then click this button to test personalization
+        </div>
+    </div>
+
     <div class="main-content">
         <!-- LEFT PANEL: Contact Management -->
         <div class="panel left-panel">
@@ -352,6 +363,11 @@
                 <label for="subject" style="font-size: 14px; font-weight: bold; color: #333; display: block; margin-bottom: 5px;">Subject:</label>
                 <input type="text" id="subject" placeholder="Email subject" style="font-size: 14px; padding: 10px; width: 100%; border: 1px solid #ddd; border-radius: 4px;" aria-required="true" maxlength="255" oninput="validateSubject(this)">
                 <div id="subjectError" style="color: #dc3545; font-size: 12px; margin-top: 2px; display: none;" role="alert"></div>
+
+                <!-- Additional test button for debugging -->
+                <button onclick="testPersonalization()" style="margin-top: 10px; padding: 10px 15px; font-size: 14px; background: #ff6b6b; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2);" title="Test contact personalization">
+                    🚨 TEST PERSONALIZATION 🚨
+                </button>
             </div>
 
             <div style="margin-bottom: 20px;">
@@ -469,6 +485,10 @@
                 <div style="margin-bottom: 8px;">
                     <button onclick="openSmartMessage()" id="smartMessageBtn" class="modern-btn" style="padding: 6px 12px; font-size: 11px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 6px; cursor: pointer;" title="AI-powered message enhancement">
                         🤖 Smart Message
+                    </button>
+                    <!-- Test button for debugging -->
+                    <button onclick="testPersonalization()" style="padding: 8px 12px; font-size: 12px; background: #dc3545; color: white; border: none; border-radius: 6px; cursor: pointer; margin-left: 10px; font-weight: bold;" title="Test contact personalization">
+                        🔧 DEBUG TEST
                     </button>
                 </div>
 
@@ -1616,9 +1636,12 @@ Market Advantages:
             updateHiddenTextarea();
         }
 
-        // Contact Personalization Auto-Population
-        function populatePersonalizationData() {
+        // Contact Personalization Auto-Population - Make sure it's globally accessible
+        window.populatePersonalizationData = function() {
+            console.log('populatePersonalizationData called, selectedContactIndex:', selectedContactIndex);
+
             if (selectedContactIndex === -1 || !contacts[selectedContactIndex]) {
+                console.log('No contact selected or contact not found');
                 return;
             }
 
@@ -1626,14 +1649,22 @@ Market Advantages:
             const subjectField = document.getElementById('subject');
             const messageBody = document.getElementById('messageBody');
 
+            console.log('Contact:', contact);
+            console.log('Message body element:', messageBody);
+
+            if (!messageBody) {
+                console.error('Message body element not found!');
+                return;
+            }
+
             // Auto-populate subject if empty or contains template
             if (!subjectField.value || subjectField.value.includes('{')) {
                 subjectField.value = `Business Partnership Opportunity - Intex Technologies in ${contact.country}`;
+                console.log('Subject populated');
             }
 
-            // Auto-populate message if empty or contains template variables
-            if (!messageBody.value || messageBody.value.includes('{')) {
-                const personalizedMessage = `Dear ${contact.contactName},
+            // Always populate message body when a contact is selected (for immediate feedback)
+            const personalizedMessage = `Dear ${contact.contactName},
 
 We are pleased to introduce Intex Technologies to ${contact.firm}.
 
@@ -1667,10 +1698,61 @@ Intex Technologies
 Email: vishwas.agarwal@gmail.com
 Phone: +91-XXXXXXXXXX`;
 
-                messageBody.value = personalizedMessage;
+            console.log('About to set messageBody.innerHTML');
+
+            // Force clear any previous content and set new content
+            messageBody.innerHTML = '';
+            setTimeout(() => {
+                messageBody.innerHTML = personalizedMessage.replace(/\n/g, '<br>');
+                console.log('Message body innerHTML set to:', messageBody.innerHTML.substring(0, 100) + '...');
+                updateHiddenTextarea();
+                console.log('updateHiddenTextarea called');
+            }, 50);
+
+            console.log('Message body populated with personalized content');
+            showAlert(`Personalized content for ${contact.firm} from ${contact.country}`, 'success');
+        }
+
+        // Add test button dynamically when page loads
+        window.addEventListener('load', function() {
+            // Create a floating test button that's impossible to miss
+            const testButton = document.createElement('div');
+            testButton.innerHTML = `
+                <div style="position: fixed; top: 10px; right: 10px; z-index: 9999; background: #ff0000; color: white; padding: 15px; border: 3px solid #000; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.5); cursor: pointer; font-weight: bold; font-size: 14px;" onclick="testPersonalization()">
+                    🚨 TEST PERSONALIZATION 🚨<br>
+                    <small style="font-size: 10px;">Click to debug</small>
+                </div>
+            `;
+            document.body.appendChild(testButton);
+            console.log('Dynamic test button added to page');
+        });
+
+        // Test function to directly check personalization
+        function testPersonalization() {
+            console.log('TEST: Manual personalization test');
+            console.log('TEST: selectedContactIndex =', selectedContactIndex);
+            console.log('TEST: contacts array =', contacts);
+
+            const messageBody = document.getElementById('messageBody');
+            console.log('TEST: messageBody element =', messageBody);
+
+            if (contacts.length === 0) {
+                alert('TEST: No contacts loaded. Upload a file first.');
+                return;
             }
 
-            showAlert(`Personalized content for ${contact.firm} from ${contact.country}`, 'success');
+            if (selectedContactIndex === -1) {
+                alert('TEST: No contact selected. Click on a contact first.');
+                return;
+            }
+
+            // Try a direct simple test first
+            console.log('TEST: Setting direct test content');
+            messageBody.innerHTML = '<strong>TEST CONTENT APPLIED SUCCESSFULLY!</strong><br>This means the message body element is working.';
+
+            setTimeout(() => {
+                populatePersonalizationData();
+            }, 1000);
         }
 
         // Email Attachment Functions
@@ -2469,7 +2551,44 @@ Phone: +91-XXXXXXXXXX`;
                 console.log(`Rendering contact ${index + 1}:`, contact);
                 const div = document.createElement('div');
                 div.className = 'contact-item';
-                div.onclick = () => selectContact(index);
+
+                // Add visual feedback for debugging
+                div.style.border = '2px solid #007bff';
+                div.style.backgroundColor = '#f0f8ff';
+                div.style.cursor = 'pointer';
+
+                // Create a unique function name for this contact
+                const clickFunctionName = `contactClick_${index}`;
+                window[clickFunctionName] = function() {
+                    console.log('🔥 CONTACT CLICKED VIA GLOBAL FUNCTION! Index:', index);
+                    console.log('🔥 About to call selectContact...');
+                    try {
+                        selectContact(index);
+                        console.log('🔥 selectContact completed successfully');
+                    } catch (error) {
+                        console.error('🔥 ERROR in selectContact:', error);
+                    }
+                };
+
+                // Set onclick as string to ensure it works
+                div.setAttribute('onclick', `${clickFunctionName}(); console.log('🔥 ONCLICK ATTRIBUTE FIRED for index ${index}');`);
+
+                // Also try addEventListener
+                div.addEventListener('click', function() {
+                    console.log('🔥 ADDEVENTLISTENER FIRED for index:', index);
+                    window[clickFunctionName]();
+                });
+
+                console.log(`🔥 Contact ${index} click handlers attached`);
+
+                // FORCE IMMEDIATE TEST - if this contact has index 0, auto-populate
+                if (index === 0) {
+                    console.log('🔥 AUTO-TESTING FIRST CONTACT');
+                    setTimeout(() => {
+                        console.log('🔥 AUTO-TRIGGERING FIRST CONTACT SELECTION');
+                        window[clickFunctionName]();
+                    }, 1000);
+                }
                 div.setAttribute('role', 'option');
                 div.setAttribute('aria-selected', 'false');
                 div.setAttribute('tabindex', '-1');
@@ -2596,8 +2715,12 @@ Phone: +91-XXXXXXXXXX`;
         }
 
         function selectContact(index) {
+            console.log('=== selectContact called with index:', index, '===');
+
             selectedContactIndex = index;
             const contact = contacts[index];
+
+            console.log('Selected contact details:', contact);
 
             // Update UI
             document.querySelectorAll('.contact-item').forEach((item, i) => {
@@ -2605,13 +2728,83 @@ Phone: +91-XXXXXXXXXX`;
             });
 
             // Populate email form
-            document.getElementById('toEmail').value = contact.email;
+            const toEmailField = document.getElementById('toEmail');
+            if (toEmailField) {
+                toEmailField.value = contact.email;
+                console.log('Set email field to:', contact.email);
+            }
 
-            // Auto-populate personalized content
-            populatePersonalizationData();
-            document.getElementById('sendBtn').disabled = false;
+            // IMMEDIATELY populate subject line
+            const subjectField = document.getElementById('subject');
+            if (subjectField) {
+                subjectField.value = `Business Partnership Opportunity - Intex Technologies in ${contact.country}`;
+                console.log('Subject populated with:', subjectField.value);
+            }
 
-            showAlert(`Selected: ${contact.contactName} from ${contact.firm}`);
+            // IMMEDIATELY populate message body
+            const messageBody = document.getElementById('messageBody');
+            console.log('Looking for messageBody element...');
+            console.log('messageBody element found:', messageBody);
+            console.log('messageBody element type:', typeof messageBody);
+
+            if (messageBody) {
+                console.log('Found messageBody element, populating content...');
+                console.log('Current messageBody content:', messageBody.innerHTML);
+
+                const personalizedMessage = `Dear ${contact.contactName},
+
+We are pleased to introduce Intex Technologies to ${contact.firm}.
+
+Since our inception in 1996, we have been at the forefront of innovation in consumer electronics and technology sectors. We believe ${contact.firm}, with its established market presence in ${contact.country}, would be an ideal partner for expanding our reach.
+
+Our Product Portfolio:
+• IT Peripherals: Speakers, keyboards, mice, webcams, and computer accessories
+• Home Appliances: Air coolers, room heaters, water purifiers, and kitchen appliances
+• Mobile Accessories: Power banks, chargers, cables, and smartphone accessories
+• Audio Solutions: Wireless speakers, headphones, and sound systems
+
+We are actively seeking distribution partners in ${contact.country} who share our vision of delivering high-quality, innovative products to consumers.
+
+What We Offer Our Partners:
+✓ Competitive pricing with attractive profit margins
+✓ Comprehensive marketing support and co-branding opportunities
+✓ Technical training and ongoing product support
+✓ Flexible payment terms and credit facilities
+✓ Exclusive territory rights (subject to discussion)
+✓ Access to our complete product catalog and new launches
+
+We would welcome the opportunity to discuss how we can work together to bring Intex Technologies' innovative products to the ${contact.country} market through ${contact.firm}.
+
+Please feel free to contact us at your earliest convenience to explore this exciting business opportunity.
+
+Best regards,
+
+Vishwas Agarwal
+Business Development Manager
+Intex Technologies
+Email: vishwas.agarwal@gmail.com
+Phone: +91-XXXXXXXXXX`;
+
+                messageBody.innerHTML = personalizedMessage.replace(/\n/g, '<br>');
+                console.log('Message body populated! Content length:', messageBody.innerHTML.length);
+
+                // Update hidden textarea
+                const hiddenTextarea = document.getElementById('messageBodyHidden');
+                if (hiddenTextarea) {
+                    hiddenTextarea.value = messageBody.innerHTML;
+                    console.log('Hidden textarea updated');
+                }
+            } else {
+                console.error('messageBody element not found!');
+            }
+
+            const sendBtn = document.getElementById('sendBtn');
+            if (sendBtn) {
+                sendBtn.disabled = false;
+            }
+
+            showAlert(`Selected: ${contact.contactName} from ${contact.firm}`, 'success');
+            console.log('=== selectContact completed ===');
         }
 
         async function sendEmail() {
