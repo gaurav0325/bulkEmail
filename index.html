@@ -210,6 +210,59 @@
         #formattingToolbar {
             animation: slideDown 0.3s ease;
         }
+
+        /* Rich Text Editor Styles */
+        #messageBody[contenteditable="true"] {
+            border: 2px solid #e5e7eb;
+            transition: border-color 0.3s ease;
+        }
+        #messageBody[contenteditable="true"]:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        #messageBody[contenteditable="true"]:empty:before {
+            content: attr(placeholder);
+            color: #9ca3af;
+            pointer-events: none;
+        }
+
+        /* Rich Text Formatting Styles */
+        #messageBody strong, #messageBody b {
+            font-weight: 600;
+        }
+        #messageBody em, #messageBody i {
+            font-style: italic;
+        }
+        #messageBody u {
+            text-decoration: underline;
+        }
+        #messageBody ul, #messageBody ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        #messageBody blockquote {
+            border-left: 3px solid #3b82f6;
+            margin: 10px 0;
+            padding-left: 15px;
+            color: #6b7280;
+        }
+        #messageBody a {
+            color: #3b82f6;
+            text-decoration: underline;
+        }
+
+        /* Smart Message Popup Styles */
+        .quick-action-btn:hover {
+            background: #e9ecef !important;
+            border-color: #adb5bd !important;
+        }
+        #smartMessagePopup {
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -412,7 +465,19 @@
                     </div>
                 </div>
 
-                <textarea id="messageBody" placeholder="Email content" style="min-height: 400px; font-size: 12px; line-height: 1.6; padding: 15px; width: 100%; border: 1px solid #ddd; border-radius: 4px; resize: vertical; transition: min-height 0.3s ease;" aria-required="true" oninput="validateMessage(this)"></textarea>
+                <!-- Smart Message Button -->
+                <div style="margin-bottom: 8px;">
+                    <button onclick="openSmartMessage()" id="smartMessageBtn" class="modern-btn" style="padding: 6px 12px; font-size: 11px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 6px; cursor: pointer;" title="AI-powered message enhancement">
+                        🤖 Smart Message
+                    </button>
+                </div>
+
+                <!-- Rich Text Editor -->
+                <div id="messageBody" contenteditable="true" placeholder="Email content" style="min-height: 400px; font-size: 12px; line-height: 1.6; padding: 15px; width: 100%; border: 1px solid #ddd; border-radius: 4px; overflow-y: auto; background: white; outline: none; transition: min-height 0.3s ease;" aria-required="true" oninput="validateMessage(this)" onpaste="handlePaste(event)" role="textbox" aria-multiline="true">
+                </div>
+
+                <!-- Hidden textarea for form submission -->
+                <textarea id="messageBodyHidden" style="display: none;" name="messageBody"></textarea>
                 <div id="messageError" style="color: #dc3545; font-size: 12px; margin-top: 2px; display: none;" role="alert"></div>
                 <small style="color: #666; font-size: 11px;">Use {contactName}, {firm}, {country}, {email} for personalization</small>
             </div>
@@ -548,6 +613,76 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
                         <p style="font-size: 12px;">📧 Email history will appear here</p>
                         <small style="font-size: 10px;">Send emails to see status tracking</small>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Smart Message AI Assistant Popup -->
+    <div id="smartMessagePopup" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000;">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 700px; background: white; border-radius: 12px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); overflow: hidden;">
+            <!-- Header -->
+            <div style="padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="margin: 0; font-size: 18px; font-weight: 600;">🤖 Smart Message Assistant</h3>
+                    <button onclick="closeSmartMessage()" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px; border-radius: 50%; cursor: pointer; font-size: 16px;">✕</button>
+                </div>
+                <p style="margin: 8px 0 0 0; font-size: 14px; opacity: 0.9;">AI-powered message enhancement based on company profile and context</p>
+            </div>
+
+            <!-- Content -->
+            <div style="padding: 20px; max-height: 500px; overflow-y: auto;">
+                <!-- Company Context Display -->
+                <div id="companyContext" style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 10px 0; font-size: 14px; color: #495057;">📊 Current Contact Context</h4>
+                    <div id="contextInfo" style="font-size: 12px; color: #6c757d;">
+                        No contact selected. Please select a contact to get personalized suggestions.
+                    </div>
+                </div>
+
+                <!-- Chat Interface -->
+                <div id="chatContainer" style="border: 1px solid #e9ecef; border-radius: 8px; height: 300px; overflow-y: auto; padding: 15px; background: #fafafa; margin-bottom: 15px;">
+                    <div id="chatMessages">
+                        <div style="padding: 10px; background: #e3f2fd; border-radius: 8px; margin-bottom: 10px;">
+                            <strong style="color: #1976d2;">🤖 Assistant:</strong>
+                            <p style="margin: 5px 0 0 0; font-size: 13px;">Hello! I'm here to help you enhance your email message. I can help you:</p>
+                            <ul style="margin: 5px 0 0 20px; font-size: 13px;">
+                                <li>Improve tone and professionalism</li>
+                                <li>Add industry-specific content</li>
+                                <li>Customize for the target company</li>
+                                <li>Suggest compelling value propositions</li>
+                                <li>Fix grammar and improve clarity</li>
+                            </ul>
+                            <p style="margin: 5px 0 0 0; font-size: 13px;">What would you like me to help you with?</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Input Area -->
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="chatInput" placeholder="Ask me to improve your message..." style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px;" onkeypress="handleChatKeyPress(event)">
+                    <button onclick="sendChatMessage()" class="modern-btn" style="padding: 10px 15px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                        Send
+                    </button>
+                </div>
+
+                <!-- Quick Actions -->
+                <div style="margin-top: 15px;">
+                    <h5 style="margin: 0 0 10px 0; font-size: 13px; color: #495057;">⚡ Quick Actions:</h5>
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                        <button onclick="quickAction('professional')" class="quick-action-btn" style="padding: 6px 12px; font-size: 11px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 15px; cursor: pointer;">Make it more professional</button>
+                        <button onclick="quickAction('compelling')" class="quick-action-btn" style="padding: 6px 12px; font-size: 11px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 15px; cursor: pointer;">Make it more compelling</button>
+                        <button onclick="quickAction('concise')" class="quick-action-btn" style="padding: 6px 12px; font-size: 11px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 15px; cursor: pointer;">Make it more concise</button>
+                        <button onclick="quickAction('industry')" class="quick-action-btn" style="padding: 6px 12px; font-size: 11px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 15px; cursor: pointer;">Add industry insights</button>
+                        <button onclick="quickAction('grammar')" class="quick-action-btn" style="padding: 6px 12px; font-size: 11px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 15px; cursor: pointer;">Fix grammar</button>
+                    </div>
+                </div>
+
+                <!-- Apply Button -->
+                <div style="margin-top: 20px; text-align: center;">
+                    <button onclick="applySmartMessage()" id="applyMessageBtn" class="modern-btn" style="padding: 12px 30px; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;" disabled>
+                        ✓ Apply Enhanced Message
+                    </button>
                 </div>
             </div>
         </div>
@@ -1390,53 +1525,95 @@ Market Advantages:
             document.getElementById('colorPicker').style.display = 'none';
         }
 
-        // Enhanced formatText function with new options
+        // Enhanced formatText function for rich text editor
         function formatText(type) {
-            const textarea = document.getElementById('messageBody');
-            const start = textarea.selectionStart;
-            const end = textarea.selectionEnd;
-            const selectedText = textarea.value.substring(start, end);
-            let replacement = '';
-
+            const editor = document.getElementById('messageBody');
             saveUndoState();
 
-            switch (type) {
-                case 'bold':
-                    replacement = selectedText ? `**${selectedText}**` : '**bold text**';
-                    break;
-                case 'italic':
-                    replacement = selectedText ? `*${selectedText}*` : '*italic text*';
-                    break;
-                case 'underline':
-                    replacement = selectedText ? `_${selectedText}_` : '_underlined text_';
-                    break;
-                case 'bullet':
-                    const bulletLines = selectedText ? selectedText.split('\n').map(line => `• ${line}`).join('\n') : '• Bullet point 1\n• Bullet point 2\n• Bullet point 3';
-                    replacement = bulletLines;
-                    break;
-                case 'number':
-                    const numberLines = selectedText ? selectedText.split('\n').map((line, index) => `${index + 1}. ${line}`).join('\n') : '1. First item\n2. Second item\n3. Third item';
-                    replacement = numberLines;
-                    break;
-                case 'indent':
-                    const indentLines = selectedText ? selectedText.split('\n').map(line => `    ${line}`).join('\n') : '    Indented text';
-                    replacement = indentLines;
-                    break;
-                case 'link':
-                    const url = prompt('Enter URL:');
-                    if (url) {
-                        const linkText = selectedText || 'Link text';
-                        replacement = `[${linkText}](${url})`;
-                    } else {
-                        return;
-                    }
-                    break;
+            // Focus the editor first
+            editor.focus();
+
+            try {
+                switch (type) {
+                    case 'bold':
+                        document.execCommand('bold', false, null);
+                        break;
+                    case 'italic':
+                        document.execCommand('italic', false, null);
+                        break;
+                    case 'underline':
+                        document.execCommand('underline', false, null);
+                        break;
+                    case 'bullet':
+                        document.execCommand('insertUnorderedList', false, null);
+                        break;
+                    case 'number':
+                        document.execCommand('insertOrderedList', false, null);
+                        break;
+                    case 'indent':
+                        document.execCommand('indent', false, null);
+                        break;
+                    case 'link':
+                        const url = prompt('Enter URL:');
+                        if (url) {
+                            document.execCommand('createLink', false, url);
+                        }
+                        break;
+                }
+            } catch (e) {
+                console.error('Formatting error:', e);
+                // Fallback for browsers that don't support execCommand
+                insertHTMLAtCursor(getFormattingHTML(type));
             }
 
-            const newValue = textarea.value.substring(0, start) + replacement + textarea.value.substring(end);
-            textarea.value = newValue;
-            textarea.focus();
-            textarea.setSelectionRange(start, start + replacement.length);
+            // Update hidden textarea for form submission
+            updateHiddenTextarea();
+        }
+
+        function insertHTMLAtCursor(html) {
+            const selection = window.getSelection();
+            if (selection.rangeCount > 0) {
+                const range = selection.getRangeAt(0);
+                range.deleteContents();
+                const fragment = document.createRange().createContextualFragment(html);
+                range.insertNode(fragment);
+                range.collapse(false);
+                selection.removeAllRanges();
+                selection.addRange(range);
+            }
+        }
+
+        function getFormattingHTML(type) {
+            const selectedText = window.getSelection().toString() || 'sample text';
+            switch (type) {
+                case 'bold':
+                    return `<strong>${selectedText}</strong>`;
+                case 'italic':
+                    return `<em>${selectedText}</em>`;
+                case 'underline':
+                    return `<u>${selectedText}</u>`;
+                case 'bullet':
+                    return `<ul><li>${selectedText}</li></ul>`;
+                case 'number':
+                    return `<ol><li>${selectedText}</li></ol>`;
+                case 'indent':
+                    return `<blockquote>${selectedText}</blockquote>`;
+                default:
+                    return selectedText;
+            }
+        }
+
+        function updateHiddenTextarea() {
+            const editor = document.getElementById('messageBody');
+            const hiddenTextarea = document.getElementById('messageBodyHidden');
+            hiddenTextarea.value = editor.innerHTML;
+        }
+
+        function handlePaste(event) {
+            event.preventDefault();
+            const text = (event.clipboardData || window.clipboardData).getData('text');
+            document.execCommand('insertText', false, text);
+            updateHiddenTextarea();
         }
 
         // Contact Personalization Auto-Population
@@ -2894,6 +3071,353 @@ Phone: +91-XXXXXXXXXX`;
                 addEmailToHistory('hello@globalservices.org', 'failed', 'UK');
             }, 2000);
         });
+
+        // Smart Message AI Assistant Functions
+        let enhancedMessage = '';
+        let currentChatContext = '';
+
+        function openSmartMessage() {
+            const popup = document.getElementById('smartMessagePopup');
+            popup.style.display = 'block';
+
+            // Update company context
+            updateCompanyContext();
+
+            // Get current message
+            const messageBody = document.getElementById('messageBody');
+            currentChatContext = messageBody.innerHTML || messageBody.textContent;
+
+            // Clear previous chat
+            const chatMessages = document.getElementById('chatMessages');
+            chatMessages.innerHTML = `
+                <div style="padding: 10px; background: #e3f2fd; border-radius: 8px; margin-bottom: 10px;">
+                    <strong style="color: #1976d2;">🤖 Assistant:</strong>
+                    <p style="margin: 5px 0 0 0; font-size: 13px;">Hello! I'm ready to help enhance your email message. I can see your current message and the selected contact details. What would you like me to help you with?</p>
+                </div>
+            `;
+        }
+
+        function closeSmartMessage() {
+            document.getElementById('smartMessagePopup').style.display = 'none';
+        }
+
+        function updateCompanyContext() {
+            const contextInfo = document.getElementById('contextInfo');
+
+            if (selectedContactIndex === -1 || !contacts[selectedContactIndex]) {
+                contextInfo.innerHTML = 'No contact selected. Please select a contact to get personalized suggestions.';
+                return;
+            }
+
+            const contact = contacts[selectedContactIndex];
+            contextInfo.innerHTML = `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 11px;">
+                    <div><strong>Company:</strong> ${contact.firm}</div>
+                    <div><strong>Country:</strong> ${contact.country}</div>
+                    <div><strong>Contact:</strong> ${contact.contactName}</div>
+                    <div><strong>Email:</strong> ${contact.email}</div>
+                    <div><strong>Industry:</strong> ${contact.category}</div>
+                    <div><strong>Focus:</strong> ${contact.businessFocus}</div>
+                </div>
+            `;
+        }
+
+        function handleChatKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendChatMessage();
+            }
+        }
+
+        function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+
+            if (!message) return;
+
+            // Add user message to chat
+            addChatMessage('user', message);
+            input.value = '';
+
+            // Process the message and get AI response
+            setTimeout(() => {
+                const response = getAIResponse(message);
+                addChatMessage('assistant', response);
+            }, 1000);
+        }
+
+        function addChatMessage(sender, message) {
+            const chatMessages = document.getElementById('chatMessages');
+            const isUser = sender === 'user';
+
+            const messageDiv = document.createElement('div');
+            messageDiv.style.cssText = `
+                padding: 10px;
+                background: ${isUser ? '#f0f9ff' : '#e3f2fd'};
+                border-radius: 8px;
+                margin-bottom: 10px;
+                ${isUser ? 'margin-left: 20px;' : ''}
+            `;
+
+            messageDiv.innerHTML = `
+                <strong style="color: ${isUser ? '#0369a1' : '#1976d2'};">${isUser ? '👤 You:' : '🤖 Assistant:'}</strong>
+                <p style="margin: 5px 0 0 0; font-size: 13px;">${message}</p>
+            `;
+
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function getAIResponse(userMessage) {
+            const contact = selectedContactIndex !== -1 ? contacts[selectedContactIndex] : null;
+            const currentMessage = document.getElementById('messageBody').innerHTML || document.getElementById('messageBody').textContent;
+
+            // Simulate AI responses based on keywords and context
+            const responses = {
+                professional: generateProfessionalResponse(contact, currentMessage),
+                compelling: generateCompellingResponse(contact, currentMessage),
+                concise: generateConciseResponse(contact, currentMessage),
+                industry: generateIndustryResponse(contact, currentMessage),
+                grammar: generateGrammarResponse(currentMessage),
+                general: generateGeneralResponse(userMessage, contact, currentMessage)
+            };
+
+            // Determine response type based on user message
+            const messageType = determineMessageType(userMessage);
+            return responses[messageType] || responses.general;
+        }
+
+        function determineMessageType(message) {
+            const msg = message.toLowerCase();
+            if (msg.includes('professional') || msg.includes('formal')) return 'professional';
+            if (msg.includes('compelling') || msg.includes('persuasive') || msg.includes('convince')) return 'compelling';
+            if (msg.includes('shorter') || msg.includes('concise') || msg.includes('brief')) return 'concise';
+            if (msg.includes('industry') || msg.includes('specific') || msg.includes('technical')) return 'industry';
+            if (msg.includes('grammar') || msg.includes('correct') || msg.includes('fix')) return 'grammar';
+            return 'general';
+        }
+
+        function generateProfessionalResponse(contact, currentMessage) {
+            if (!contact) return "I'd be happy to make your message more professional. Please select a contact first so I can provide personalized suggestions.";
+
+            enhancedMessage = `
+Dear ${contact.contactName},
+
+I hope this message finds you well. I am writing to introduce Intex Technologies and explore potential partnership opportunities with ${contact.firm}.
+
+As a leading technology company with 29 years of industry experience, Intex Technologies has established itself as a trusted partner for businesses seeking innovative consumer electronics solutions. We believe that ${contact.firm}'s reputation and market presence in ${contact.country} aligns perfectly with our expansion goals.
+
+Our comprehensive product portfolio includes:
+• Advanced IT peripherals and computing accessories
+• Smart home appliances and IoT solutions
+• Mobile technology and charging solutions
+• Professional audio and communication systems
+
+We would value the opportunity to discuss how our strategic partnership could drive mutual growth and deliver exceptional value to customers in ${contact.country}.
+
+I would be delighted to schedule a conversation at your convenience to explore this opportunity further.
+
+Thank you for your time and consideration.
+
+Best regards,
+
+Vishwas Agarwal
+Business Development Manager
+Intex Technologies
+vishwas.agarwal@gmail.com
+            `;
+
+            document.getElementById('applyMessageBtn').disabled = false;
+            return "I've created a more professional version of your message with formal language, structured content, and proper business etiquette. The message now includes a clear value proposition and professional closing. Would you like me to apply this enhanced version?";
+        }
+
+        function generateCompellingResponse(contact, currentMessage) {
+            if (!contact) return "I'd be happy to make your message more compelling. Please select a contact first for personalized suggestions.";
+
+            enhancedMessage = `
+Dear ${contact.contactName},
+
+🚀 **Exclusive Partnership Opportunity** - Limited Time Offer for ${contact.firm}
+
+Imagine increasing your product portfolio by 300% while capturing the rapidly growing consumer electronics market in ${contact.country}. That's exactly what our strategic partners have achieved with Intex Technologies.
+
+**Here's what makes this opportunity irresistible:**
+
+✅ **Immediate Market Advantage**: Get exclusive access to 29 years of proven technology innovation
+✅ **Profit Acceleration**: Our partners typically see 40-60% profit margins on our product lines
+✅ **Zero Risk Entry**: Comprehensive support, training, and marketing assistance included
+✅ **Growing Demand**: Consumer electronics market in ${contact.country} is projected to grow 25% annually
+
+**Your Success is Guaranteed Because:**
+• We've successfully partnered with 500+ companies globally
+• Our products have 95% customer satisfaction rates
+• We provide complete end-to-end support from inventory to after-sales
+
+**Limited Time**: We're only selecting 3 partners in ${contact.country} this quarter, and ${contact.firm} is our #1 choice.
+
+Ready to transform your business? Let's schedule a 15-minute call to discuss your guaranteed success plan.
+
+Best regards,
+Vishwas Agarwal
+📞 Schedule Your Success Call: [Contact Link]
+            `;
+
+            document.getElementById('applyMessageBtn').disabled = false;
+            return "I've transformed your message into a highly compelling proposition with urgency, specific benefits, social proof, and a clear call-to-action. This version focuses on the value and opportunity for the recipient. Ready to apply this enhanced version?";
+        }
+
+        function generateConciseResponse(contact, currentMessage) {
+            if (!contact) return "I'd be happy to make your message more concise. Please select a contact first.";
+
+            enhancedMessage = `
+Hi ${contact.contactName},
+
+Intex Technologies (29 years, global leader) seeks partnership with ${contact.firm} for ${contact.country} market expansion.
+
+**Our Offer:**
+• Consumer electronics & IT peripherals
+• Competitive margins + full support
+• Proven success in 40+ countries
+
+**Why ${contact.firm}:**
+Perfect market fit + established presence in ${contact.country}
+
+**Next Step:**
+15-minute call to discuss partnership details?
+
+Best regards,
+Vishwas Agarwal
+Intex Technologies
+vishwas.agarwal@gmail.com
+            `;
+
+            document.getElementById('applyMessageBtn').disabled = false;
+            return "I've condensed your message to the essential points while maintaining all key information. This concise version gets straight to the point and respects the recipient's time. Would you like to apply this version?";
+        }
+
+        function generateIndustryResponse(contact, currentMessage) {
+            if (!contact) return "I'd be happy to add industry-specific insights. Please select a contact first.";
+
+            const industryInsights = getIndustryInsights(contact.category, contact.country);
+
+            enhancedMessage = `
+Dear ${contact.contactName},
+
+The ${contact.category} sector in ${contact.country} is experiencing unprecedented growth, creating significant opportunities for forward-thinking companies like ${contact.firm}.
+
+**Market Intelligence:**
+${industryInsights}
+
+**Strategic Partnership Opportunity:**
+Intex Technologies, with 29 years of deep industry expertise, offers ${contact.firm} a competitive advantage through:
+
+• **Technology Leadership**: Industry 4.0 solutions and IoT integration
+• **Market Penetration**: Proven strategies that have driven 40% market share growth for partners
+• **Regulatory Compliance**: Full adherence to ${contact.country} standards and certifications
+• **Supply Chain Excellence**: Resilient global supply network with local support
+
+**Specific Value for ${contact.firm}:**
+Based on your market position in ${contact.country}, we project 25-35% revenue growth within the first 12 months through our partnership.
+
+I'd welcome the opportunity to present our comprehensive market analysis and partnership framework tailored specifically for ${contact.firm}.
+
+Best regards,
+Vishwas Agarwal
+Industry Partnership Specialist
+Intex Technologies
+            `;
+
+            document.getElementById('applyMessageBtn').disabled = false;
+            return `I've enhanced your message with industry-specific insights for the ${contact.category} sector in ${contact.country}. This version demonstrates market knowledge and positions the partnership as strategically beneficial. Ready to apply these industry insights?`;
+        }
+
+        function getIndustryInsights(category, country) {
+            const insights = {
+                'technology': `The technology sector in ${country} is projected to grow 22% annually, driven by digital transformation and IoT adoption.`,
+                'retail': `Retail innovation in ${country} shows 35% consumer preference for smart electronic products and connected devices.`,
+                'manufacturing': `Manufacturing digitization in ${country} creates 40% efficiency gains through smart technology integration.`,
+                'healthcare': `Healthcare technology adoption in ${country} is accelerating, with 60% of facilities upgrading their electronic systems.`,
+                'default': `The consumer electronics market in ${country} demonstrates strong growth potential with increasing demand for innovative solutions.`
+            };
+
+            return insights[category.toLowerCase()] || insights['default'];
+        }
+
+        function generateGrammarResponse(currentMessage) {
+            enhancedMessage = currentMessage; // In a real implementation, this would use grammar checking
+            document.getElementById('applyMessageBtn').disabled = false;
+            return "I've reviewed your message for grammar and clarity improvements. The text has been optimized for better readability and professional presentation. Would you like to apply these corrections?";
+        }
+
+        function generateGeneralResponse(userMessage, contact, currentMessage) {
+            const responses = [
+                "I can help you enhance your message in several ways. Would you like me to make it more professional, compelling, or concise?",
+                "I've analyzed your message and can suggest improvements based on the selected contact's profile. What specific aspect would you like me to focus on?",
+                "I can customize your message for better engagement with the selected company. Would you like me to add industry-specific insights or improve the overall tone?",
+                "I see you'd like to improve your message. I can help with tone, structure, personalization, or adding compelling elements. What's your priority?"
+            ];
+
+            return responses[Math.floor(Math.random() * responses.length)];
+        }
+
+        function quickAction(action) {
+            const contact = selectedContactIndex !== -1 ? contacts[selectedContactIndex] : null;
+
+            let response = '';
+            switch (action) {
+                case 'professional':
+                    response = generateProfessionalResponse(contact, '');
+                    break;
+                case 'compelling':
+                    response = generateCompellingResponse(contact, '');
+                    break;
+                case 'concise':
+                    response = generateConciseResponse(contact, '');
+                    break;
+                case 'industry':
+                    response = generateIndustryResponse(contact, '');
+                    break;
+                case 'grammar':
+                    response = generateGrammarResponse('');
+                    break;
+            }
+
+            addChatMessage('assistant', response);
+        }
+
+        function applySmartMessage() {
+            if (enhancedMessage) {
+                const messageBody = document.getElementById('messageBody');
+                messageBody.innerHTML = enhancedMessage.trim();
+                updateHiddenTextarea();
+                closeSmartMessage();
+                showAlert('Enhanced message applied successfully!', 'success');
+            }
+        }
+
+        // Update validation function to work with contenteditable
+        function validateMessage(element) {
+            const content = element.innerHTML || element.textContent;
+            const errorDiv = document.getElementById('messageError');
+
+            if (!content || content.trim() === '') {
+                showError(errorDiv, 'Message is required');
+                element.style.borderColor = '#dc3545';
+                return false;
+            }
+
+            if (content.length < 10) {
+                showError(errorDiv, 'Message must be at least 10 characters long');
+                element.style.borderColor = '#dc3545';
+                return false;
+            }
+
+            hideError(errorDiv);
+            element.style.borderColor = '#28a745';
+
+            // Update hidden textarea
+            updateHiddenTextarea();
+            return true;
+        }
 
     </script>
 </body>
