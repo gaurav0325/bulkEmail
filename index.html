@@ -390,10 +390,13 @@
                 <h3 style="margin: 0; color: #007bff; font-size: 14px;">📋 Contact List</h3>
                 <div style="display: flex; align-items: center; gap: 5px;">
                     <div id="contactCounts" style="font-size: 10px; color: #666; font-weight: bold;">
-                        <span id="totalCount">0</span> |
-                        <span id="sentCount" style="color: #28a745;">0✅</span> |
-                        <span id="failedCount" style="color: #dc3545;">0❌</span>
+                        <span id="totalCount">0 contacts</span> |
+                        <span id="sentCount" style="color: #22c55e;">0 sent</span> |
+                        <span id="failedCount" style="color: #ef4444;">0 failed</span>
                     </div>
+                    <button onclick="downloadContactStatus()" class="button button-secondary" style="padding: 4px 8px; font-size: 10px; display: none;" id="downloadContactsBtn" title="Download contact status spreadsheet">
+                        Download
+                    </button>
                     <button id="scrollTopBtn" class="button" onclick="scrollToTop()" style="padding: 4px 8px; font-size: 12px; display: none;">
                         Top
                     </button>
@@ -830,6 +833,7 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
         let uploadedSpreadsheetData = []; // Track original spreadsheet data with status
         let failedUploads = []; // Track detailed failed upload records
         let messageExpanded = false; // Track message area expansion
+        let currentUploadedFileName = ''; // Track current uploaded document name for export
 
         // Data Persistence Configuration
         const STORAGE_KEYS = {
@@ -1126,6 +1130,9 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
             console.log('=== ADVANCED FILE UPLOAD STARTED ===');
             console.log('File selected:', file.name, file.type, file.size);
             showAlert(`Processing ${sanitizeInput(file.name)}...`, 'success');
+
+            // Store the uploaded file name for export
+            currentUploadedFileName = file.name;
 
             try {
                 // Clear existing data
@@ -2374,6 +2381,9 @@ Phone: +91-XXXXXXXXXX`;
             console.log('File selected:', file.name, file.type, file.size);
             showAlert(`Processing ${sanitizeInput(file.name)}...`, 'success');
 
+            // Store the uploaded file name for export
+            currentUploadedFileName = file.name;
+
             try {
                 // Clear existing data
                 contacts = [];
@@ -2894,20 +2904,33 @@ Phone: +91-XXXXXXXXXX`;
                 div.setAttribute('aria-selected', 'false');
                 div.setAttribute('tabindex', '-1');
 
-                // Add status-based styling
+                // Add status-based styling with pleasing colors
                 let statusColor = '';
+                let statusBorder = '';
                 let statusIcon = '';
+                let statusBadge = '';
+
                 if (contact.emailStatus === 'sent') {
-                    statusColor = 'background: #d4edda; border-color: #28a745;';
-                    statusIcon = '✅';
+                    // Soft green for successful sends - pleasing to eyes
+                    statusColor = 'background: linear-gradient(135deg, #e8f5e8 0%, #f0fff0 100%);';
+                    statusBorder = 'border-left: 4px solid #22c55e; border: 1px solid #86efac;';
+                    statusIcon = '✓'; // Simple checkmark
+                    statusBadge = '<span style="background: #22c55e; color: white; padding: 2px 6px; border-radius: 10px; font-size: 9px; font-weight: 500;">SENT</span>';
                 } else if (contact.emailStatus === 'failed') {
-                    statusColor = 'background: #f8d7da; border-color: #dc3545;';
-                    statusIcon = '❌';
+                    // Soft red for failed sends - pleasing to eyes
+                    statusColor = 'background: linear-gradient(135deg, #fef2f2 0%, #fff5f5 100%);';
+                    statusBorder = 'border-left: 4px solid #ef4444; border: 1px solid #fca5a5;';
+                    statusIcon = '✗'; // Simple X mark
+                    statusBadge = '<span style="background: #ef4444; color: white; padding: 2px 6px; border-radius: 10px; font-size: 9px; font-weight: 500;">FAILED</span>';
                 } else {
-                    statusIcon = '📧';
+                    // Soft blue for pending - pleasing to eyes
+                    statusColor = 'background: linear-gradient(135deg, #f0f9ff 0%, #f8fafc 100%);';
+                    statusBorder = 'border-left: 4px solid #3b82f6; border: 1px solid #93c5fd;';
+                    statusIcon = '•'; // Simple dot
+                    statusBadge = '<span style="background: #6b7280; color: white; padding: 2px 6px; border-radius: 10px; font-size: 9px; font-weight: 500;">PENDING</span>';
                 }
 
-                div.style.cssText += statusColor;
+                div.style.cssText += statusColor + statusBorder;
 
                 // Security: Sanitize all contact data before display
                 const sanitizedContact = {
@@ -2968,8 +2991,9 @@ Phone: +91-XXXXXXXXXX`;
 
                 // Status icon
                 const statusDiv = document.createElement('div');
-                statusDiv.style.cssText = 'font-size: 20px;';
-                statusDiv.textContent = statusIcon;
+                statusDiv.style.cssText = 'display: flex; flex-direction: column; align-items: center; gap: 4px;';
+                const iconColor = contact.emailStatus === 'sent' ? '#22c55e' : contact.emailStatus === 'failed' ? '#ef4444' : '#6b7280';
+                statusDiv.innerHTML = '<div style="font-size: 16px; color: ' + iconColor + '; font-weight: bold;">' + statusIcon + '</div>' + statusBadge;
 
                 flexContainer.appendChild(contentDiv);
                 flexContainer.appendChild(statusDiv);
@@ -2996,6 +3020,11 @@ Phone: +91-XXXXXXXXXX`;
             // Auto-save after contact loading
             if (contacts.length > 0) {
                 saveToLocalStorage();
+                // Show download button when contacts are loaded
+                const downloadBtn = document.getElementById('downloadContactsBtn');
+                if (downloadBtn) {
+                    downloadBtn.style.display = 'inline-flex';
+                }
             }
         }
 
@@ -3913,6 +3942,83 @@ Phone: +91-XXXXXXXXXX`;
             document.body.removeChild(a);
 
             showAlert('Failed uploads exported to CSV', 'success');
+        }
+
+        // Contact Status Download Functionality
+        function downloadContactStatus() {
+            if (contacts.length === 0) {
+                showAlert('No contacts to export', 'info');
+                return;
+            }
+
+            try {
+                // Create CSV content with contact status
+                const headers = [
+                    'Row Number',
+                    'Contact Name',
+                    'Company',
+                    'Email Address',
+                    'Country',
+                    'Phone',
+                    'Website',
+                    'Email Status',
+                    'Last Updated'
+                ];
+
+                let csvContent = headers.join(',') + '\n';
+
+                contacts.forEach((contact, index) => {
+                    const row = [
+                        index + 1,
+                        contact.contactName || '',
+                        contact.firm || '',
+                        contact.email || '',
+                        contact.country || '',
+                        contact.phone || '',
+                        contact.website || '',
+                        contact.emailStatus || 'pending',
+                        new Date().toISOString().split('T')[0] // Today's date
+                    ].map(field => `"${field.toString().replace(/"/g, '""')}"`).join(',');
+                    csvContent += row + '\n';
+                });
+
+                // Add summary statistics
+                csvContent += '\n';
+                csvContent += '"SUMMARY STATISTICS"\n';
+                csvContent += `"Total Contacts","${contacts.length}"\n`;
+                csvContent += `"Successfully Sent","${contacts.filter(c => c.emailStatus === 'sent').length}"\n`;
+                csvContent += `"Failed to Send","${contacts.filter(c => c.emailStatus === 'failed').length}"\n`;
+                csvContent += `"Pending/Not Sent","${contacts.filter(c => c.emailStatus === 'pending').length}"\n`;
+                csvContent += `"Success Rate","${contacts.length > 0 ? Math.round((contacts.filter(c => c.emailStatus === 'sent').length / contacts.length) * 100) : 0}%"\n`;
+                csvContent += `"Export Date","${new Date().toLocaleString()}"\n`;
+                csvContent += `"Source Document","${currentUploadedFileName || 'Unknown'}"\n`;
+
+                // Generate filename with document reference
+                const sourceFileName = currentUploadedFileName ?
+                    currentUploadedFileName.replace(/\.[^/.]+$/, '') : // Remove extension
+                    'contacts';
+                const timestamp = new Date().toISOString().split('T')[0];
+                const filename = `${sourceFileName}_contact_status_${timestamp}.csv`;
+
+                // Download CSV
+                const blob = new Blob([csvContent], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+
+                const successRate = contacts.length > 0 ? Math.round((contacts.filter(c => c.emailStatus === 'sent').length / contacts.length) * 100) : 0;
+                showAlert(`Contact status exported! (${contacts.length} contacts, ${successRate}% success rate)`, 'success');
+
+            } catch (error) {
+                console.error('Error exporting contact status:', error);
+                showAlert('Failed to export contact status', 'error');
+            }
         }
 
         // Secure Data Persistence Functions
