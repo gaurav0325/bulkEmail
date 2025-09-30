@@ -380,6 +380,7 @@
                             📎 Choose Files
                         </button>
                         <small style="color: #6b7280; font-size: 11px;">Max 5 files, 25MB total</small>
+                        <small style="color: #f59e0b; font-size: 10px; display: block; margin-top: 2px;">ℹ️ Note: Attachments are stored for display. In a real email system, these would be sent with the email.</small>
                     </div>
                     <div id="attachmentList" style="min-height: 40px;">
                         <div id="attachmentEmpty" style="text-align: center; color: #9ca3af; font-style: italic; padding: 15px; font-size: 11px;">
@@ -1323,24 +1324,74 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
 
         // UI Enhancement Functions
         function toggleMessageExpand() {
-            const messageBody = document.getElementById('messageBody');
-            const expandBtn = document.getElementById('messageExpandBtn');
+            // Create modal popup for message editing
+            const modal = document.createElement('div');
+            modal.id = 'messageExpandModal';
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.5);
+                z-index: 2000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            `;
 
-            if (messageExpanded) {
-                messageBody.style.minHeight = '400px';
-                messageBody.style.height = '400px';
-                expandBtn.textContent = '📄 Expand';
-                expandBtn.setAttribute('aria-label', 'Expand message area');
-                messageExpanded = false;
-                showAlert('Message area collapsed to normal size', 'success');
-            } else {
-                messageBody.style.minHeight = '600px';
-                messageBody.style.height = '600px';
-                expandBtn.textContent = '📄 Collapse';
-                expandBtn.setAttribute('aria-label', 'Collapse message area');
-                messageExpanded = true;
-                showAlert('Message area expanded for better readability', 'success');
+            const messageBody = document.getElementById('messageBody');
+            const currentContent = messageBody.innerHTML;
+
+            modal.innerHTML = `
+                <div style="background: white; border-radius: 12px; width: 90%; max-width: 800px; height: 80%; display: flex; flex-direction: column; box-shadow: 0 20px 40px rgba(0,0,0,0.3);">
+                    <div style="padding: 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+                        <h3 style="margin: 0; color: #1f2937; font-size: 18px;">📝 Edit Message - Full Screen</h3>
+                        <button onclick="closeMessageModal()" style="background: #f3f4f6; border: none; padding: 8px; border-radius: 50%; cursor: pointer; font-size: 16px;">✕</button>
+                    </div>
+
+                    <div style="flex: 1; padding: 20px; overflow: hidden; display: flex; flex-direction: column;">
+                        <div id="expandedMessageBody" contenteditable="true"
+                             style="flex: 1; padding: 20px; border: 1px solid #d1d5db; border-radius: 8px; overflow-y: auto; font-size: 14px; line-height: 1.6; outline: none;"
+                             oninput="validateMessage(this)" onpaste="handlePaste(event)">
+                            ${currentContent}
+                        </div>
+                    </div>
+
+                    <div style="padding: 20px; border-top: 1px solid #e5e7eb; display: flex; gap: 10px; justify-content: flex-end;">
+                        <button onclick="cancelMessageEdit()" style="padding: 10px 20px; background: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                            Cancel
+                        </button>
+                        <button onclick="saveMessageEdit()" style="padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                            Save Changes
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+            document.getElementById('expandedMessageBody').focus();
+        }
+
+        function closeMessageModal() {
+            const modal = document.getElementById('messageExpandModal');
+            if (modal) {
+                modal.remove();
             }
+        }
+
+        function cancelMessageEdit() {
+            closeMessageModal();
+        }
+
+        function saveMessageEdit() {
+            const expandedBody = document.getElementById('expandedMessageBody');
+            const originalBody = document.getElementById('messageBody');
+
+            originalBody.innerHTML = expandedBody.innerHTML;
+            updateHiddenTextarea();
+            closeMessageModal();
+            showAlert('Message updated successfully!', 'success');
         }
 
         function toggleTemplate() {
@@ -1504,25 +1555,42 @@ Market Advantages:
         }
 
         function applyColor(color) {
-            const textarea = document.getElementById('messageBody');
-            const start = textarea.selectionStart;
-            const end = textarea.selectionEnd;
-            const selectedText = textarea.value.substring(start, end);
-
+            const editor = document.getElementById('messageBody');
             saveUndoState();
+            editor.focus();
 
-            let replacement;
-            if (selectedText) {
-                replacement = `<span style="color: ${color};">${selectedText}</span>`;
+            const selection = window.getSelection();
+            if (selection.rangeCount === 0) return;
+
+            const range = selection.getRangeAt(0);
+
+            if (range.collapsed) {
+                // No selection, insert colored text placeholder
+                const span = document.createElement('span');
+                span.style.color = color;
+                span.textContent = 'colored text';
+                range.insertNode(span);
+
+                // Select the inserted text
+                const newRange = document.createRange();
+                newRange.selectNodeContents(span);
+                selection.removeAllRanges();
+                selection.addRange(newRange);
             } else {
-                replacement = `<span style="color: ${color};">colored text</span>`;
+                // Apply color to selected text
+                const span = document.createElement('span');
+                span.style.color = color;
+
+                try {
+                    span.appendChild(range.extractContents());
+                    range.insertNode(span);
+                } catch (e) {
+                    // Fallback: use execCommand
+                    document.execCommand('foreColor', false, color);
+                }
             }
 
-            const newValue = textarea.value.substring(0, start) + replacement + textarea.value.substring(end);
-            textarea.value = newValue;
-            textarea.focus();
-            textarea.setSelectionRange(start, start + replacement.length);
-
+            updateHiddenTextarea();
             // Hide color picker
             document.getElementById('colorPicker').style.display = 'none';
         }
@@ -3169,12 +3237,26 @@ Phone: +91-XXXXXXXXXX`;
             const messageBody = document.getElementById('messageBody');
             currentChatContext = messageBody.innerHTML || messageBody.textContent;
 
-            // Clear previous chat
+            // Show current message and provide ChatGPT-like interface
             const chatMessages = document.getElementById('chatMessages');
+            const currentMessageText = messageBody.textContent || messageBody.innerText || 'No message content';
+
             chatMessages.innerHTML = `
-                <div style="padding: 10px; background: #e3f2fd; border-radius: 8px; margin-bottom: 10px;">
-                    <strong style="color: #1976d2;">🤖 Assistant:</strong>
-                    <p style="margin: 5px 0 0 0; font-size: 13px;">Hello! I'm ready to help enhance your email message. I can see your current message and the selected contact details. What would you like me to help you with?</p>
+                <div style="padding: 15px; background: #f8f9fa; border-radius: 12px; margin-bottom: 15px; border-left: 4px solid #3b82f6;">
+                    <div style="font-weight: 600; color: #1e40af; margin-bottom: 8px; font-size: 14px;">📧 Current Message</div>
+                    <div style="background: white; padding: 12px; border-radius: 8px; font-size: 13px; line-height: 1.5; max-height: 200px; overflow-y: auto; border: 1px solid #e5e7eb;">
+                        ${currentMessageText.length > 500 ? currentMessageText.substring(0, 500) + '...' : currentMessageText}
+                    </div>
+                </div>
+
+                <div style="padding: 15px; background: #f0f9ff; border-radius: 12px; margin-bottom: 15px;">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                        <span style="font-size: 18px;">🤖</span>
+                        <strong style="color: #0369a1; font-size: 14px;">AI Assistant</strong>
+                    </div>
+                    <p style="margin: 0; font-size: 13px; color: #334155; line-height: 1.5;">
+                        I can help you enhance your email message. Choose from the quick actions below or tell me what specific changes you'd like to make. I'll show you a preview before applying any changes.
+                    </p>
                 </div>
             `;
         }
@@ -3220,10 +3302,10 @@ Phone: +91-XXXXXXXXXX`;
             addChatMessage('user', message);
             input.value = '';
 
-            // Process the message and get AI response
+            // Process the message and get AI response with enhanced message
             setTimeout(() => {
-                const response = getAIResponse(message);
-                addChatMessage('assistant', response);
+                const result = getAIResponseWithPreview(message);
+                addChatMessageWithPreview('assistant', result.explanation, result.enhancedMessage);
             }, 1000);
         }
 
@@ -3247,6 +3329,270 @@ Phone: +91-XXXXXXXXXX`;
 
             chatMessages.appendChild(messageDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function addChatMessageWithPreview(sender, explanation, enhancedMessage) {
+            const chatMessages = document.getElementById('chatMessages');
+
+            const messageDiv = document.createElement('div');
+            messageDiv.style.cssText = `
+                padding: 15px;
+                background: #f0f9ff;
+                border-radius: 12px;
+                margin-bottom: 15px;
+                border-left: 4px solid #3b82f6;
+            `;
+
+            messageDiv.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                    <span style="font-size: 16px;">🤖</span>
+                    <strong style="color: #0369a1; font-size: 14px;">AI Enhancement</strong>
+                </div>
+
+                <div style="margin-bottom: 12px; font-size: 13px; color: #475569;">
+                    ${explanation}
+                </div>
+
+                <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 12px;">
+                    <div style="font-weight: 600; color: #374151; margin-bottom: 8px; font-size: 12px;">📝 ENHANCED MESSAGE PREVIEW</div>
+                    <div style="font-size: 13px; line-height: 1.5; color: #1f2937; max-height: 300px; overflow-y: auto;">
+                        ${enhancedMessage.replace(/\n/g, '<br>')}
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 8px;">
+                    <button onclick="applyEnhancedMessage(\`${enhancedMessage.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)"
+                            style="padding: 8px 16px; background: #16a34a; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500;">
+                        ✅ Apply Changes
+                    </button>
+                    <button onclick="rejectEnhancement()"
+                            style="padding: 8px 16px; background: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500;">
+                        ❌ Keep Original
+                    </button>
+                </div>
+            `;
+
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function applyEnhancedMessage(enhancedMessage) {
+            const messageBody = document.getElementById('messageBody');
+            messageBody.innerHTML = enhancedMessage.replace(/\n/g, '<br>');
+            updateHiddenTextarea();
+            showAlert('Enhanced message applied successfully!', 'success');
+            closeSmartMessage();
+        }
+
+        function rejectEnhancement() {
+            showAlert('Enhancement rejected. Original message kept.', 'info');
+        }
+
+        function getAIResponseWithPreview(userMessage) {
+            const contact = selectedContactIndex !== -1 ? contacts[selectedContactIndex] : null;
+            const currentMessage = document.getElementById('messageBody').textContent || '';
+
+            // Generate enhanced message based on request
+            const lowerMessage = userMessage.toLowerCase();
+            let enhancedMessage = currentMessage;
+            let explanation = '';
+
+            if (lowerMessage.includes('professional') || lowerMessage.includes('formal')) {
+                explanation = "I've made your message more professional by adding formal language and business etiquette.";
+                enhancedMessage = generateProfessionalVersion(currentMessage, contact);
+            } else if (lowerMessage.includes('compelling') || lowerMessage.includes('persuasive')) {
+                explanation = "I've made your message more compelling by adding urgency and value propositions.";
+                enhancedMessage = generateCompellingVersion(currentMessage, contact);
+            } else if (lowerMessage.includes('concise') || lowerMessage.includes('shorter')) {
+                explanation = "I've made your message more concise while keeping the key points.";
+                enhancedMessage = generateConciseVersion(currentMessage, contact);
+            } else if (lowerMessage.includes('personal') || lowerMessage.includes('friendly')) {
+                explanation = "I've made your message more personal and friendly while maintaining professionalism.";
+                enhancedMessage = generatePersonalVersion(currentMessage, contact);
+            } else {
+                explanation = "I've enhanced your message with better structure and professional language.";
+                enhancedMessage = generateGeneralEnhancement(currentMessage, contact);
+            }
+
+            return {
+                explanation: explanation,
+                enhancedMessage: enhancedMessage
+            };
+        }
+
+        function generateProfessionalVersion(message, contact) {
+            if (!contact) return message;
+
+            return `Dear ${contact.contactName},
+
+I hope this message finds you well. I am writing to introduce Intex Technologies and explore potential partnership opportunities with ${contact.firm}.
+
+Since our establishment in 1996, Intex Technologies has maintained a leadership position in the consumer electronics and technology sectors. We believe that ${contact.firm}, with its established market presence in ${contact.country}, would represent an ideal strategic partner for expanding our operations.
+
+Our comprehensive product portfolio includes:
+• Professional IT peripherals and computer accessories
+• Advanced home appliances and climate solutions
+• Premium mobile accessories and charging solutions
+• High-quality audio systems and entertainment products
+
+We are currently seeking qualified distribution partners in ${contact.country} who share our commitment to delivering exceptional products and customer service.
+
+Our partnership program offers:
+✓ Competitive wholesale pricing with attractive margin structures
+✓ Comprehensive marketing support and co-branding opportunities
+✓ Technical training programs and ongoing product support
+✓ Flexible payment terms and credit facilities
+✓ Exclusive territorial rights (subject to mutual agreement)
+
+I would welcome the opportunity to discuss how we might collaborate to bring Intex Technologies' innovative solutions to the ${contact.country} market through ${contact.firm}.
+
+Thank you for your time and consideration. I look forward to your response.
+
+Best regards,
+
+Vishwas Agarwal
+Business Development Manager
+Intex Technologies
+Email: vishwas.agarwal@gmail.com`;
+        }
+
+        function generateCompellingVersion(message, contact) {
+            if (!contact) return message;
+
+            return `🔥 EXCLUSIVE PARTNERSHIP OPPORTUNITY - Limited Time!
+
+Dear ${contact.contactName},
+
+What if I told you that ${contact.firm} could increase revenue by 30-40% in the next 12 months with the RIGHT technology partner?
+
+Intex Technologies (Est. 1996) is offering ${contact.firm} an EXCLUSIVE opportunity to become our primary distributor in ${contact.country}.
+
+⚡ HERE'S WHAT MAKES THIS URGENT:
+→ We're only selecting ONE partner per region
+→ The ${contact.country} market is experiencing 25% growth in tech products
+→ Our current partners report average 35% profit margins
+→ First-mover advantage in your market is CRITICAL
+
+🎯 WHAT YOU GET IMMEDIATELY:
+✅ Instant access to 500+ high-demand products
+✅ Marketing budget of $10,000 for launch campaigns
+✅ 60-day exclusive territory protection
+✅ Direct factory pricing (no middleman markup)
+✅ Same-day technical support guarantee
+
+💰 REAL NUMBERS FROM OUR PARTNERS:
+• TechMart (UAE): $2.3M revenue in first year
+• ElectroWorld (Malaysia): 400% growth in 18 months
+• Digital Plus (Thailand): Became market leader in 2 years
+
+⏰ TIME-SENSITIVE: This offer expires in 7 days. After that, we'll approach your competitors.
+
+The question isn't whether you can afford this opportunity...
+The question is: Can ${contact.firm} afford to MISS it?
+
+Ready to dominate the ${contact.country} tech market?
+
+Call me NOW: +91-XXXXXXXXXX
+
+Vishwas Agarwal
+Business Development Manager
+Intex Technologies
+
+P.S. I have authorization to offer a 15% first-order discount, but only if you respond within 48 hours.`;
+        }
+
+        function generateConciseVersion(message, contact) {
+            if (!contact) return message;
+
+            return `Hi ${contact.contactName},
+
+Intex Technologies (1996-present) seeks distribution partner in ${contact.country}.
+
+Our Products: IT peripherals, home appliances, mobile accessories, audio systems.
+
+Partnership Benefits:
+• Competitive pricing + attractive margins
+• Marketing support + training
+• Flexible payment terms
+• Exclusive territory rights
+
+Interested in discussing how ${contact.firm} can benefit from this partnership?
+
+Best regards,
+Vishwas Agarwal
+Business Development Manager
+Intex Technologies
+vishwas.agarwal@gmail.com`;
+        }
+
+        function generatePersonalVersion(message, contact) {
+            if (!contact) return message;
+
+            return `Hello ${contact.contactName}!
+
+I hope you're having a great day. I came across ${contact.firm} and was really impressed by what you've built in ${contact.country}.
+
+I'm Vishwas from Intex Technologies, and I think there might be a fantastic opportunity for us to work together. We've been in the tech business since 1996, and I genuinely believe ${contact.firm} would be perfect for what we have in mind.
+
+Here's what caught my attention about your company - you clearly understand your market in ${contact.country}, and that's exactly the kind of local expertise we value in a partner.
+
+What we bring to the table:
+• A diverse range of products (IT gear, home appliances, mobile accessories, audio equipment)
+• Really competitive pricing that lets our partners succeed
+• Hands-on support (we're not the "sell and disappear" type!)
+• Marketing help that actually works
+• Payment terms designed for real businesses
+
+I'd love to have a friendly chat about how we could help ${contact.firm} grow even more. No pressure, no pushy sales tactics - just two business people exploring possibilities.
+
+Would you be open to a quick call next week? I think you'll find our partnership model refreshingly straightforward.
+
+Looking forward to potentially working together!
+
+Warm regards,
+Vishwas Agarwal
+Business Development Manager
+Intex Technologies
+vishwas.agarwal@gmail.com
+
+P.S. - I'm happy to send over some references from our other partners if that would be helpful.`;
+        }
+
+        function generateGeneralEnhancement(message, contact) {
+            if (!contact) return message;
+
+            return `Dear ${contact.contactName},
+
+I trust this message finds you well. I am reaching out regarding a strategic partnership opportunity between Intex Technologies and ${contact.firm}.
+
+Intex Technologies, established in 1996, is a leading innovator in consumer electronics and technology solutions. We have identified ${contact.firm} as a potential strategic partner due to your strong market position in ${contact.country}.
+
+Our Product Excellence:
+• Premium IT peripherals and computer accessories
+• Innovative home appliances and climate control solutions
+• Cutting-edge mobile accessories and power solutions
+• Superior audio systems and entertainment technology
+
+Partnership Value Proposition:
+✓ Competitive pricing with substantial profit margins
+✓ Comprehensive marketing and promotional support
+✓ Technical training and ongoing partnership support
+✓ Flexible financial terms and credit arrangements
+✓ Market exclusivity opportunities
+
+We believe this partnership would create significant value for both organizations and establish a strong foundation for long-term success in the ${contact.country} market.
+
+I would appreciate the opportunity to discuss this proposal in detail at your convenience.
+
+Thank you for your consideration.
+
+Professional regards,
+
+Vishwas Agarwal
+Business Development Manager
+Intex Technologies
+Email: vishwas.agarwal@gmail.com
+Phone: +91-XXXXXXXXXX`;
         }
 
         function getAIResponse(userMessage) {
