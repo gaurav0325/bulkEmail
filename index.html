@@ -1497,26 +1497,6 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
             return true;
         }
 
-        function validateMessage(input) {
-            const message = input.value.trim();
-            const errorDiv = document.getElementById('messageError');
-
-            if (!message) {
-                showError(errorDiv, 'Message is required');
-                input.style.borderColor = '#dc3545';
-                return false;
-            }
-
-            if (message.length > 50000) {
-                showError(errorDiv, 'Message too long (max 50,000 characters)');
-                input.style.borderColor = '#dc3545';
-                return false;
-            }
-
-            hideError(errorDiv);
-            input.style.borderColor = '#28a745';
-            return true;
-        }
 
         function showError(errorDiv, message) {
             errorDiv.textContent = message;
@@ -1895,17 +1875,9 @@ Market Advantages:
             const range = selection.getRangeAt(0);
 
             if (range.collapsed) {
-                // No selection, insert colored text placeholder
-                const span = document.createElement('span');
-                span.style.color = color;
-                span.textContent = 'colored text';
-                range.insertNode(span);
-
-                // Select the inserted text
-                const newRange = document.createRange();
-                newRange.selectNodeContents(span);
-                selection.removeAllRanges();
-                selection.addRange(newRange);
+                // No text selected, just return without doing anything
+                showAlert('Please select text first to change its color', 'info');
+                return;
             } else {
                 // Apply color to selected text
                 const span = document.createElement('span');
@@ -2289,7 +2261,7 @@ Phone: +91-XXXXXXXXXX`;
                 status: status, // 'sent', 'failed'
                 timestamp: timestamp,
                 country: country,
-                content: document.getElementById('messageBody').value ? document.getElementById('messageBody').value.substring(0, 100) + '...' : 'No content'
+                content: document.getElementById('messageBody').innerHTML ? document.getElementById('messageBody').innerHTML.substring(0, 100) + '...' : 'No content'
             };
             emailHistory.unshift(historyItem); // Add to beginning
             updateEmailHistory();
@@ -3153,7 +3125,7 @@ Phone: +91-XXXXXXXXXX`;
             const fromEmail = document.getElementById('fromEmail').value.trim();
             const toEmailField = document.getElementById('toEmail').value.trim();
             const subject = document.getElementById('subject').value.trim();
-            const body = document.getElementById('messageBody').value.trim();
+            const body = document.getElementById('messageBody').innerHTML.trim();
 
             // Parse multiple emails
             const toEmails = parseMultipleEmails(toEmailField);
