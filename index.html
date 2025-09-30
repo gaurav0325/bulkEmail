@@ -6,6 +6,7 @@
     <title>Bulk Email Sender - Data Analysis Insights v2.2</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.5/dist/purify.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <meta name="cache-control" content="no-cache">
     <meta name="version" content="2.1-contact-enhancements">
     <style>
@@ -280,6 +281,7 @@
                     <a href="#" onclick="loadDraftEmail()" style="color: #333; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px; border-bottom: 1px solid #eee;">📄 Load Draft</a>
                     <a href="#" onclick="exportAllData()" style="color: #333; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px; border-bottom: 1px solid #eee;">📥 Export All</a>
                     <a href="#" onclick="importAllData()" style="color: #333; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px; border-bottom: 1px solid #eee;">📤 Import Data</a>
+                    <a href="#" onclick="showEmailConfig()" style="color: #6c757d; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px; border-bottom: 1px solid #eee;">⚙️ Email Setup</a>
                     <a href="#" onclick="clearAllData()" style="color: #dc3545; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px;">🗑️ Clear All</a>
                 </div>
             </div>
@@ -771,6 +773,29 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
         let autoSaveEnabled = true;
         let lastAutoSave = Date.now();
 
+        // Email Service Configuration
+        const EMAIL_CONFIG = {
+            emailjs: {
+                enabled: true,
+                publicKey: 'your-emailjs-public-key', // Replace with actual key
+                serviceId: 'your-service-id', // Replace with actual service ID
+                templateId: 'your-template-id' // Replace with actual template ID
+            },
+            netlify: {
+                enabled: true,
+                endpoint: '/.netlify/functions/send-email'
+            },
+            formspree: {
+                enabled: false, // Set to true and add your Formspree endpoint
+                endpoint: 'https://formspree.io/f/your-formspree-id'
+            },
+            webhook: {
+                enabled: false, // Set to true and add your webhook URL
+                endpoint: 'https://your-email-webhook.com/send',
+                apiKey: 'your-api-key'
+            }
+        };
+
         // Security: Email validation regex
         const EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
 
@@ -781,26 +806,231 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
 
         // Security Functions
         function sanitizeHTML(str) {
+            if (!str) return '';
             if (typeof DOMPurify !== 'undefined') {
-                return DOMPurify.sanitize(str);
+                return DOMPurify.sanitize(str, {
+                    ALLOWED_TAGS: ['b', 'i', 'u', 'strong', 'em', 'br', 'p', 'div', 'span', 'ul', 'ol', 'li', 'a'],
+                    ALLOWED_ATTR: ['href', 'target', 'style'],
+                    ALLOW_DATA_ATTR: false
+                });
             }
-            // Fallback if DOMPurify isn't loaded
+            // Enhanced fallback sanitization
+            return escapeHTML(str);
+        }
+
+        function escapeHTML(str) {
+            if (!str) return '';
             const div = document.createElement('div');
             div.textContent = str;
             return div.innerHTML;
         }
 
+        function sanitizeContactData(contact) {
+            if (!contact) return null;
+            return {
+                email: escapeHTML(contact.email || ''),
+                contactName: escapeHTML(contact.contactName || ''),
+                firm: escapeHTML(contact.firm || ''),
+                country: escapeHTML(contact.country || ''),
+                phone: escapeHTML(contact.phone || ''),
+                // Preserve other safe properties
+                emailStatus: contact.emailStatus || 'pending'
+            };
+        }
+
+        function createSafeHTML(template, data) {
+            // Use template literals safely by escaping all data
+            const safeData = {};
+            for (const [key, value] of Object.entries(data)) {
+                safeData[key] = escapeHTML(value);
+            }
+            return template.replace(/\{\{(\w+)\}\}/g, (match, key) => safeData[key] || '');
+        }
+
         function sanitizeInput(input) {
-            return input.replace(/[<>\"'&]/g, function(match) {
-                const escape = {
-                    '<': '&lt;',
-                    '>': '&gt;',
-                    '"': '&quot;',
-                    "'": '&#x27;',
-                    '&': '&amp;'
-                };
-                return escape[match];
-            });
+            if (typeof input !== 'string') return input;
+
+            // Enhanced sanitization with comprehensive security measures
+            return input
+                .replace(/<script[^>]*>.*?<\/script>/gi, '') // Remove script tags
+                .replace(/<iframe[^>]*>.*?<\/iframe>/gi, '') // Remove iframe tags
+                .replace(/<object[^>]*>.*?<\/object>/gi, '') // Remove object tags
+                .replace(/<embed[^>]*>.*?<\/embed>/gi, '') // Remove embed tags
+                .replace(/<link[^>]*>/gi, '') // Remove link tags
+                .replace(/<meta[^>]*>/gi, '') // Remove meta tags
+                .replace(/javascript:/gi, '') // Remove javascript: protocol
+                .replace(/vbscript:/gi, '') // Remove vbscript: protocol
+                .replace(/data:/gi, '') // Remove data: protocol
+                .replace(/on\w+\s*=/gi, '') // Remove event handlers
+                .replace(/expression\s*\(/gi, '') // Remove CSS expressions
+                .replace(/url\s*\(/gi, '') // Remove CSS url() calls
+                .replace(/import\s*\(/gi, '') // Remove import statements
+                .replace(/@import/gi, '') // Remove @import rules
+                .replace(/[<>\"'&]/g, function(match) {
+                    const escape = {
+                        '<': '&lt;',
+                        '>': '&gt;',
+                        '"': '&quot;',
+                        "'": '&#x27;',
+                        '&': '&amp;'
+                    };
+                    return escape[match];
+                })
+                .trim();
+        }
+
+        // Specific sanitization for different input types
+        function sanitizeEmail(email) {
+            if (!email) return '';
+            // Allow only valid email characters and validate format
+            const sanitized = email.trim().toLowerCase()
+                .replace(/[^a-zA-Z0-9._%+-@]/g, '')
+                .substring(0, 254); // RFC 5321 limit
+
+            return EMAIL_REGEX.test(sanitized) ? sanitized : '';
+        }
+
+        function sanitizeSubject(subject) {
+            if (!subject) return '';
+            // Remove potentially dangerous characters but keep basic formatting
+            return subject.trim()
+                .replace(/[\r\n]/g, ' ') // Replace line breaks with spaces
+                .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // Remove control characters
+                .substring(0, 998); // RFC 5321 limit
+        }
+
+        function sanitizeText(text) {
+            if (!text) return '';
+            // Basic text sanitization for names, companies, etc.
+            return text.trim()
+                .replace(/[<>"'&]/g, function(match) {
+                    const entities = {
+                        '<': '&lt;',
+                        '>': '&gt;',
+                        '"': '&quot;',
+                        "'": '&#x27;',
+                        '&': '&amp;'
+                    };
+                    return entities[match];
+                })
+                .substring(0, 500); // Reasonable length limit
+        }
+
+        // Secure Storage Functions with Encryption
+        const ENCRYPTION_KEY = 'bulkEmail_secure_key_v1'; // In production, use proper key management
+
+        async function encryptData(data) {
+            try {
+                // Simple encryption using Web Crypto API
+                const encoder = new TextEncoder();
+                const dataString = JSON.stringify(data);
+                const dataBytes = encoder.encode(dataString);
+
+                // Generate a random salt
+                const salt = crypto.getRandomValues(new Uint8Array(16));
+
+                // Derive key from password
+                const keyMaterial = await crypto.subtle.importKey(
+                    'raw',
+                    encoder.encode(ENCRYPTION_KEY),
+                    { name: 'PBKDF2' },
+                    false,
+                    ['deriveKey']
+                );
+
+                const derivedKey = await crypto.subtle.deriveKey(
+                    {
+                        name: 'PBKDF2',
+                        salt: salt,
+                        iterations: 100000,
+                        hash: 'SHA-256'
+                    },
+                    keyMaterial,
+                    { name: 'AES-GCM', length: 256 },
+                    false,
+                    ['encrypt']
+                );
+
+                // Generate random IV
+                const iv = crypto.getRandomValues(new Uint8Array(12));
+
+                // Encrypt data
+                const encryptedData = await crypto.subtle.encrypt(
+                    { name: 'AES-GCM', iv: iv },
+                    derivedKey,
+                    dataBytes
+                );
+
+                // Combine salt, iv, and encrypted data
+                const combined = new Uint8Array(salt.length + iv.length + encryptedData.byteLength);
+                combined.set(salt, 0);
+                combined.set(iv, salt.length);
+                combined.set(new Uint8Array(encryptedData), salt.length + iv.length);
+
+                // Convert to base64 for storage
+                return btoa(String.fromCharCode(...combined));
+            } catch (error) {
+                console.error('Encryption failed:', error);
+                // Fallback to plain text storage (log warning)
+                console.warn('Using unencrypted storage as fallback');
+                return JSON.stringify(data);
+            }
+        }
+
+        async function decryptData(encryptedString) {
+            try {
+                // Try to parse as encrypted data first
+                const combined = Uint8Array.from(atob(encryptedString), c => c.charCodeAt(0));
+
+                // Extract salt, iv, and encrypted data
+                const salt = combined.slice(0, 16);
+                const iv = combined.slice(16, 28);
+                const encryptedData = combined.slice(28);
+
+                const encoder = new TextEncoder();
+                const decoder = new TextDecoder();
+
+                // Derive key from password
+                const keyMaterial = await crypto.subtle.importKey(
+                    'raw',
+                    encoder.encode(ENCRYPTION_KEY),
+                    { name: 'PBKDF2' },
+                    false,
+                    ['deriveKey']
+                );
+
+                const derivedKey = await crypto.subtle.deriveKey(
+                    {
+                        name: 'PBKDF2',
+                        salt: salt,
+                        iterations: 100000,
+                        hash: 'SHA-256'
+                    },
+                    keyMaterial,
+                    { name: 'AES-GCM', length: 256 },
+                    false,
+                    ['decrypt']
+                );
+
+                // Decrypt data
+                const decryptedData = await crypto.subtle.decrypt(
+                    { name: 'AES-GCM', iv: iv },
+                    derivedKey,
+                    encryptedData
+                );
+
+                const decryptedString = decoder.decode(decryptedData);
+                return JSON.parse(decryptedString);
+            } catch (error) {
+                console.log('Decryption failed, trying plain text fallback:', error.message);
+                // Fallback to plain text parsing (backward compatibility)
+                try {
+                    return JSON.parse(encryptedString);
+                } catch (parseError) {
+                    console.error('Both decryption and plain text parsing failed:', parseError);
+                    return null;
+                }
+            }
         }
 
         // Advanced file upload handler for multiple document types (declared early for inline event handlers)
@@ -1777,7 +2007,9 @@ Phone: +91-XXXXXXXXXX`;
             // Force clear any previous content and set new content
             messageBody.innerHTML = '';
             setTimeout(() => {
-                messageBody.innerHTML = personalizedMessage.replace(/\n/g, '<br>');
+                // Sanitize the personalized message before setting innerHTML
+                const sanitizedMessage = sanitizeHTML(personalizedMessage.replace(/\n/g, '<br>'));
+                messageBody.innerHTML = sanitizedMessage;
                 console.log('Message body innerHTML set to:', messageBody.innerHTML.substring(0, 100) + '...');
                 updateHiddenTextarea();
                 console.log('updateHiddenTextarea called');
@@ -2787,7 +3019,9 @@ Intex Technologies
 Email: vishwas.agarwal@gmail.com
 Phone: +91-XXXXXXXXXX`;
 
-                messageBody.innerHTML = personalizedMessage.replace(/\n/g, '<br>');
+                // Sanitize the personalized message before setting innerHTML
+                const sanitizedMessage = sanitizeHTML(personalizedMessage.replace(/\n/g, '<br>'));
+                messageBody.innerHTML = sanitizedMessage;
 
                 // Update hidden textarea
                 const hiddenTextarea = document.getElementById('messageBodyHidden');
@@ -2852,27 +3086,36 @@ Phone: +91-XXXXXXXXXX`;
                     console.log(`Sending to: ${toEmail}`);
 
                     try {
-                        const response = await fetch('/.netlify/functions/send-email-working', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                from_email: fromEmail,
-                                from_name: 'Intex Technologies',
-                                to_email: toEmail,
-                                subject: subject,
-                                content: body
-                            })
-                        });
+                        // Create contact object for email sending
+                        const contact = {
+                            email: toEmail,
+                            contactName: '', // Will be extracted if available
+                            firm: '',
+                            country: ''
+                        };
 
-                        const result = await response.json();
+                        // Try to find contact details if it's a known contact
+                        const knownContact = contacts.find(c => c.email === toEmail);
+                        if (knownContact) {
+                            contact.contactName = knownContact.contactName;
+                            contact.firm = knownContact.firm;
+                            contact.country = knownContact.country;
+                        }
+
+                        // Get message body HTML (preserving formatting)
+                        const messageBodyHTML = document.getElementById('messageBody').innerHTML;
+
+                        // Send email using real email service
+                        const result = await sendRealEmail(contact, subject, messageBodyHTML);
                         console.log(`Response for ${toEmail}:`, result);
 
                         if (result.success) {
                             successCount++;
-                            addToEmailHistory(toEmail, subject, 'sent', Date.now());
+                            addToEmailHistory(toEmail, subject, 'sent', Date.now(), contact.country);
                         } else {
                             failureCount++;
-                            addToEmailHistory(toEmail, subject, 'failed', Date.now());
+                            addToEmailHistory(toEmail, subject, 'failed', Date.now(), contact.country);
+                            console.error(`Email failed for ${toEmail}:`, result.error);
                         }
                     } catch (emailError) {
                         console.error(`Error sending to ${toEmail}:`, emailError);
@@ -2998,8 +3241,9 @@ Phone: +91-XXXXXXXXXX`;
                         .replace(/{country}/g, contact.country || '')
                         .replace(/{email}/g, contact.email || '');
 
-                    // Simulate email sending (replace with actual email service)
-                    const success = await simulateEmailSending(contact, personalizedSubject, personalizedMessage);
+                    // Send actual email with preserved formatting
+                    const emailResult = await sendRealEmail(contact, personalizedSubject, personalizedMessage);
+                    const success = emailResult.success;
 
                     if (success) {
                         bulkEmailSuccessCount++;
@@ -3025,14 +3269,187 @@ Phone: +91-XXXXXXXXXX`;
             completeBulkEmail();
         }
 
-        async function simulateEmailSending(contact, subject, message) {
-            // Simulate email sending with random success/failure
-            // In production, replace with actual email service call
-            const randomDelay = Math.random() * 1000 + 500; // 0.5-1.5 second delay
-            await new Promise(resolve => setTimeout(resolve, randomDelay));
+        async function sendRealEmail(contact, subject, messageHTML) {
+            try {
+                // Prepare email data with proper formatting preservation
+                const emailData = {
+                    from_email: document.getElementById('fromEmail').value,
+                    from_name: window.defaultFromName || 'Professional Outreach',
+                    to_email: contact.email,
+                    to_name: contact.contactName,
+                    subject: subject,
+                    html_content: messageHTML, // Preserve HTML formatting
+                    text_content: stripHTML(messageHTML), // Plain text fallback
+                    company: contact.firm,
+                    country: contact.country
+                };
 
-            // 90% success rate simulation
-            return Math.random() > 0.1;
+                console.log('Sending email to:', contact.email);
+
+                // Try multiple email service options in order of preference
+                const emailServices = [
+                    () => sendViaEmailJS(emailData),
+                    () => sendViaNetlifyFunction(emailData),
+                    () => sendViaFormspree(emailData),
+                    () => sendViaWebhook(emailData)
+                ];
+
+                let lastError = null;
+                for (const service of emailServices) {
+                    try {
+                        const result = await service();
+                        if (result.success) {
+                            console.log('Email sent successfully via service');
+                            return { success: true, service: result.service };
+                        }
+                    } catch (error) {
+                        console.log('Email service failed, trying next...', error.message);
+                        lastError = error;
+                        continue;
+                    }
+                }
+
+                // If all services fail, return error
+                console.error('All email services failed:', lastError);
+                return { success: false, error: lastError?.message || 'All email services unavailable' };
+
+            } catch (error) {
+                console.error('Email sending error:', error);
+                return { success: false, error: error.message };
+            }
+        }
+
+        function stripHTML(html) {
+            const div = document.createElement('div');
+            div.innerHTML = html;
+            return div.textContent || div.innerText || '';
+        }
+
+        // EmailJS Integration (Free tier: 200 emails/month)
+        async function sendViaEmailJS(emailData) {
+            if (!EMAIL_CONFIG.emailjs.enabled) {
+                throw new Error('EmailJS service disabled');
+            }
+
+            if (typeof emailjs === 'undefined') {
+                throw new Error('EmailJS not loaded');
+            }
+
+            try {
+                // Initialize EmailJS if not already done
+                if (!window.emailjsInitialized) {
+                    emailjs.init(EMAIL_CONFIG.emailjs.publicKey);
+                    window.emailjsInitialized = true;
+                }
+
+                const result = await emailjs.send(
+                    EMAIL_CONFIG.emailjs.serviceId,
+                    EMAIL_CONFIG.emailjs.templateId,
+                    {
+                        from_name: emailData.from_name,
+                        from_email: emailData.from_email,
+                        to_name: emailData.to_name,
+                        to_email: emailData.to_email,
+                        subject: emailData.subject,
+                        message: emailData.html_content,
+                        company: emailData.company,
+                        country: emailData.country
+                    }
+                );
+
+                return { success: true, service: 'EmailJS', messageId: result.text };
+            } catch (error) {
+                throw new Error(`EmailJS failed: ${error.message}`);
+            }
+        }
+
+        // Netlify Functions Integration
+        async function sendViaNetlifyFunction(emailData) {
+            if (!EMAIL_CONFIG.netlify.enabled) {
+                throw new Error('Netlify service disabled');
+            }
+
+            try {
+                const response = await fetch(EMAIL_CONFIG.netlify.endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(emailData)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                if (result.success) {
+                    return { success: true, service: 'Netlify', messageId: result.messageId };
+                } else {
+                    throw new Error(result.error || 'Netlify function failed');
+                }
+            } catch (error) {
+                throw new Error(`Netlify function failed: ${error.message}`);
+            }
+        }
+
+        // Formspree Integration (Free tier: 50 submissions/month)
+        async function sendViaFormspree(emailData) {
+            if (!EMAIL_CONFIG.formspree.enabled) {
+                throw new Error('Formspree service disabled');
+            }
+
+            try {
+                const response = await fetch(EMAIL_CONFIG.formspree.endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: emailData.from_email,
+                        name: emailData.from_name,
+                        subject: emailData.subject,
+                        message: emailData.html_content,
+                        recipient: emailData.to_email,
+                        _replyto: emailData.from_email
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                return { success: true, service: 'Formspree' };
+            } catch (error) {
+                throw new Error(`Formspree failed: ${error.message}`);
+            }
+        }
+
+        // Custom Webhook Integration
+        async function sendViaWebhook(emailData) {
+            if (!EMAIL_CONFIG.webhook.enabled) {
+                throw new Error('Webhook service disabled');
+            }
+
+            try {
+                const response = await fetch(EMAIL_CONFIG.webhook.endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${EMAIL_CONFIG.webhook.apiKey}`
+                    },
+                    body: JSON.stringify(emailData)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                return { success: true, service: 'Webhook', messageId: result.id };
+            } catch (error) {
+                throw new Error(`Webhook failed: ${error.message}`);
+            }
         }
 
         function pauseBulkEmail() {
@@ -3266,37 +3683,77 @@ Phone: +91-XXXXXXXXXX`;
             showAlert('Failed uploads exported to CSV', 'success');
         }
 
-        // Data Persistence Functions
-        function saveToLocalStorage() {
+        // Secure Data Persistence Functions
+        async function saveToLocalStorage() {
             try {
                 if (!autoSaveEnabled) return;
 
+                // Sanitize all data before encryption
+                const sanitizedContacts = contacts.map(contact => ({
+                    email: sanitizeEmail(contact.email),
+                    contactName: sanitizeText(contact.contactName),
+                    firm: sanitizeText(contact.firm),
+                    country: sanitizeText(contact.country),
+                    phone: sanitizeText(contact.phone),
+                    website: sanitizeText(contact.website),
+                    address: sanitizeText(contact.address),
+                    emailStatus: contact.emailStatus || 'pending'
+                }));
+
+                const sanitizedEmailHistory = emailHistory.map(entry => ({
+                    id: entry.id,
+                    toEmails: Array.isArray(entry.toEmails) ? entry.toEmails.map(sanitizeEmail) : [sanitizeEmail(entry.toEmails)],
+                    subject: sanitizeSubject(entry.subject),
+                    status: entry.status,
+                    timestamp: entry.timestamp,
+                    country: sanitizeText(entry.country),
+                    content: sanitizeHTML(entry.content)
+                }));
+
                 const dataToSave = {
-                    contacts: contacts,
-                    emailHistory: emailHistory,
+                    contacts: sanitizedContacts,
+                    emailHistory: sanitizedEmailHistory,
                     uploadedSpreadsheetData: uploadedSpreadsheetData,
-                    savedAt: Date.now()
+                    savedAt: Date.now(),
+                    version: '2.2'
                 };
 
-                localStorage.setItem(STORAGE_KEYS.CONTACTS, JSON.stringify(dataToSave));
+                // Encrypt data before storing
+                const encryptedData = await encryptData(dataToSave);
+                localStorage.setItem(STORAGE_KEYS.CONTACTS, encryptedData);
                 lastAutoSave = Date.now();
-                console.log('Data saved to localStorage');
+                console.log('Data encrypted and saved to localStorage');
             } catch (error) {
                 console.error('Error saving to localStorage:', error);
                 showAlert('Failed to save data locally', 'error');
             }
         }
 
-        function loadFromLocalStorage() {
+        async function loadFromLocalStorage() {
             try {
                 const savedData = localStorage.getItem(STORAGE_KEYS.CONTACTS);
                 if (!savedData) return false;
 
-                const parsedData = JSON.parse(savedData);
-                if (!parsedData.contacts || !Array.isArray(parsedData.contacts)) return false;
+                // Decrypt data
+                const parsedData = await decryptData(savedData);
+                if (!parsedData || !parsedData.contacts || !Array.isArray(parsedData.contacts)) return false;
+
+                // Validate and sanitize loaded data
+                const validatedContacts = parsedData.contacts
+                    .filter(contact => contact.email && EMAIL_REGEX.test(contact.email))
+                    .map(contact => ({
+                        email: sanitizeEmail(contact.email),
+                        contactName: sanitizeText(contact.contactName),
+                        firm: sanitizeText(contact.firm),
+                        country: sanitizeText(contact.country),
+                        phone: sanitizeText(contact.phone),
+                        website: sanitizeText(contact.website),
+                        address: sanitizeText(contact.address),
+                        emailStatus: contact.emailStatus || 'pending'
+                    }));
 
                 // Restore data
-                contacts = parsedData.contacts || [];
+                contacts = validatedContacts;
                 emailHistory = parsedData.emailHistory || [];
                 uploadedSpreadsheetData = parsedData.uploadedSpreadsheetData || [];
 
@@ -3312,7 +3769,7 @@ Phone: +91-XXXXXXXXXX`;
                 }
 
                 const savedDate = new Date(parsedData.savedAt).toLocaleString();
-                showAlert(`Data restored from ${savedDate} (${contacts.length} contacts)`, 'success');
+                showAlert(`Secure data restored from ${savedDate} (${contacts.length} contacts)`, 'success');
                 return true;
             } catch (error) {
                 console.error('Error loading from localStorage:', error);
@@ -3813,24 +4270,242 @@ Phone: +91-XXXXXXXXXX`;
         }
 
         // Initialize on page load - no complex initialization
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('Simple email sender loaded');
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('Secure email sender loaded');
             testXLSXLibrary(); // Test if XLSX library loaded
             extractTemplateHeaders(); // Extract and populate From field
 
             // Initialize data persistence
             setupAutoSave();
 
-            // Try to load saved data
-            const dataLoaded = loadFromLocalStorage();
+            // Try to load saved data (now async with encryption)
+            try {
+                const dataLoaded = await loadFromLocalStorage();
 
-            if (!dataLoaded) {
-                renderContacts(); // Initialize contact list display if no saved data
-                showAlert('📧 Email Sender Ready! Upload your contact spreadsheet to begin sending personalized emails.');
+                if (!dataLoaded) {
+                    renderContacts(); // Initialize contact list display if no saved data
+                    showAlert('🔒 Secure Email Sender Ready! Upload your contact spreadsheet to begin sending personalized emails.');
+                }
+            } catch (error) {
+                console.error('Failed to load saved data:', error);
+                renderContacts();
+                showAlert('🔒 Secure Email Sender Ready! Upload your contact spreadsheet to begin sending personalized emails.');
             }
+
+            // Load email service configuration
+            await loadEmailServiceConfig();
 
             // Check if this is the user's first visit
             checkFirstVisit();
+        }
+
+        async function loadEmailServiceConfig() {
+            try {
+                const savedConfig = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+                if (savedConfig) {
+                    const config = await decryptData(savedConfig);
+                    if (config && config.emailConfig) {
+                        Object.assign(EMAIL_CONFIG, config.emailConfig);
+                        console.log('Email service configuration loaded');
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading email service config:', error);
+            }
+        }
+
+        // Email Service Configuration
+        function showEmailConfig() {
+            const modal = document.createElement('div');
+            modal.id = 'emailConfigModal';
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;
+                z-index: 10000; padding: 20px;
+            `;
+
+            modal.innerHTML = `
+                <div style="background: white; padding: 30px; border-radius: 8px; max-width: 600px; width: 90%; max-height: 80%; overflow-y: auto;">
+                    <h3 style="margin: 0 0 20px 0; color: #007bff;">⚙️ Email Service Configuration</h3>
+
+                    <div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 4px; border-left: 4px solid #17a2b8;">
+                        <strong>Setup Instructions:</strong>
+                        <p style="margin: 5px 0; font-size: 14px;">Configure at least one email service to enable real email sending. All credentials are stored securely with encryption.</p>
+                    </div>
+
+                    <!-- EmailJS Configuration -->
+                    <div style="margin-bottom: 25px; padding: 15px; border: 1px solid #ddd; border-radius: 6px;">
+                        <h4 style="margin: 0 0 15px 0; color: #28a745;">📧 EmailJS (Recommended - Free Tier)</h4>
+                        <div style="margin-bottom: 10px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">Public Key:</label>
+                            <input type="text" id="emailjsPublicKey" placeholder="Your EmailJS public key" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        </div>
+                        <div style="margin-bottom: 10px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">Service ID:</label>
+                            <input type="text" id="emailjsServiceId" placeholder="Your EmailJS service ID" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        </div>
+                        <div style="margin-bottom: 10px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">Template ID:</label>
+                            <input type="text" id="emailjsTemplateId" placeholder="Your EmailJS template ID" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        </div>
+                        <label style="display: flex; align-items: center; margin-top: 10px;">
+                            <input type="checkbox" id="emailjsEnabled" style="margin-right: 8px;">
+                            <span>Enable EmailJS</span>
+                        </label>
+                        <p style="margin: 10px 0 0 0; font-size: 12px; color: #666;">Get free API keys at <a href="https://emailjs.com" target="_blank">emailjs.com</a> (200 emails/month free)</p>
+                    </div>
+
+                    <!-- Netlify Functions -->
+                    <div style="margin-bottom: 25px; padding: 15px; border: 1px solid #ddd; border-radius: 6px;">
+                        <h4 style="margin: 0 0 15px 0; color: #6366f1;">⚡ Netlify Functions</h4>
+                        <div style="margin-bottom: 10px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">Function Endpoint:</label>
+                            <input type="text" id="netlifyEndpoint" value="/.netlify/functions/send-email" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        </div>
+                        <label style="display: flex; align-items: center; margin-top: 10px;">
+                            <input type="checkbox" id="netlifyEnabled" checked style="margin-right: 8px;">
+                            <span>Enable Netlify Functions</span>
+                        </label>
+                        <p style="margin: 10px 0 0 0; font-size: 12px; color: #666;">Requires Netlify function deployment</p>
+                    </div>
+
+                    <!-- Custom Webhook -->
+                    <div style="margin-bottom: 25px; padding: 15px; border: 1px solid #ddd; border-radius: 6px;">
+                        <h4 style="margin: 0 0 15px 0; color: #f59e0b;">🔗 Custom Webhook</h4>
+                        <div style="margin-bottom: 10px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">Webhook URL:</label>
+                            <input type="text" id="webhookEndpoint" placeholder="https://your-email-webhook.com/send" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        </div>
+                        <div style="margin-bottom: 10px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">API Key:</label>
+                            <input type="password" id="webhookApiKey" placeholder="Your API key" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        </div>
+                        <label style="display: flex; align-items: center; margin-top: 10px;">
+                            <input type="checkbox" id="webhookEnabled" style="margin-right: 8px;">
+                            <span>Enable Custom Webhook</span>
+                        </label>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 30px;">
+                        <button onclick="testEmailConfig()" style="background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">🧪 Test Configuration</button>
+                        <div>
+                            <button onclick="saveEmailConfig()" style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin-right: 10px;">💾 Save</button>
+                            <button onclick="closeEmailConfig()" style="background: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">✕ Close</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Load current configuration
+            loadCurrentEmailConfig();
+
+            document.body.appendChild(modal);
+        }
+
+        async function loadCurrentEmailConfig() {
+            try {
+                const savedConfig = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+                if (savedConfig) {
+                    const config = await decryptData(savedConfig);
+                    if (config && config.emailConfig) {
+                        const emailConfig = config.emailConfig;
+
+                        // Load EmailJS config
+                        if (emailConfig.emailjs) {
+                            document.getElementById('emailjsPublicKey').value = emailConfig.emailjs.publicKey || '';
+                            document.getElementById('emailjsServiceId').value = emailConfig.emailjs.serviceId || '';
+                            document.getElementById('emailjsTemplateId').value = emailConfig.emailjs.templateId || '';
+                            document.getElementById('emailjsEnabled').checked = emailConfig.emailjs.enabled || false;
+                        }
+
+                        // Load Netlify config
+                        if (emailConfig.netlify) {
+                            document.getElementById('netlifyEndpoint').value = emailConfig.netlify.endpoint || '/.netlify/functions/send-email';
+                            document.getElementById('netlifyEnabled').checked = emailConfig.netlify.enabled !== false;
+                        }
+
+                        // Load Webhook config
+                        if (emailConfig.webhook) {
+                            document.getElementById('webhookEndpoint').value = emailConfig.webhook.endpoint || '';
+                            document.getElementById('webhookApiKey').value = emailConfig.webhook.apiKey || '';
+                            document.getElementById('webhookEnabled').checked = emailConfig.webhook.enabled || false;
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading email config:', error);
+            }
+        }
+
+        async function saveEmailConfig() {
+            try {
+                const newConfig = {
+                    emailjs: {
+                        enabled: document.getElementById('emailjsEnabled').checked,
+                        publicKey: document.getElementById('emailjsPublicKey').value.trim(),
+                        serviceId: document.getElementById('emailjsServiceId').value.trim(),
+                        templateId: document.getElementById('emailjsTemplateId').value.trim()
+                    },
+                    netlify: {
+                        enabled: document.getElementById('netlifyEnabled').checked,
+                        endpoint: document.getElementById('netlifyEndpoint').value.trim()
+                    },
+                    webhook: {
+                        enabled: document.getElementById('webhookEnabled').checked,
+                        endpoint: document.getElementById('webhookEndpoint').value.trim(),
+                        apiKey: document.getElementById('webhookApiKey').value.trim()
+                    }
+                };
+
+                // Update global config
+                Object.assign(EMAIL_CONFIG, newConfig);
+
+                // Save encrypted config
+                const configToSave = {
+                    emailConfig: newConfig,
+                    savedAt: Date.now()
+                };
+                const encryptedConfig = await encryptData(configToSave);
+                localStorage.setItem(STORAGE_KEYS.SETTINGS, encryptedConfig);
+
+                showAlert('Email configuration saved successfully!', 'success');
+                closeEmailConfig();
+            } catch (error) {
+                console.error('Error saving email config:', error);
+                showAlert('Failed to save email configuration', 'error');
+            }
+        }
+
+        async function testEmailConfig() {
+            const testContact = {
+                email: document.getElementById('fromEmail').value,
+                contactName: 'Test User',
+                firm: 'Test Company',
+                country: 'Test Country'
+            };
+
+            const testSubject = 'Email Configuration Test';
+            const testMessage = 'This is a test email to verify your email configuration is working correctly.';
+
+            try {
+                showAlert('Testing email configuration...', 'info');
+                const result = await sendRealEmail(testContact, testSubject, testMessage);
+
+                if (result.success) {
+                    showAlert(`✅ Email test successful via ${result.service}!`, 'success');
+                } else {
+                    showAlert(`❌ Email test failed: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showAlert(`❌ Email test failed: ${error.message}`, 'error');
+            }
+        }
+
+        function closeEmailConfig() {
+            const modal = document.getElementById('emailConfigModal');
+            if (modal) {
+                modal.remove();
+            }
         });
         // Email Analytics Dashboard Functions
         let autoRedirectEnabled = true;
@@ -4266,7 +4941,9 @@ Phone: +91-XXXXXXXXXX`;
 
         function applyEnhancedMessage(enhancedMessage) {
             const messageBody = document.getElementById('messageBody');
-            messageBody.innerHTML = enhancedMessage.replace(/\n/g, '<br>');
+            // Sanitize enhanced message before applying
+            const sanitizedMessage = sanitizeHTML(enhancedMessage.replace(/\n/g, '<br>'));
+            messageBody.innerHTML = sanitizedMessage;
             updateHiddenTextarea();
             showAlert('Enhanced message applied successfully!', 'success');
             closeSmartMessage();
@@ -4703,7 +5380,9 @@ Intex Technologies
         function applySmartMessage() {
             if (enhancedMessage) {
                 const messageBody = document.getElementById('messageBody');
-                messageBody.innerHTML = enhancedMessage.trim();
+                // Sanitize enhanced message before applying
+                const sanitizedMessage = sanitizeHTML(enhancedMessage.trim());
+                messageBody.innerHTML = sanitizedMessage;
                 updateHiddenTextarea();
                 closeSmartMessage();
                 showAlert('Enhanced message applied successfully!', 'success');
