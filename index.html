@@ -82,16 +82,85 @@
             min-width: 250px;
         }
         .button {
-            background: #007bff;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
+            background: #f8f9fa;
+            color: #202124;
+            border: 1px solid #dadce0;
+            padding: 8px 16px;
+            border-radius: 4px;
             cursor: pointer;
-            margin: 5px;
+            transition: all 0.2s;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 500;
+            min-height: 36px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            outline: none;
+            margin: 4px 2px;
         }
         .button:hover {
-            background: #0056b3;
+            background: #f1f3f4;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+        }
+        .button:active {
+            background: #e8eaed;
+        }
+        .button:disabled {
+            background: #f8f9fa;
+            color: #5f6368;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        /* Primary button variant (for main actions) */
+        .button-primary {
+            background: #1a73e8;
+            color: white;
+            border: 1px solid #1a73e8;
+        }
+        .button-primary:hover {
+            background: #1557b0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.16);
+        }
+        .button-primary:active {
+            background: #1143a3;
+        }
+        .button-primary:disabled {
+            background: #dadce0;
+            color: #5f6368;
+            border: 1px solid #dadce0;
+        }
+
+        /* Secondary button variant */
+        .button-secondary {
+            background: white;
+            color: #1a73e8;
+            border: 1px solid #dadce0;
+        }
+        .button-secondary:hover {
+            background: #f8f9fa;
+        }
+
+        /* Danger button variant */
+        .button-danger {
+            background: white;
+            color: #d93025;
+            border: 1px solid #dadce0;
+        }
+        .button-danger:hover {
+            background: #fce8e6;
+        }
+
+        /* Success button variant */
+        .button-success {
+            background: #34a853;
+            color: white;
+            border: 1px solid #34a853;
+        }
+        .button-success:hover {
+            background: #2d8f47;
         }
         .contact-item {
             border: 1px solid #ddd;
@@ -275,19 +344,19 @@
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end;">
             <!-- Data Management Buttons -->
             <div class="dropdown" style="position: relative; display: inline-block;">
-                <button class="button" style="padding: 8px 12px; font-size: 12px; background: #6c757d;" onclick="toggleDataMenu()" id="dataMenuBtn">💾 Data ▼</button>
+                <button class="button" onclick="toggleDataMenu()" id="dataMenuBtn">Data ▼</button>
                 <div id="dataMenu" style="display: none; position: absolute; right: 0; background: white; min-width: 160px; box-shadow: 0 8px 16px rgba(0,0,0,0.2); z-index: 1000; border-radius: 4px; border: 1px solid #ddd; top: 100%; margin-top: 2px;">
-                    <a href="#" onclick="saveDraftEmail()" style="color: #333; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px; border-bottom: 1px solid #eee;">💾 Save Draft</a>
-                    <a href="#" onclick="loadDraftEmail()" style="color: #333; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px; border-bottom: 1px solid #eee;">📄 Load Draft</a>
-                    <a href="#" onclick="exportAllData()" style="color: #333; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px; border-bottom: 1px solid #eee;">📥 Export All</a>
-                    <a href="#" onclick="importAllData()" style="color: #333; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px; border-bottom: 1px solid #eee;">📤 Import Data</a>
-                    <a href="#" onclick="showEmailConfig()" style="color: #6c757d; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px; border-bottom: 1px solid #eee;">⚙️ Email Setup</a>
-                    <a href="#" onclick="clearAllData()" style="color: #dc3545; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px;">🗑️ Clear All</a>
+                    <a href="#" onclick="saveDraftEmail()" style="color: #333; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px; border-bottom: 1px solid #eee;">Save Draft</a>
+                    <a href="#" onclick="loadDraftEmail()" style="color: #333; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px; border-bottom: 1px solid #eee;">Load Draft</a>
+                    <a href="#" onclick="exportAllData()" style="color: #333; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px; border-bottom: 1px solid #eee;">Export All</a>
+                    <a href="#" onclick="importAllData()" style="color: #333; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px; border-bottom: 1px solid #eee;">Import Data</a>
+                    <a href="#" onclick="showEmailConfig()" style="color: #6c757d; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px; border-bottom: 1px solid #eee;">Email Setup</a>
+                    <a href="#" onclick="clearAllData()" style="color: #dc3545; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px;">Clear All</a>
                 </div>
             </div>
-            <button class="button" onclick="startTutorial()" style="padding: 8px 12px; font-size: 12px; background: #17a2b8; color: white;" title="Interactive Tutorial">🎓 Help</button>
-            <button class="button" onclick="sendEmail()" id="sendBtn" disabled style="padding: 10px 20px; font-size: 14px; font-weight: bold;" aria-label="Send Email to Selected Contact">📤 Send Email</button>
-            <button class="button" id="bulkSendBtn" onclick="startBulkEmailSending()" disabled style="padding: 10px 20px; font-size: 14px; font-weight: bold;" aria-label="Send Bulk Emails to All Contacts" title="Send emails to all uploaded contacts">📧 Bulk Email</button>
+            <button class="button button-secondary" onclick="startTutorial()" title="Interactive Tutorial">Help</button>
+            <button class="button button-primary" onclick="sendEmail()" id="sendBtn" disabled aria-label="Send Email to Selected Contact">Send Email</button>
+            <button class="button button-primary" id="bulkSendBtn" onclick="showBulkEmailConfirmation()" disabled aria-label="Send Bulk Emails to All Contacts" title="Review and send emails to all uploaded contacts">Bulk Email</button>
         </div>
     </div>
 
@@ -301,7 +370,7 @@
             <div style="padding: 8px; border: 1px solid #ddd; border-radius: 5px; background: #f8f9fa; margin-bottom: 12px;" role="region" aria-label="File Upload">
                 <div style="display: flex; align-items: center; justify-content: space-between;">
                     <span style="font-size: 12px; color: #666;">📁 Upload Contacts:</span>
-                    <label for="fileUpload" class="button" style="background: #28a745; cursor: pointer; padding: 4px 8px; font-size: 10px;" aria-describedby="fileUploadDesc">
+                    <label for="fileUpload" class="button button-success" style="cursor: pointer; padding: 6px 12px; font-size: 12px;" aria-describedby="fileUploadDesc">
                         Choose File
                     </label>
                 </div>
@@ -325,8 +394,8 @@
                         <span id="sentCount" style="color: #28a745;">0✅</span> |
                         <span id="failedCount" style="color: #dc3545;">0❌</span>
                     </div>
-                    <button id="scrollTopBtn" class="button" onclick="scrollToTop()" style="padding: 2px 6px; font-size: 10px; display: none;">
-                        ⬆️
+                    <button id="scrollTopBtn" class="button" onclick="scrollToTop()" style="padding: 4px 8px; font-size: 12px; display: none;">
+                        Top
                     </button>
                 </div>
             </div>
@@ -377,11 +446,11 @@
                         <button onclick="toggleAttachments()" id="attachmentBtn" class="modern-btn" style="padding: 6px 8px; font-size: 12px; background: white; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; color: #6b7280;" title="Add Attachments">
                             📎
                         </button>
-                        <button onclick="toggleFormatting()" id="formatToggle" class="button" style="padding: 3px 8px; font-size: 11px; background: #f8f9fa; color: #333; border: 1px solid #ddd;" aria-label="Toggle formatting tools">
-                            🎨 Format
+                        <button onclick="toggleFormatting()" id="formatToggle" class="button" aria-label="Toggle formatting tools">
+                            Format
                         </button>
-                        <button onclick="toggleMessageExpand()" id="messageExpandBtn" class="button" style="padding: 3px 8px; font-size: 11px; background: #f8f9fa; color: #333; border: 1px solid #ddd;" aria-label="Expand message area">
-                            📄 Expand
+                        <button onclick="toggleMessageExpand()" id="messageExpandBtn" class="button" aria-label="Expand message area">
+                            Expand
                         </button>
                     </div>
                 </div>
@@ -421,7 +490,7 @@
 
                         <!-- Color Highlighting -->
                         <button onclick="showColorPicker()" class="format-btn modern-btn" style="padding: 6px 10px; font-size: 12px; background: white; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; position: relative;" title="Text Color">
-                            🎨 Color
+                            Color
                         </button>
                         <div id="colorPicker" style="display: none; position: absolute; z-index: 1000; background: white; border: 1px solid #d1d5db; border-radius: 6px; padding: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-top: 5px;">
                             <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px;">
@@ -512,8 +581,8 @@
             <div style="border: 1px solid #ddd; border-radius: 6px; margin-bottom: 15px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: #f8f9fa; border-bottom: 1px solid #ddd;">
                     <h3 style="margin: 0; color: #007bff; font-size: 14px;">📧 Template</h3>
-                    <button onclick="toggleTemplate()" id="templateToggle" class="button" style="padding: 3px 6px; font-size: 10px;">
-                        📝 Expand
+                    <button onclick="toggleTemplate()" id="templateToggle" class="button">
+                        Expand
                     </button>
                 </div>
                 <div id="templateContainer" style="display: none; padding: 8px;">
@@ -577,8 +646,8 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
             <div style="border: 1px solid #ddd; border-radius: 6px; margin-bottom: 15px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: #f8f9fa; border-bottom: 1px solid #ddd;">
                     <h3 style="margin: 0; color: #007bff; font-size: 14px;">📊 Email Analytics</h3>
-                    <button onclick="toggleAnalytics()" id="analyticsToggle" class="modern-btn" style="padding: 3px 6px; font-size: 10px; background: white; border: 1px solid #d1d5db; border-radius: 4px;">
-                        📈 Expand
+                    <button onclick="toggleAnalytics()" id="analyticsToggle" class="button" style="padding: 6px 12px; font-size: 12px;">
+                        Expand
                     </button>
                 </div>
                 <div id="analyticsContainer" style="display: none; padding: 12px;">
@@ -621,8 +690,8 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
             <div style="border: 1px solid #ddd; border-radius: 6px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: #f8f9fa; border-bottom: 1px solid #ddd;">
                     <h3 style="margin: 0; color: #007bff; font-size: 14px;">📧 Email History</h3>
-                    <button onclick="clearEmailHistory()" class="modern-btn" style="padding: 3px 6px; font-size: 10px; background: white; border: 1px solid #d1d5db; border-radius: 4px; color: #dc2626;">
-                        🗑️ Clear
+                    <button onclick="clearEmailHistory()" class="button button-danger" style="padding: 6px 12px; font-size: 12px;">
+                        Clear
                     </button>
                 </div>
                 <div id="emailHistory" style="max-height: 250px; overflow-y: auto; padding: 8px;">
@@ -707,19 +776,19 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
 
     <!-- Bottom-right Response Email Management -->
     <div id="responseEmailManager" style="position: fixed; bottom: 20px; right: 20px; z-index: 1000;">
-        <button onclick="toggleResponseManager()" id="responseBtn" class="modern-btn" style="width: 50px; height: 50px; border-radius: 50%; background: #3b82f6; color: white; border: none; font-size: 20px; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); cursor: pointer;" title="Response Email Manager">
-            💬
+        <button onclick="toggleResponseManager()" id="responseBtn" class="button button-primary" style="width: 50px; height: 50px; border-radius: 50%; font-size: 12px; padding: 0;" title="Response Email Manager">
+            Replies
         </button>
 
         <div id="responsePanel" style="display: none; position: absolute; bottom: 60px; right: 0; width: 300px; background: white; border: 1px solid #d1d5db; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); overflow: hidden;">
             <div style="padding: 12px; background: #f8f9fa; border-bottom: 1px solid #e5e7eb;">
-                <h4 style="margin: 0; font-size: 14px; color: #374151;">📬 Response Email Manager</h4>
+                <h4 style="margin: 0; font-size: 14px; color: #374151;">Response Email Manager</h4>
             </div>
 
             <div style="padding: 12px; max-height: 250px; overflow-y: auto;">
                 <div style="margin-bottom: 12px;">
-                    <button onclick="checkResponseEmails()" class="modern-btn" style="width: 100%; padding: 8px; font-size: 12px; background: #3b82f6; color: white; border: none; border-radius: 6px;">
-                        🔄 Check for Responses
+                    <button onclick="checkResponseEmails()" class="button button-primary" style="width: 100%; padding: 8px; font-size: 12px;">
+                        Check for Responses
                     </button>
                 </div>
 
@@ -3163,6 +3232,169 @@ Phone: +91-XXXXXXXXXX`;
         let bulkEmailSuccessCount = 0;
         let bulkEmailFailureCount = 0;
 
+        // Bulk Email Confirmation System
+        function showBulkEmailConfirmation() {
+            if (contacts.length === 0) {
+                showAlert('No contacts available for bulk email. Please upload contacts first.', 'error');
+                return;
+            }
+
+            // Validate email fields first
+            const fromEmailValid = validateEmail(document.getElementById('fromEmail'));
+            const subjectValid = validateSubject(document.getElementById('subject'));
+            const messageValid = validateMessage(document.getElementById('messageBody'));
+
+            if (!fromEmailValid || !subjectValid || !messageValid) {
+                showAlert('Please fix all validation errors before proceeding with bulk email', 'error');
+                return;
+            }
+
+            // Get email details
+            const fromEmail = document.getElementById('fromEmail').value;
+            const subject = document.getElementById('subject').value;
+            const messageBody = document.getElementById('messageBody');
+            const messageHTML = messageBody.innerHTML;
+            const messageText = messageBody.textContent || messageBody.innerText;
+
+            // Create confirmation modal
+            const modal = document.createElement('div');
+            modal.id = 'bulkEmailConfirmModal';
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;
+                z-index: 15000; padding: 20px;
+            `;
+
+            // Get first few contacts for preview
+            const previewContacts = contacts.slice(0, 5);
+            const remainingCount = contacts.length - previewContacts.length;
+
+            // Generate email previews for first few contacts
+            const emailPreviews = previewContacts.map(contact => {
+                const personalizedSubject = subject
+                    .replace(/{contactName}/g, contact.contactName || '')
+                    .replace(/{firm}/g, contact.firm || '')
+                    .replace(/{country}/g, contact.country || '')
+                    .replace(/{email}/g, contact.email || '');
+
+                const personalizedMessage = messageText
+                    .replace(/{contactName}/g, contact.contactName || '')
+                    .replace(/{firm}/g, contact.firm || '')
+                    .replace(/{country}/g, contact.country || '')
+                    .replace(/{email}/g, contact.email || '');
+
+                return {
+                    contact,
+                    subject: personalizedSubject,
+                    message: personalizedMessage.substring(0, 200) + (personalizedMessage.length > 200 ? '...' : '')
+                };
+            });
+
+            modal.innerHTML = `
+                <div style="background: white; border-radius: 8px; max-width: 800px; width: 90%; max-height: 90%; overflow-y: auto; padding: 0;">
+                    <!-- Header -->
+                    <div style="padding: 24px 24px 16px 24px; border-bottom: 1px solid #e0e0e0;">
+                        <h2 style="margin: 0; color: #202124; font-size: 20px; font-weight: 500;">Review Bulk Email</h2>
+                        <p style="margin: 8px 0 0 0; color: #5f6368; font-size: 14px;">Please review the email content and recipients before sending</p>
+                    </div>
+
+                    <!-- Email Summary -->
+                    <div style="padding: 20px 24px;">
+                        <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 12px;">
+                                <div>
+                                    <div style="font-size: 12px; color: #5f6368; margin-bottom: 4px;">FROM</div>
+                                    <div style="font-size: 14px; color: #202124;">${escapeHTML(fromEmail)}</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 12px; color: #5f6368; margin-bottom: 4px;">RECIPIENTS</div>
+                                    <div style="font-size: 14px; color: #202124; font-weight: 500;">${contacts.length} contacts</div>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="font-size: 12px; color: #5f6368; margin-bottom: 4px;">SUBJECT TEMPLATE</div>
+                                <div style="font-size: 14px; color: #202124;">${escapeHTML(subject)}</div>
+                            </div>
+                        </div>
+
+                        <!-- Message Preview -->
+                        <div style="margin-bottom: 24px;">
+                            <h3 style="margin: 0 0 12px 0; color: #202124; font-size: 16px; font-weight: 500;">Message Template</h3>
+                            <div style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; background: white; max-height: 200px; overflow-y: auto;">
+                                <div style="font-size: 14px; line-height: 1.5; color: #202124;">${messageHTML}</div>
+                            </div>
+                        </div>
+
+                        <!-- Personalized Previews -->
+                        <div style="margin-bottom: 24px;">
+                            <h3 style="margin: 0 0 12px 0; color: #202124; font-size: 16px; font-weight: 500;">Personalized Email Previews</h3>
+                            <div style="font-size: 12px; color: #5f6368; margin-bottom: 12px;">Preview of how emails will look for first ${previewContacts.length} contacts${remainingCount > 0 ? ` (${remainingCount} more contacts will receive similar personalized emails)` : ''}</div>
+
+                            ${emailPreviews.map((preview, index) => `
+                                <div style="border: 1px solid #e0e0e0; border-radius: 8px; margin-bottom: 12px; overflow: hidden;">
+                                    <div style="background: #f8f9fa; padding: 12px 16px; border-bottom: 1px solid #e0e0e0;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                                            <div>
+                                                <div style="font-size: 14px; font-weight: 500; color: #202124;">${escapeHTML(preview.contact.contactName || 'N/A')} (${escapeHTML(preview.contact.email)})</div>
+                                                <div style="font-size: 12px; color: #5f6368;">${escapeHTML(preview.contact.firm || 'N/A')} • ${escapeHTML(preview.contact.country || 'N/A')}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div style="padding: 12px 16px;">
+                                        <div style="font-size: 12px; color: #5f6368; margin-bottom: 4px;">SUBJECT:</div>
+                                        <div style="font-size: 14px; color: #202124; margin-bottom: 8px; font-weight: 500;">${escapeHTML(preview.subject)}</div>
+                                        <div style="font-size: 12px; color: #5f6368; margin-bottom: 4px;">MESSAGE PREVIEW:</div>
+                                        <div style="font-size: 13px; color: #202124; line-height: 1.4;">${escapeHTML(preview.message)}</div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+
+                        <!-- Warning Notice -->
+                        <div style="background: #fef7e0; border: 1px solid #fdd835; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+                            <div style="display: flex; align-items: start; gap: 12px;">
+                                <div style="font-size: 18px; color: #f57f17; margin-top: 2px;">⚠️</div>
+                                <div>
+                                    <div style="font-size: 14px; font-weight: 500; color: #f57f17; margin-bottom: 4px;">Important Notice</div>
+                                    <div style="font-size: 13px; color: #795548; line-height: 1.4;">
+                                        • This will send <strong>${contacts.length} individual emails</strong><br>
+                                        • Each email will be personalized with contact-specific information<br>
+                                        • Please ensure you have permission to contact all recipients<br>
+                                        • This action cannot be undone once started
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Footer Actions -->
+                    <div style="padding: 16px 24px; border-top: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; background: #f8f9fa;">
+                        <div style="font-size: 13px; color: #5f6368;">
+                            Ready to send ${contacts.length} personalized emails?
+                        </div>
+                        <div style="display: flex; gap: 12px;">
+                            <button onclick="closeBulkEmailConfirmation()" class="button">Cancel</button>
+                            <button onclick="confirmBulkEmailSending()" class="button button-primary">Send All Emails</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+        }
+
+        function closeBulkEmailConfirmation() {
+            const modal = document.getElementById('bulkEmailConfirmModal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        function confirmBulkEmailSending() {
+            closeBulkEmailConfirmation();
+            startBulkEmailSending();
+        }
+
         async function startBulkEmailSending() {
             if (bulkEmailInProgress) {
                 showAlert('Bulk email is already in progress', 'error');
@@ -3609,8 +3841,8 @@ Phone: +91-XXXXXXXXXX`;
                 <div style="background: white; padding: 20px; border-radius: 8px; max-width: 90%; max-height: 90%; width: 800px; overflow: hidden; display: flex; flex-direction: column;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                         <h3 style="margin: 0; color: #dc3545;">❌ Failed Uploads Report</h3>
-                        <button onclick="exportFailedUploads()" style="background: #28a745; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; margin-right: 10px;">📥 Export CSV</button>
-                        <button onclick="closeFailedUploadsModal()" style="background: #6c757d; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;">✕ Close</button>
+                        <button onclick="exportFailedUploads()" class="button button-success" style="margin-right: 10px;">Export CSV</button>
+                        <button onclick="closeFailedUploadsModal()" class="button">Close</button>
                     </div>
                     <div style="font-size: 14px; margin-bottom: 10px; color: #666;">
                         Total Failed Records: <strong>${failedRecords.length}</strong>
@@ -4389,8 +4621,8 @@ Phone: +91-XXXXXXXXXX`;
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 30px;">
                         <button onclick="testEmailConfig()" style="background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">🧪 Test Configuration</button>
                         <div>
-                            <button onclick="saveEmailConfig()" style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin-right: 10px;">💾 Save</button>
-                            <button onclick="closeEmailConfig()" style="background: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">✕ Close</button>
+                            <button onclick="saveEmailConfig()" class="button button-primary" style="margin-right: 10px;">Save</button>
+                            <button onclick="closeEmailConfig()" class="button">Close</button>
                         </div>
                     </div>
                 </div>
@@ -4715,25 +4947,103 @@ Phone: +91-XXXXXXXXXX`;
             }
 
             const responsesHTML = responseEmails.slice(0, 5).map(response => `
-                <div style="padding: 8px; margin-bottom: 8px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px;">
-                    <div style="font-weight: 500; font-size: 11px; color: #0369a1; margin-bottom: 2px;">
-                        ${response.from}
+                <div style="padding: 12px; margin-bottom: 8px; background: #f8f9fa; border: 1px solid #dadce0; border-radius: 8px;">
+                    <div style="font-weight: 500; font-size: 12px; color: #202124; margin-bottom: 4px;">
+                        ${escapeHTML(response.from)}
                     </div>
-                    <div style="font-size: 10px; color: #374151; margin-bottom: 4px;">
-                        ${response.subject}
+                    <div style="font-size: 11px; color: #5f6368; margin-bottom: 6px;">
+                        ${escapeHTML(response.subject)}
                     </div>
-                    <div style="font-size: 9px; color: #6b7280;">
+                    <div style="font-size: 10px; color: #5f6368; margin-bottom: 8px;">
                         ${response.timestamp.toLocaleString()}
                     </div>
-                    <div style="margin-top: 6px;">
-                        <button onclick="redirectResponseEmail(${JSON.stringify(response).replace(/"/g, '&quot;')})" class="modern-btn" style="padding: 4px 8px; font-size: 9px; background: #3b82f6; color: white; border: none; border-radius: 4px;">
-                            📤 Forward
+                    <div style="display: flex; gap: 6px;">
+                        <button onclick="viewResponseEmail(${response.id})" class="button" style="padding: 4px 8px; font-size: 10px; flex: 1;">
+                            View
+                        </button>
+                        <button onclick="redirectResponseEmail(${JSON.stringify(response).replace(/"/g, '&quot;')})" class="button button-secondary" style="padding: 4px 8px; font-size: 10px; flex: 1;">
+                            Forward
                         </button>
                     </div>
                 </div>
             `).join('');
 
             container.innerHTML = responsesHTML;
+        }
+
+        function viewResponseEmail(responseId) {
+            const response = responseEmails.find(r => r.id === responseId);
+            if (!response) {
+                showAlert('Response email not found', 'error');
+                return;
+            }
+
+            // Create modal for viewing response
+            const modal = document.createElement('div');
+            modal.id = 'viewResponseModal';
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;
+                z-index: 15000; padding: 20px;
+            `;
+
+            modal.innerHTML = `
+                <div style="background: white; border-radius: 8px; max-width: 600px; width: 90%; max-height: 80%; overflow-y: auto; padding: 0;">
+                    <!-- Header -->
+                    <div style="padding: 20px 24px 16px 24px; border-bottom: 1px solid #e0e0e0;">
+                        <h3 style="margin: 0; color: #202124; font-size: 18px; font-weight: 500;">Email Response</h3>
+                    </div>
+
+                    <!-- Email Details -->
+                    <div style="padding: 20px 24px;">
+                        <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                            <div style="display: grid; grid-template-columns: 80px 1fr; gap: 12px; margin-bottom: 12px;">
+                                <div style="font-size: 12px; color: #5f6368; font-weight: 500;">FROM:</div>
+                                <div style="font-size: 14px; color: #202124;">${escapeHTML(response.from)}</div>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 80px 1fr; gap: 12px; margin-bottom: 12px;">
+                                <div style="font-size: 12px; color: #5f6368; font-weight: 500;">SUBJECT:</div>
+                                <div style="font-size: 14px; color: #202124;">${escapeHTML(response.subject)}</div>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 80px 1fr; gap: 12px;">
+                                <div style="font-size: 12px; color: #5f6368; font-weight: 500;">DATE:</div>
+                                <div style="font-size: 14px; color: #202124;">${response.timestamp.toLocaleString()}</div>
+                            </div>
+                        </div>
+
+                        <!-- Email Content -->
+                        <div>
+                            <h4 style="margin: 0 0 12px 0; color: #202124; font-size: 14px; font-weight: 500;">Message Content</h4>
+                            <div style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; background: white; min-height: 100px; max-height: 300px; overflow-y: auto;">
+                                <div style="font-size: 14px; line-height: 1.6; color: #202124; white-space: pre-wrap;">${escapeHTML(response.content || 'No content available')}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Footer Actions -->
+                    <div style="padding: 16px 24px; border-top: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; background: #f8f9fa;">
+                        <div></div>
+                        <div style="display: flex; gap: 12px;">
+                            <button onclick="closeViewResponseModal()" class="button">Close</button>
+                            <button onclick="forwardResponseFromModal(${JSON.stringify(response).replace(/"/g, '&quot;')})" class="button button-primary">Forward</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+        }
+
+        function closeViewResponseModal() {
+            const modal = document.getElementById('viewResponseModal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        function forwardResponseFromModal(response) {
+            closeViewResponseModal();
+            redirectResponseEmail(response);
         }
 
         function redirectResponseEmail(response) {
@@ -4926,11 +5236,11 @@ Phone: +91-XXXXXXXXXX`;
                 <div style="display: flex; gap: 8px;">
                     <button onclick="applyEnhancedMessage(\`${enhancedMessage.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)"
                             style="padding: 8px 16px; background: #16a34a; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500;">
-                        ✅ Apply Changes
+                        Apply Changes
                     </button>
                     <button onclick="rejectEnhancement()"
                             style="padding: 8px 16px; background: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500;">
-                        ❌ Keep Original
+                        Keep Original
                     </button>
                 </div>
             `;
