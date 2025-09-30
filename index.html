@@ -2108,10 +2108,10 @@ Phone: +91-XXXXXXXXXX`;
 
             if (container.style.display === 'none') {
                 container.style.display = 'block';
-                button.textContent = '📁 Hide';
+                button.textContent = 'Hide';
             } else {
                 container.style.display = 'none';
-                button.textContent = '📁 Add Files';
+                button.textContent = 'Add Files';
             }
         }
 
@@ -3173,7 +3173,7 @@ Phone: +91-XXXXXXXXXX`;
             }
 
             try {
-                document.getElementById('sendBtn').textContent = '📤 Sending...';
+                document.getElementById('sendBtn').textContent = 'Sending...';
                 document.getElementById('sendBtn').disabled = true;
 
                 // Send to each email address (for multiple emails, send individually)
@@ -3247,7 +3247,7 @@ Phone: +91-XXXXXXXXXX`;
                     renderContacts(); // Re-render to show red color
                 }
             } finally {
-                document.getElementById('sendBtn').textContent = '📤 Send Email';
+                document.getElementById('sendBtn').textContent = 'Send Email';
                 document.getElementById('sendBtn').disabled = false;
             }
         }
@@ -3456,7 +3456,7 @@ Phone: +91-XXXXXXXXXX`;
 
             // Update UI
             const bulkBtn = document.getElementById('bulkSendBtn');
-            bulkBtn.innerHTML = '⏸️ Pause';
+            bulkBtn.innerHTML = 'Pause';
             bulkBtn.onclick = () => pauseBulkEmail();
             document.getElementById('sendBtn').disabled = true;
 
@@ -3718,13 +3718,13 @@ Phone: +91-XXXXXXXXXX`;
                 // Resume
                 bulkEmailPaused = false;
                 const bulkBtn = document.getElementById('bulkSendBtn');
-                bulkBtn.innerHTML = '⏸️ Pause';
+                bulkBtn.innerHTML = 'Pause';
                 showAlert('Bulk email resumed', 'info');
             } else {
                 // Pause
                 bulkEmailPaused = true;
                 const bulkBtn = document.getElementById('bulkSendBtn');
-                bulkBtn.innerHTML = '▶️ Resume';
+                bulkBtn.innerHTML = 'Resume';
                 showAlert('Bulk email paused', 'info');
             }
         }
@@ -3741,7 +3741,7 @@ Phone: +91-XXXXXXXXXX`;
 
             // Update UI
             const bulkBtn = document.getElementById('bulkSendBtn');
-            bulkBtn.innerHTML = '📧 Bulk Email';
+            bulkBtn.innerHTML = 'Bulk Email';
             bulkBtn.onclick = () => startBulkEmailSending();
             document.getElementById('sendBtn').disabled = false;
 
