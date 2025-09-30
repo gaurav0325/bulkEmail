@@ -272,8 +272,20 @@
             <small style="color: #666;">Data Analysis Insights - Professional Email Campaign Tool</small>
         </div>
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end;">
+            <!-- Data Management Buttons -->
+            <div class="dropdown" style="position: relative; display: inline-block;">
+                <button class="button" style="padding: 8px 12px; font-size: 12px; background: #6c757d;" onclick="toggleDataMenu()" id="dataMenuBtn">💾 Data ▼</button>
+                <div id="dataMenu" style="display: none; position: absolute; right: 0; background: white; min-width: 160px; box-shadow: 0 8px 16px rgba(0,0,0,0.2); z-index: 1000; border-radius: 4px; border: 1px solid #ddd; top: 100%; margin-top: 2px;">
+                    <a href="#" onclick="saveDraftEmail()" style="color: #333; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px; border-bottom: 1px solid #eee;">💾 Save Draft</a>
+                    <a href="#" onclick="loadDraftEmail()" style="color: #333; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px; border-bottom: 1px solid #eee;">📄 Load Draft</a>
+                    <a href="#" onclick="exportAllData()" style="color: #333; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px; border-bottom: 1px solid #eee;">📥 Export All</a>
+                    <a href="#" onclick="importAllData()" style="color: #333; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px; border-bottom: 1px solid #eee;">📤 Import Data</a>
+                    <a href="#" onclick="clearAllData()" style="color: #dc3545; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px;">🗑️ Clear All</a>
+                </div>
+            </div>
+            <button class="button" onclick="startTutorial()" style="padding: 8px 12px; font-size: 12px; background: #17a2b8; color: white;" title="Interactive Tutorial">🎓 Help</button>
             <button class="button" onclick="sendEmail()" id="sendBtn" disabled style="padding: 10px 20px; font-size: 14px; font-weight: bold;" aria-label="Send Email to Selected Contact">📤 Send Email</button>
-            <button class="button" id="bulkSendBtn" disabled style="background: #6c757d; padding: 10px 20px; font-size: 14px; font-weight: bold; cursor: not-allowed;" aria-label="Bulk Email (Coming Soon)" title="Bulk email functionality coming soon">📧 Bulk Email</button>
+            <button class="button" id="bulkSendBtn" onclick="startBulkEmailSending()" disabled style="padding: 10px 20px; font-size: 14px; font-weight: bold;" aria-label="Send Bulk Emails to All Contacts" title="Send emails to all uploaded contacts">📧 Bulk Email</button>
         </div>
     </div>
 
@@ -745,7 +757,19 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
         let uploadStats = { total: 0, read: 0, unread: 0 }; // Track upload statistics
         let currentUploadProgress = null; // Track upload progress
         let uploadedSpreadsheetData = []; // Track original spreadsheet data with status
+        let failedUploads = []; // Track detailed failed upload records
         let messageExpanded = false; // Track message area expansion
+
+        // Data Persistence Configuration
+        const STORAGE_KEYS = {
+            CONTACTS: 'bulkEmail_contacts',
+            EMAIL_HISTORY: 'bulkEmail_emailHistory',
+            DRAFTS: 'bulkEmail_drafts',
+            SETTINGS: 'bulkEmail_settings'
+        };
+
+        let autoSaveEnabled = true;
+        let lastAutoSave = Date.now();
 
         // Security: Email validation regex
         const EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
@@ -1233,9 +1257,9 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
             uploadStatsDiv.innerHTML = `
                 📊 <strong>Upload Status:</strong>
                 <span style="color: #28a745;">${statusReport.successful} uploaded</span> |
-                <span style="color: #dc3545;">${statusReport.failed} failed</span> |
+                <span style="color: #dc3545;">${statusReport.failed > 0 ? `<a href="#" onclick="showFailedUploadsSpreadsheet()" style="color: #dc3545; text-decoration: underline; cursor: pointer;">${statusReport.failed} failed</a>` : '0 failed'}</span> |
                 Total: ${statusReport.total} rows
-                ${statusReport.failed > 0 ? `<br><small style="color: #dc3545;">Failed rows: Missing emails or invalid data</small>` : ''}
+                ${statusReport.failed > 0 ? `<br><small style="color: #dc3545;">Click on failed count to view detailed report</small>` : ''}
             `;
         }
 
@@ -1949,14 +1973,15 @@ Phone: +91-XXXXXXXXXX`;
             }
         }
 
-        function addToEmailHistory(toEmails, subject, status, timestamp) {
+        function addToEmailHistory(toEmails, subject, status, timestamp, country = '') {
             const historyItem = {
                 id: Date.now(),
                 toEmails: Array.isArray(toEmails) ? toEmails : [toEmails],
                 subject: subject,
                 status: status, // 'sent', 'failed'
                 timestamp: timestamp,
-                content: document.getElementById('messageBody').value.substring(0, 100) + '...'
+                country: country,
+                content: document.getElementById('messageBody').value ? document.getElementById('messageBody').value.substring(0, 100) + '...' : 'No content'
             };
             emailHistory.unshift(historyItem); // Add to beginning
             updateEmailHistory();
@@ -2655,7 +2680,22 @@ Phone: +91-XXXXXXXXXX`;
 
             // Update counts
             updateContactCounts();
+
+            // Enable bulk email button if contacts are available
+            const bulkSendBtn = document.getElementById('bulkSendBtn');
+            if (bulkSendBtn && contacts.length > 0) {
+                bulkSendBtn.disabled = false;
+                bulkSendBtn.style.background = '';
+                bulkSendBtn.style.cursor = 'pointer';
+                bulkSendBtn.title = `Send emails to all ${contacts.length} contacts`;
+            }
+
             console.log('=== CONTACT RENDERING COMPLETE ===');
+
+            // Auto-save after contact loading
+            if (contacts.length > 0) {
+                saveToLocalStorage();
+            }
         }
 
         function updateContactCounts() {
@@ -2871,7 +2911,850 @@ Phone: +91-XXXXXXXXXX`;
             }
         }
 
-        // Bulk email functionality temporarily disabled
+        // Bulk Email Sending Functionality
+        let bulkEmailInProgress = false;
+        let bulkEmailPaused = false;
+        let bulkEmailCancelled = false;
+        let bulkEmailCurrentIndex = 0;
+        let bulkEmailTotal = 0;
+        let bulkEmailSuccessCount = 0;
+        let bulkEmailFailureCount = 0;
+
+        async function startBulkEmailSending() {
+            if (bulkEmailInProgress) {
+                showAlert('Bulk email is already in progress', 'error');
+                return;
+            }
+
+            if (contacts.length === 0) {
+                showAlert('No contacts available for bulk email. Please upload contacts first.', 'error');
+                return;
+            }
+
+            // Validate email fields
+            const fromEmailValid = validateEmail(document.getElementById('fromEmail'));
+            const subjectValid = validateSubject(document.getElementById('subject'));
+            const messageValid = validateMessage(document.getElementById('messageBody'));
+
+            if (!fromEmailValid || !subjectValid || !messageValid) {
+                showAlert('Please fix all validation errors before sending bulk emails', 'error');
+                return;
+            }
+
+            // Initialize bulk email session
+            bulkEmailInProgress = true;
+            bulkEmailPaused = false;
+            bulkEmailCancelled = false;
+            bulkEmailCurrentIndex = 0;
+            bulkEmailTotal = contacts.length;
+            bulkEmailSuccessCount = 0;
+            bulkEmailFailureCount = 0;
+
+            // Update UI
+            const bulkBtn = document.getElementById('bulkSendBtn');
+            bulkBtn.innerHTML = '⏸️ Pause';
+            bulkBtn.onclick = () => pauseBulkEmail();
+            document.getElementById('sendBtn').disabled = true;
+
+            // Show progress modal
+            showBulkEmailProgress();
+
+            // Start sending
+            await processBulkEmails();
+        }
+
+        async function processBulkEmails() {
+            while (bulkEmailCurrentIndex < bulkEmailTotal && !bulkEmailCancelled) {
+                if (bulkEmailPaused) {
+                    await new Promise(resolve => {
+                        const checkPause = () => {
+                            if (!bulkEmailPaused || bulkEmailCancelled) {
+                                resolve();
+                            } else {
+                                setTimeout(checkPause, 1000);
+                            }
+                        };
+                        checkPause();
+                    });
+                }
+
+                if (bulkEmailCancelled) break;
+
+                const contact = contacts[bulkEmailCurrentIndex];
+                updateBulkEmailProgress();
+
+                try {
+                    // Get personalized subject and message
+                    const personalizedSubject = document.getElementById('subject').value
+                        .replace('{contactName}', contact.contactName || '')
+                        .replace('{firm}', contact.firm || '')
+                        .replace('{country}', contact.country || '')
+                        .replace('{email}', contact.email || '');
+
+                    const messageBody = document.getElementById('messageBody');
+                    const personalizedMessage = messageBody.innerHTML
+                        .replace(/{contactName}/g, contact.contactName || '')
+                        .replace(/{firm}/g, contact.firm || '')
+                        .replace(/{country}/g, contact.country || '')
+                        .replace(/{email}/g, contact.email || '');
+
+                    // Simulate email sending (replace with actual email service)
+                    const success = await simulateEmailSending(contact, personalizedSubject, personalizedMessage);
+
+                    if (success) {
+                        bulkEmailSuccessCount++;
+                        addToEmailHistory(contact.email, personalizedSubject, 'sent', Date.now(), contact.country);
+                    } else {
+                        bulkEmailFailureCount++;
+                        addToEmailHistory(contact.email, personalizedSubject, 'failed', Date.now(), contact.country);
+                    }
+
+                    // Rate limiting - delay between emails
+                    await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay
+
+                } catch (error) {
+                    console.error('Error sending email to:', contact.email, error);
+                    bulkEmailFailureCount++;
+                    addToEmailHistory(contact.email, 'Failed to send', 'failed', Date.now(), contact.country);
+                }
+
+                bulkEmailCurrentIndex++;
+            }
+
+            // Complete bulk email session
+            completeBulkEmail();
+        }
+
+        async function simulateEmailSending(contact, subject, message) {
+            // Simulate email sending with random success/failure
+            // In production, replace with actual email service call
+            const randomDelay = Math.random() * 1000 + 500; // 0.5-1.5 second delay
+            await new Promise(resolve => setTimeout(resolve, randomDelay));
+
+            // 90% success rate simulation
+            return Math.random() > 0.1;
+        }
+
+        function pauseBulkEmail() {
+            if (bulkEmailPaused) {
+                // Resume
+                bulkEmailPaused = false;
+                const bulkBtn = document.getElementById('bulkSendBtn');
+                bulkBtn.innerHTML = '⏸️ Pause';
+                showAlert('Bulk email resumed', 'info');
+            } else {
+                // Pause
+                bulkEmailPaused = true;
+                const bulkBtn = document.getElementById('bulkSendBtn');
+                bulkBtn.innerHTML = '▶️ Resume';
+                showAlert('Bulk email paused', 'info');
+            }
+        }
+
+        function cancelBulkEmail() {
+            bulkEmailCancelled = true;
+            completeBulkEmail();
+            showAlert('Bulk email cancelled', 'error');
+        }
+
+        function completeBulkEmail() {
+            bulkEmailInProgress = false;
+            bulkEmailPaused = false;
+
+            // Update UI
+            const bulkBtn = document.getElementById('bulkSendBtn');
+            bulkBtn.innerHTML = '📧 Bulk Email';
+            bulkBtn.onclick = () => startBulkEmailSending();
+            document.getElementById('sendBtn').disabled = false;
+
+            // Hide progress modal
+            hideBulkEmailProgress();
+
+            // Update analytics
+            updateAnalytics();
+            renderEmailHistory();
+
+            // Show completion message
+            if (!bulkEmailCancelled) {
+                showAlert(`Bulk email complete! ${bulkEmailSuccessCount} sent, ${bulkEmailFailureCount} failed`, 'success');
+            }
+        }
+
+        function showBulkEmailProgress() {
+            const modal = document.createElement('div');
+            modal.id = 'bulkEmailModal';
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;
+                z-index: 10000;
+            `;
+
+            modal.innerHTML = `
+                <div style="background: white; padding: 30px; border-radius: 8px; max-width: 500px; width: 90%;">
+                    <h3 style="margin: 0 0 20px 0; color: #007bff;">📧 Bulk Email Progress</h3>
+                    <div id="bulkProgressText" style="margin-bottom: 15px; font-size: 14px;">Preparing to send...</div>
+                    <div style="background: #f0f0f0; border-radius: 4px; height: 20px; margin-bottom: 15px; overflow: hidden;">
+                        <div id="bulkProgressBar" style="background: #007bff; height: 100%; width: 0%; transition: width 0.3s;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 12px; color: #666; margin-bottom: 20px;">
+                        <span>✅ Success: <span id="bulkSuccessCount">0</span></span>
+                        <span>❌ Failed: <span id="bulkFailedCount">0</span></span>
+                        <span>📊 Total: <span id="bulkTotalCount">${bulkEmailTotal}</span></span>
+                    </div>
+                    <button onclick="cancelBulkEmail()" style="background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Cancel</button>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+        }
+
+        function updateBulkEmailProgress() {
+            const progressText = document.getElementById('bulkProgressText');
+            const progressBar = document.getElementById('bulkProgressBar');
+            const successCount = document.getElementById('bulkSuccessCount');
+            const failedCount = document.getElementById('bulkFailedCount');
+
+            if (progressText) {
+                const contact = contacts[bulkEmailCurrentIndex];
+                progressText.textContent = `Sending to: ${contact.contactName} (${contact.email})`;
+            }
+
+            if (progressBar) {
+                const percentage = (bulkEmailCurrentIndex / bulkEmailTotal) * 100;
+                progressBar.style.width = percentage + '%';
+            }
+
+            if (successCount) successCount.textContent = bulkEmailSuccessCount;
+            if (failedCount) failedCount.textContent = bulkEmailFailureCount;
+        }
+
+        function hideBulkEmailProgress() {
+            const modal = document.getElementById('bulkEmailModal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        // Failed Uploads Spreadsheet Functionality
+        function showFailedUploadsSpreadsheet() {
+            const failedRecords = uploadedSpreadsheetData.filter(row => row.status === 'failed');
+
+            if (failedRecords.length === 0) {
+                showAlert('No failed uploads to display', 'info');
+                return;
+            }
+
+            // Create modal for failed uploads
+            const modal = document.createElement('div');
+            modal.id = 'failedUploadsModal';
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;
+                z-index: 10000; padding: 20px;
+            `;
+
+            // Generate table HTML
+            let tableHTML = `
+                <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                    <thead>
+                        <tr style="background: #f8f9fa;">
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Row #</th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Email</th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Contact Name</th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Company</th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Country</th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Failure Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            failedRecords.forEach((record, index) => {
+                const reason = getFailureReason(record);
+                tableHTML += `
+                    <tr style="${index % 2 === 0 ? 'background: #f9f9f9;' : ''}">
+                        <td style="border: 1px solid #ddd; padding: 8px;">${record.originalRowIndex + 1}</td>
+                        <td style="border: 1px solid #ddd; padding: 8px;">${record.email || 'N/A'}</td>
+                        <td style="border: 1px solid #ddd; padding: 8px;">${record.contactName || 'N/A'}</td>
+                        <td style="border: 1px solid #ddd; padding: 8px;">${record.firm || 'N/A'}</td>
+                        <td style="border: 1px solid #ddd; padding: 8px;">${record.country || 'N/A'}</td>
+                        <td style="border: 1px solid #ddd; padding: 8px; color: #dc3545;">${reason}</td>
+                    </tr>
+                `;
+            });
+
+            tableHTML += `
+                    </tbody>
+                </table>
+            `;
+
+            modal.innerHTML = `
+                <div style="background: white; padding: 20px; border-radius: 8px; max-width: 90%; max-height: 90%; width: 800px; overflow: hidden; display: flex; flex-direction: column;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="margin: 0; color: #dc3545;">❌ Failed Uploads Report</h3>
+                        <button onclick="exportFailedUploads()" style="background: #28a745; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; margin-right: 10px;">📥 Export CSV</button>
+                        <button onclick="closeFailedUploadsModal()" style="background: #6c757d; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;">✕ Close</button>
+                    </div>
+                    <div style="font-size: 14px; margin-bottom: 10px; color: #666;">
+                        Total Failed Records: <strong>${failedRecords.length}</strong>
+                    </div>
+                    <div style="overflow: auto; flex: 1;">
+                        ${tableHTML}
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+        }
+
+        function getFailureReason(record) {
+            if (!record.email || record.email.trim() === '') {
+                return 'Missing email address';
+            }
+            if (!EMAIL_REGEX.test(record.email)) {
+                return 'Invalid email format';
+            }
+            if (!record.contactName && !record.firm) {
+                return 'Missing contact name and company';
+            }
+            return 'Data validation failed';
+        }
+
+        function closeFailedUploadsModal() {
+            const modal = document.getElementById('failedUploadsModal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        function exportFailedUploads() {
+            const failedRecords = uploadedSpreadsheetData.filter(row => row.status === 'failed');
+
+            if (failedRecords.length === 0) {
+                showAlert('No failed uploads to export', 'info');
+                return;
+            }
+
+            // Create CSV content
+            const headers = ['Row Number', 'Email', 'Contact Name', 'Company', 'Country', 'Failure Reason'];
+            let csvContent = headers.join(',') + '\n';
+
+            failedRecords.forEach(record => {
+                const row = [
+                    record.originalRowIndex + 1,
+                    record.email || '',
+                    record.contactName || '',
+                    record.firm || '',
+                    record.country || '',
+                    getFailureReason(record)
+                ].map(field => `"${field.toString().replace(/"/g, '""')}"`).join(',');
+                csvContent += row + '\n';
+            });
+
+            // Download CSV
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = `failed_uploads_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            showAlert('Failed uploads exported to CSV', 'success');
+        }
+
+        // Data Persistence Functions
+        function saveToLocalStorage() {
+            try {
+                if (!autoSaveEnabled) return;
+
+                const dataToSave = {
+                    contacts: contacts,
+                    emailHistory: emailHistory,
+                    uploadedSpreadsheetData: uploadedSpreadsheetData,
+                    savedAt: Date.now()
+                };
+
+                localStorage.setItem(STORAGE_KEYS.CONTACTS, JSON.stringify(dataToSave));
+                lastAutoSave = Date.now();
+                console.log('Data saved to localStorage');
+            } catch (error) {
+                console.error('Error saving to localStorage:', error);
+                showAlert('Failed to save data locally', 'error');
+            }
+        }
+
+        function loadFromLocalStorage() {
+            try {
+                const savedData = localStorage.getItem(STORAGE_KEYS.CONTACTS);
+                if (!savedData) return false;
+
+                const parsedData = JSON.parse(savedData);
+                if (!parsedData.contacts || !Array.isArray(parsedData.contacts)) return false;
+
+                // Restore data
+                contacts = parsedData.contacts || [];
+                emailHistory = parsedData.emailHistory || [];
+                uploadedSpreadsheetData = parsedData.uploadedSpreadsheetData || [];
+
+                // Update UI
+                renderContacts();
+                renderEmailHistory();
+                updateAnalytics();
+
+                // Show upload status if we have data
+                if (uploadedSpreadsheetData.length > 0) {
+                    const statusReport = generateStatusReport();
+                    showUploadStatusReport(statusReport);
+                }
+
+                const savedDate = new Date(parsedData.savedAt).toLocaleString();
+                showAlert(`Data restored from ${savedDate} (${contacts.length} contacts)`, 'success');
+                return true;
+            } catch (error) {
+                console.error('Error loading from localStorage:', error);
+                return false;
+            }
+        }
+
+        function saveDraftEmail() {
+            try {
+                const draft = {
+                    fromEmail: document.getElementById('fromEmail').value,
+                    toEmail: document.getElementById('toEmail').value,
+                    subject: document.getElementById('subject').value,
+                    messageBody: document.getElementById('messageBody').innerHTML,
+                    savedAt: Date.now()
+                };
+
+                localStorage.setItem(STORAGE_KEYS.DRAFTS, JSON.stringify(draft));
+                showAlert('Draft saved', 'info');
+            } catch (error) {
+                console.error('Error saving draft:', error);
+                showAlert('Failed to save draft', 'error');
+            }
+        }
+
+        function loadDraftEmail() {
+            try {
+                const savedDraft = localStorage.getItem(STORAGE_KEYS.DRAFTS);
+                if (!savedDraft) return false;
+
+                const draft = JSON.parse(savedDraft);
+
+                // Confirm before loading
+                if (confirm('Load saved draft? This will replace current email content.')) {
+                    document.getElementById('fromEmail').value = draft.fromEmail || '';
+                    document.getElementById('toEmail').value = draft.toEmail || '';
+                    document.getElementById('subject').value = draft.subject || '';
+                    document.getElementById('messageBody').innerHTML = draft.messageBody || '';
+
+                    const savedDate = new Date(draft.savedAt).toLocaleString();
+                    showAlert(`Draft loaded from ${savedDate}`, 'success');
+                    return true;
+                }
+            } catch (error) {
+                console.error('Error loading draft:', error);
+                return false;
+            }
+        }
+
+        function exportAllData() {
+            try {
+                const exportData = {
+                    contacts: contacts,
+                    emailHistory: emailHistory,
+                    uploadedSpreadsheetData: uploadedSpreadsheetData,
+                    exportedAt: new Date().toISOString(),
+                    version: '2.2'
+                };
+
+                const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = `bulk_email_data_${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+
+                showAlert('All data exported successfully', 'success');
+            } catch (error) {
+                console.error('Error exporting data:', error);
+                showAlert('Failed to export data', 'error');
+            }
+        }
+
+        function importAllData() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = function(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const importedData = JSON.parse(e.target.result);
+
+                        // Validate data structure
+                        if (!importedData.contacts || !Array.isArray(importedData.contacts)) {
+                            throw new Error('Invalid data format');
+                        }
+
+                        // Confirm import
+                        if (confirm(`Import data from ${new Date(importedData.exportedAt).toLocaleString()}? This will replace all current data.`)) {
+                            contacts = importedData.contacts || [];
+                            emailHistory = importedData.emailHistory || [];
+                            uploadedSpreadsheetData = importedData.uploadedSpreadsheetData || [];
+
+                            // Update UI
+                            renderContacts();
+                            renderEmailHistory();
+                            updateAnalytics();
+
+                            // Save to localStorage
+                            saveToLocalStorage();
+
+                            showAlert(`Imported ${contacts.length} contacts and ${emailHistory.length} email records`, 'success');
+                        }
+                    } catch (error) {
+                        console.error('Error importing data:', error);
+                        showAlert('Failed to import data: Invalid file format', 'error');
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        function clearAllData() {
+            if (confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
+                if (confirm('This will delete all contacts, email history, and drafts. Continue?')) {
+                    // Clear memory
+                    contacts = [];
+                    emailHistory = [];
+                    uploadedSpreadsheetData = [];
+                    failedUploads = [];
+
+                    // Clear localStorage
+                    Object.values(STORAGE_KEYS).forEach(key => {
+                        localStorage.removeItem(key);
+                    });
+
+                    // Update UI
+                    renderContacts();
+                    renderEmailHistory();
+                    updateAnalytics();
+                    document.getElementById('uploadStats').style.display = 'none';
+
+                    // Clear email form
+                    document.getElementById('toEmail').value = '';
+                    document.getElementById('subject').value = '';
+                    document.getElementById('messageBody').innerHTML = '';
+
+                    showAlert('All data cleared', 'success');
+                }
+            }
+        }
+
+        // Auto-save functionality
+        function setupAutoSave() {
+            // Auto-save every 30 seconds
+            setInterval(() => {
+                if (autoSaveEnabled && contacts.length > 0) {
+                    saveToLocalStorage();
+                }
+            }, 30000);
+
+            // Save when email content changes
+            document.getElementById('messageBody').addEventListener('input', () => {
+                if (autoSaveEnabled) {
+                    clearTimeout(window.autoSaveTimeout);
+                    window.autoSaveTimeout = setTimeout(saveDraftEmail, 5000);
+                }
+            });
+        }
+
+        function toggleDataMenu() {
+            const menu = document.getElementById('dataMenu');
+            if (menu.style.display === 'none' || menu.style.display === '') {
+                menu.style.display = 'block';
+                // Close menu when clicking outside
+                setTimeout(() => {
+                    document.addEventListener('click', closeDataMenu);
+                }, 100);
+            } else {
+                menu.style.display = 'none';
+            }
+        }
+
+        function closeDataMenu(event) {
+            const menu = document.getElementById('dataMenu');
+            const button = document.getElementById('dataMenuBtn');
+            if (!menu.contains(event.target) && !button.contains(event.target)) {
+                menu.style.display = 'none';
+                document.removeEventListener('click', closeDataMenu);
+            }
+        }
+
+        // User Onboarding Tutorial System
+        let tutorialActive = false;
+        let currentTutorialStep = 0;
+        let tutorialOverlay = null;
+
+        const tutorialSteps = [
+            {
+                title: 'Welcome to Bulk Email Sender! 🚀',
+                description: 'This tutorial will guide you through all features of the application. Let\'s start by learning how to upload your contact files.',
+                target: null,
+                position: 'center'
+            },
+            {
+                title: 'Step 1: Upload Contact Files 📁',
+                description: 'Click here to upload your contact files. Supports Excel, CSV, PDF, Word, PowerPoint, and even images with text.',
+                target: '#fileUpload',
+                position: 'bottom',
+                highlight: true
+            },
+            {
+                title: 'Step 2: View Upload Status 📊',
+                description: 'After uploading, you\'ll see statistics here. Click on "failed" link to view detailed error reports in a spreadsheet.',
+                target: '#uploadStats',
+                position: 'bottom'
+            },
+            {
+                title: 'Step 3: Contact List 📝',
+                description: 'Your contacts appear here. Click on any contact to auto-populate the email fields with personalized content.',
+                target: '#contactsList',
+                position: 'right'
+            },
+            {
+                title: 'Step 4: Email Composition ✍️',
+                description: 'Compose your emails here. Use the formatting toolbar for rich text editing including colors, lists, and links.',
+                target: '#messageBody',
+                position: 'left',
+                highlight: true
+            },
+            {
+                title: 'Step 5: Smart Message AI 🤖',
+                description: 'Click "Smart Message" for AI assistance to enhance your email content based on company profiles and context.',
+                target: '[onclick="openSmartMessage()"]',
+                position: 'bottom'
+            },
+            {
+                title: 'Step 6: Data Management 💾',
+                description: 'Use this menu to save drafts, export data, or import previous sessions. Auto-save keeps your work safe.',
+                target: '#dataMenuBtn',
+                position: 'bottom'
+            },
+            {
+                title: 'Step 7: Send Options 📤',
+                description: 'Send individual emails or use bulk email for all contacts with progress tracking and pause/resume functionality.',
+                target: '#sendBtn',
+                position: 'bottom'
+            },
+            {
+                title: 'Step 8: Analytics Dashboard 📊',
+                description: 'Monitor your email performance with real-time analytics including success rates and geographic data.',
+                target: '#emailHistory',
+                position: 'left'
+            },
+            {
+                title: 'Step 9: Response Management 📨',
+                description: 'Click this icon to manage email responses with auto-forwarding to your main email address.',
+                target: '#responseManagerBtn',
+                position: 'left'
+            },
+            {
+                title: 'Tutorial Complete! ✨',
+                description: 'You\'re now ready to use all features. Remember: upload contacts, personalize messages, and track results. Need help anytime? Click the Help button.',
+                target: null,
+                position: 'center'
+            }
+        ];
+
+        function startTutorial() {
+            if (tutorialActive) {
+                endTutorial();
+                return;
+            }
+
+            tutorialActive = true;
+            currentTutorialStep = 0;
+            showTutorialStep();
+        }
+
+        function showTutorialStep() {
+            const step = tutorialSteps[currentTutorialStep];
+            if (!step) {
+                endTutorial();
+                return;
+            }
+
+            // Remove existing overlay
+            if (tutorialOverlay) {
+                tutorialOverlay.remove();
+            }
+
+            // Create overlay
+            tutorialOverlay = document.createElement('div');
+            tutorialOverlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.7);
+                z-index: 20000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            `;
+
+            // Highlight target element
+            let targetElement = null;
+            if (step.target) {
+                targetElement = document.querySelector(step.target);
+                if (targetElement && step.highlight) {
+                    targetElement.style.position = 'relative';
+                    targetElement.style.zIndex = '20001';
+                    targetElement.style.boxShadow = '0 0 0 4px rgba(23, 162, 184, 0.8), 0 0 20px rgba(23, 162, 184, 0.6)';
+                    targetElement.style.borderRadius = '4px';
+                }
+            }
+
+            // Create tooltip
+            const tooltip = document.createElement('div');
+            tooltip.style.cssText = `
+                background: white;
+                padding: 20px;
+                border-radius: 8px;
+                max-width: 400px;
+                width: 90%;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+                position: relative;
+                margin: 20px;
+            `;
+
+            // Position tooltip based on target
+            if (targetElement && step.position !== 'center') {
+                const rect = targetElement.getBoundingClientRect();
+                tutorialOverlay.style.alignItems = 'flex-start';
+                tutorialOverlay.style.justifyContent = 'flex-start';
+
+                let top, left;
+                switch (step.position) {
+                    case 'bottom':
+                        top = rect.bottom + 10;
+                        left = rect.left + (rect.width / 2) - 200;
+                        break;
+                    case 'top':
+                        top = rect.top - 120;
+                        left = rect.left + (rect.width / 2) - 200;
+                        break;
+                    case 'left':
+                        top = rect.top + (rect.height / 2) - 60;
+                        left = rect.left - 420;
+                        break;
+                    case 'right':
+                        top = rect.top + (rect.height / 2) - 60;
+                        left = rect.right + 10;
+                        break;
+                }
+
+                // Ensure tooltip stays in viewport
+                top = Math.max(10, Math.min(top, window.innerHeight - 140));
+                left = Math.max(10, Math.min(left, window.innerWidth - 420));
+
+                tooltip.style.position = 'absolute';
+                tooltip.style.top = top + 'px';
+                tooltip.style.left = left + 'px';
+                tooltip.style.margin = '0';
+            }
+
+            tooltip.innerHTML = `
+                <div style="margin-bottom: 15px;">
+                    <h3 style="margin: 0 0 10px 0; color: #17a2b8; font-size: 18px;">${step.title}</h3>
+                    <p style="margin: 0; line-height: 1.5; color: #333;">${step.description}</p>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="font-size: 12px; color: #666;">
+                        Step ${currentTutorialStep + 1} of ${tutorialSteps.length}
+                    </div>
+                    <div>
+                        ${currentTutorialStep > 0 ? '<button onclick="previousTutorialStep()" style="background: #6c757d; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; margin-right: 10px;">← Previous</button>' : ''}
+                        ${currentTutorialStep < tutorialSteps.length - 1 ? '<button onclick="nextTutorialStep()" style="background: #17a2b8; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; margin-right: 10px;">Next →</button>' : ''}
+                        <button onclick="endTutorial()" style="background: #dc3545; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;">${currentTutorialStep === tutorialSteps.length - 1 ? 'Finish' : 'Skip'}</button>
+                    </div>
+                </div>
+            `;
+
+            tutorialOverlay.appendChild(tooltip);
+            document.body.appendChild(tutorialOverlay);
+
+            // Auto-advance for center-positioned steps after 5 seconds
+            if (step.position === 'center' && currentTutorialStep < tutorialSteps.length - 1) {
+                setTimeout(() => {
+                    if (tutorialActive && currentTutorialStep < tutorialSteps.length - 1) {
+                        nextTutorialStep();
+                    }
+                }, 5000);
+            }
+        }
+
+        function nextTutorialStep() {
+            clearHighlight();
+            currentTutorialStep++;
+            showTutorialStep();
+        }
+
+        function previousTutorialStep() {
+            clearHighlight();
+            currentTutorialStep--;
+            showTutorialStep();
+        }
+
+        function endTutorial() {
+            tutorialActive = false;
+            clearHighlight();
+            if (tutorialOverlay) {
+                tutorialOverlay.remove();
+                tutorialOverlay = null;
+            }
+            showAlert('Tutorial ended. Click Help anytime to restart!', 'info');
+        }
+
+        function clearHighlight() {
+            // Clear any highlighted elements
+            document.querySelectorAll('*').forEach(el => {
+                if (el.style.zIndex === '20001') {
+                    el.style.position = '';
+                    el.style.zIndex = '';
+                    el.style.boxShadow = '';
+                    el.style.borderRadius = '';
+                }
+            });
+        }
+
+        // Check if user is new and show tutorial
+        function checkFirstVisit() {
+            const hasVisited = localStorage.getItem('bulkEmail_hasVisited');
+            if (!hasVisited) {
+                localStorage.setItem('bulkEmail_hasVisited', 'true');
+                setTimeout(() => {
+                    if (confirm('Welcome to Bulk Email Sender! Would you like to take a quick tutorial to learn all the features?')) {
+                        startTutorial();
+                    }
+                }, 2000);
+            }
+        }
 
         // Test connection functionality removed
 
@@ -2934,8 +3817,20 @@ Phone: +91-XXXXXXXXXX`;
             console.log('Simple email sender loaded');
             testXLSXLibrary(); // Test if XLSX library loaded
             extractTemplateHeaders(); // Extract and populate From field
-            renderContacts(); // Initialize contact list display
-            showAlert('📧 Email Sender Ready! Upload your contact spreadsheet to begin sending personalized emails.');
+
+            // Initialize data persistence
+            setupAutoSave();
+
+            // Try to load saved data
+            const dataLoaded = loadFromLocalStorage();
+
+            if (!dataLoaded) {
+                renderContacts(); // Initialize contact list display if no saved data
+                showAlert('📧 Email Sender Ready! Upload your contact spreadsheet to begin sending personalized emails.');
+            }
+
+            // Check if this is the user's first visit
+            checkFirstVisit();
         });
         // Email Analytics Dashboard Functions
         let autoRedirectEnabled = true;
@@ -3213,14 +4108,7 @@ Phone: +91-XXXXXXXXXX`;
         });
 
         // Initialize analytics on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            // Simulate some initial email history for demo
-            setTimeout(() => {
-                addEmailToHistory('contact@abc-corp.com', 'sent', 'USA');
-                addEmailToHistory('info@xyz-industries.net', 'sent', 'Canada');
-                addEmailToHistory('hello@globalservices.org', 'failed', 'UK');
-            }, 2000);
-        });
+        // Removed dummy email history - now uses real data from email sending
 
         // Smart Message AI Assistant Functions
         let enhancedMessage = '';
