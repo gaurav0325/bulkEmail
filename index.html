@@ -567,7 +567,7 @@
                 </div>
 
                 <!-- Rich Text Editor -->
-                <div id="messageBody" contenteditable="true" placeholder="Email content" style="min-height: 400px; font-size: 12px; line-height: 1.6; padding: 15px; width: 100%; border: 1px solid #ddd; border-radius: 4px; overflow-y: auto; background: white; outline: none; transition: min-height 0.3s ease;" aria-required="true" oninput="validateMessage(this)" onpaste="handlePaste(event)" role="textbox" aria-multiline="true">
+                <div id="messageBody" contenteditable="true" placeholder="Email content" style="min-height: 400px; font-size: 12px; line-height: 1.6; padding: 15px; width: 100%; border: 1px solid #ddd; border-radius: 4px; overflow-y: auto; background: white; outline: none; transition: min-height 0.3s ease;" aria-required="true" oninput="validateMessage(this); handleContentChange()" onpaste="handlePaste(event)" onkeydown="handleKeyDown(event)" role="textbox" aria-multiline="true">
                 </div>
 
                 <!-- Hidden textarea for form submission -->
@@ -1806,12 +1806,53 @@ Market Advantages:
 
         // Enhanced Formatting Functions
         let undoStack = [];
+        let lastContent = '';
+        let contentChangeTimer = null;
 
         function saveUndoState() {
             const editor = document.getElementById('messageBody');
-            undoStack.push(editor.innerHTML);
-            if (undoStack.length > 10) {
-                undoStack.shift(); // Keep only last 10 states
+            const currentContent = editor.innerHTML;
+
+            // Don't save duplicate states
+            if (undoStack.length === 0 || undoStack[undoStack.length - 1] !== currentContent) {
+                undoStack.push(currentContent);
+                if (undoStack.length > 20) {
+                    undoStack.shift(); // Keep only last 20 states for better undo history
+                }
+                console.log(`💾 Saved undo state. Stack size: ${undoStack.length}`);
+            }
+        }
+
+        function handleContentChange() {
+            // Debounce to avoid saving too many states while typing
+            clearTimeout(contentChangeTimer);
+            contentChangeTimer = setTimeout(() => {
+                const editor = document.getElementById('messageBody');
+                const currentContent = editor.innerHTML;
+
+                if (currentContent !== lastContent) {
+                    saveUndoState();
+                    lastContent = currentContent;
+                }
+            }, 1000); // Save state 1 second after user stops typing
+        }
+
+        function handleKeyDown(event) {
+            // Save state before significant changes
+            if (event.ctrlKey && (event.key === 'v' || event.key === 'x' || event.key === 'z')) {
+                if (event.key === 'z') {
+                    event.preventDefault();
+                    undoFormat();
+                    return;
+                }
+                // For paste and cut, save current state first
+                saveUndoState();
+            } else if (event.key === 'Enter' || event.key === 'Backspace' || event.key === 'Delete') {
+                // Save state before major structural changes
+                const editor = document.getElementById('messageBody');
+                if (editor.innerHTML !== lastContent) {
+                    saveUndoState();
+                }
             }
         }
 
@@ -1857,49 +1898,61 @@ Market Advantages:
             const selection = window.getSelection();
             console.log(`Selection range count: ${selection.rangeCount}`);
 
-            if (selection.rangeCount === 0) {
-                showAlert('Please select text first to change its color', 'info');
+            // Check if there's a selection
+            if (selection.rangeCount === 0 || selection.getRangeAt(0).collapsed) {
+                showAlert('Please select text first to change its color', 'warning');
                 return;
             }
 
             const range = selection.getRangeAt(0);
-            console.log(`Range collapsed: ${range.collapsed}, Range text: "${range.toString()}"`);
+            const selectedText = range.toString();
+            console.log(`Selected text: "${selectedText}"`);
 
-            if (range.collapsed) {
-                // No text selected, try to use document.execCommand as fallback
-                if (document.execCommand) {
-                    document.execCommand('foreColor', false, color);
-                    console.log(`Applied color via execCommand: ${color}`);
-                } else {
-                    showAlert('Please select text first to change its color', 'info');
-                }
+            if (!selectedText.trim()) {
+                showAlert('Please select some text to color', 'warning');
                 return;
             }
 
-            // Apply color to selected text
-            const span = document.createElement('span');
-            span.style.color = color;
-            console.log(`Created span with color: ${span.style.color}`);
-
+            // Use the most reliable method for modern browsers
             try {
-                const contents = range.extractContents();
-                span.appendChild(contents);
+                // Method 1: Create a styled span and replace the selection
+                const span = document.createElement('span');
+                span.style.color = color;
+                span.style.backgroundColor = 'transparent';
+                span.textContent = selectedText;
+
+                // Delete the selected content
+                range.deleteContents();
+
+                // Insert the colored span
                 range.insertNode(span);
 
-                // Restore selection to show the colored text
-                const newRange = document.createRange();
-                newRange.selectNodeContents(span);
+                // Clear selection to see the result clearly
                 selection.removeAllRanges();
-                selection.addRange(newRange);
 
-                showAlert(`Text color changed to ${color}`, 'success');
-            } catch (e) {
-                // Fallback: use execCommand if modern approach fails
-                console.log('Using fallback execCommand for color');
-                document.execCommand('foreColor', false, color);
+                console.log(`✅ Color applied successfully: ${color} to text: "${selectedText}"`);
+                showAlert(`Text colored ${color}`, 'success');
+
+                // Update hidden textarea for form submission
+                updateHiddenTextarea();
+
+            } catch (error) {
+                console.error('Color application failed:', error);
+
+                // Fallback method using execCommand
+                try {
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                    document.execCommand('styleWithCSS', false, true);
+                    document.execCommand('foreColor', false, color);
+                    console.log(`✅ Fallback color applied: ${color}`);
+                    showAlert(`Text colored ${color} (fallback method)`, 'success');
+                } catch (fallbackError) {
+                    console.error('Fallback color method also failed:', fallbackError);
+                    showAlert('Unable to apply color. Please try selecting the text again.', 'error');
+                }
             }
 
-            updateHiddenTextarea();
             // Hide color picker
             document.getElementById('colorPicker').style.display = 'none';
         }
@@ -4850,6 +4903,23 @@ Phone: +91-XXXXXXXXXX`;
         // Initialize on page load - no complex initialization
         document.addEventListener('DOMContentLoaded', async function() {
             console.log('Secure email sender loaded');
+
+            // Initialize undo system
+            const editor = document.getElementById('messageBody');
+            if (editor) {
+                // Save initial empty state
+                saveUndoState();
+                lastContent = editor.innerHTML;
+
+                // Add focus event to save state when user starts editing
+                editor.addEventListener('focus', function() {
+                    if (undoStack.length === 0) {
+                        saveUndoState();
+                    }
+                });
+
+                console.log('📝 Undo system initialized');
+            }
             testXLSXLibrary(); // Test if XLSX library loaded
             extractTemplateHeaders(); // Extract and populate From field
 
