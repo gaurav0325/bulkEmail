@@ -2554,89 +2554,55 @@ Phone: +91-XXXXXXXXXX`;
 
                         if (jsonData.length < 2) return; // Skip empty sheets
 
-                        // Detect multiple tables within the sheet by finding header rows
-                        const tables = detectTablesInSheet(jsonData);
-                        console.log(`Found ${tables.length} table(s) in sheet "${sheetName}"`);
+                        // Simple single-table processing (restored for stability)
+                        const headers = jsonData[0].map(h => h ? h.toString().toLowerCase() : '');
+                        const rows = jsonData.slice(1);
 
-                        // Process each table found in the sheet
-                        tables.forEach((table, tableIndex) => {
-                            const headers = table.headers;
-                            const rows = table.rows;
+                        console.log(`Processing sheet "${sheetName}" with ${rows.length} rows`);
 
-                            console.log(`Processing table ${tableIndex + 1} in sheet "${sheetName}" with ${rows.length} rows`);
-                            console.log(`Table ${tableIndex + 1} headers:`, headers);
+                        // Map column indices for key parameters
+                        const columnMap = {
+                            firm: findColumnIndex(headers, ['firm name', 'company', 'firm', 'organization']),
+                            address: findColumnIndex(headers, ['address', 'location', 'addr']),
+                            phone: findColumnIndex(headers, ['contact number', 'phone', 'telephone', 'mobile']),
+                            contactName: findColumnIndex(headers, ['contact person', 'name', 'contact', 'person']),
+                            email: findColumnIndex(headers, ['email', 'email address', 'e-mail']),
+                            website: findColumnIndex(headers, ['website', 'url', 'web', 'site']),
+                            source: findColumnIndex(headers, ['source', 'lead source', 'origin']),
+                            category: findColumnIndex(headers, ['category', 'type', 'sector', 'industry'])
+                        };
 
-                            // Map column indices for key parameters
-                            const columnMap = {
-                                firm: findColumnIndex(headers, ['firm name', 'company', 'firm', 'organization']),
-                                address: findColumnIndex(headers, ['address', 'location', 'addr']),
-                                phone: findColumnIndex(headers, ['contact number', 'phone', 'telephone', 'mobile']),
-                                contactName: findColumnIndex(headers, ['contact person', 'name', 'contact', 'person']),
-                                email: findColumnIndex(headers, ['email', 'email address', 'e-mail']),
-                                website: findColumnIndex(headers, ['website', 'url', 'web', 'site']),
-                                source: findColumnIndex(headers, ['source', 'lead source', 'origin']),
-                                category: findColumnIndex(headers, ['category', 'type', 'sector', 'industry'])
+                        if (columnMap.email === -1) {
+                            console.log(`Skipping sheet "${sheetName}" - no email column found`);
+                            return;
+                        }
+
+                        // Process each row
+                        rows.forEach((row, rowIndex) => {
+                            if (!row || row.length === 0) return;
+
+                            const contact = {
+                                country: sheetName,
+                                firm: getCellValue(row, columnMap.firm) || 'Unknown Company',
+                                address: getCellValue(row, columnMap.address) || '',
+                                phone: getCellValue(row, columnMap.phone) || '',
+                                contactName: getCellValue(row, columnMap.contactName) || 'Contact Person',
+                                email: getCellValue(row, columnMap.email) || '',
+                                website: getCellValue(row, columnMap.website) || '',
+                                source: getCellValue(row, columnMap.source) || '',
+                                category: getCellValue(row, columnMap.category) || '',
+                                businessFocus: generateBusinessFocus(getCellValue(row, columnMap.category)),
+                                marketStrength: 'High',
+                                emailStatus: 'pending'
                             };
 
-                            // Only process table if it has email column
-                            if (columnMap.email === -1) {
-                                console.log(`Skipping table ${tableIndex + 1} in "${sheetName}" - no email column found`);
-                                return;
+                            if (contact.email && contact.email.includes('@')) {
+                                contacts.push(contact);
+                                totalProcessed++;
                             }
-
-                            // Process each row
-                            rows.forEach((row, rowIndex) => {
-                                if (!row || row.length === 0) {
-                                    // Track empty rows as failed
-                                    uploadedSpreadsheetData.push({
-                                        originalRowIndex: rowIndex + 1, // +1 for header
-                                        originalData: row,
-                                        status: 'failed',
-                                        reason: 'Empty row',
-                                        sheetName: sheetName
-                                    });
-                                    return;
-                                }
-
-                                const contact = {
-                                    country: sheetName, // Use sheet name as country
-                                    firm: getCellValue(row, columnMap.firm) || 'Unknown Company',
-                                    address: getCellValue(row, columnMap.address) || '',
-                                    phone: getCellValue(row, columnMap.phone) || '',
-                                    contactName: getCellValue(row, columnMap.contactName) || 'Contact Person',
-                                    email: getCellValue(row, columnMap.email) || '',
-                                    website: getCellValue(row, columnMap.website) || '',
-                                    source: getCellValue(row, columnMap.source) || '',
-                                    category: getCellValue(row, columnMap.category) || '',
-                                    businessFocus: generateBusinessFocus(getCellValue(row, columnMap.category)),
-                                    marketStrength: 'High',
-                                    emailStatus: 'pending' // pending, sent, failed
-                                };
-
-                                // Track in spreadsheet data
-                                const spreadsheetEntry = {
-                                    originalRowIndex: rowIndex + 1, // +1 for header
-                                    originalData: row,
-                                    sheetName: sheetName,
-                                    processedContact: contact
-                                };
-
-                                // Only add if email exists
-                                if (contact.email && contact.email.includes('@')) {
-                                    contacts.push(contact);
-                                    spreadsheetEntry.status = 'uploaded';
-                                    spreadsheetEntry.reason = 'Successfully uploaded';
-                                    totalProcessed++;
-                                } else {
-                                    spreadsheetEntry.status = 'failed';
-                                    spreadsheetEntry.reason = 'Missing or invalid email address';
-                                }
-
-                                uploadedSpreadsheetData.push(spreadsheetEntry);
-                            });
                         });
 
-                        console.log(`Processed sheet "${sheetName}": ${jsonData.length - 1} rows`);
+                        console.log(`Processed sheet "${sheetName}": ${rows.length} rows`);
                     });
 
                 console.log(`Total contacts loaded: ${contacts.length}`);
