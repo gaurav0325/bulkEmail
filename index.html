@@ -1124,8 +1124,12 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
                 combined.set(iv, salt.length);
                 combined.set(new Uint8Array(encryptedData), salt.length + iv.length);
 
-                // Convert to base64 for storage
-                return btoa(String.fromCharCode(...combined));
+                // Convert to base64 for storage (chunk large arrays to avoid stack overflow)
+                let binaryString = '';
+                for (let i = 0; i < combined.length; i++) {
+                    binaryString += String.fromCharCode(combined[i]);
+                }
+                return btoa(binaryString);
             } catch (error) {
                 console.error('Encryption failed:', error);
                 // Fallback to plain text storage (log warning)
