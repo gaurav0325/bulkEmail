@@ -2566,6 +2566,7 @@ Phone: +91-XXXXXXXXXX`;
 
                             console.log(`Processing table ${tableIndex + 1} in sheet "${sheetName}" with ${rows.length} rows`);
                             console.log(`Table ${tableIndex + 1} headers:`, headers);
+                            console.log(`🔍 RAW ROWS IN TABLE ${tableIndex + 1}:`, rows);
 
                             // Map column indices for key parameters
                             const columnMap = {
@@ -2587,7 +2588,10 @@ Phone: +91-XXXXXXXXXX`;
 
                             // Process each row in the table
                             rows.forEach((row, rowIndex) => {
+                                console.log(`📋 Processing row ${rowIndex + 1} in table ${tableIndex + 1} of "${sheetName}":`, row);
+
                                 if (!row || row.length === 0) {
+                                    console.log(`⏭️ Skipping empty row ${rowIndex + 1} in table ${tableIndex + 1}`);
                                     // Track empty rows as failed
                                     uploadedSpreadsheetData.push({
                                         originalRowIndex: table.startRow + rowIndex + 1,
@@ -2613,6 +2617,8 @@ Phone: +91-XXXXXXXXXX`;
                                     marketStrength: 'High',
                                     emailStatus: 'pending'
                                 };
+
+                                console.log(`💼 Contact extracted: Firm="${contact.firm}", Email="${contact.email}"`);;
 
                                 // Track in spreadsheet data
                                 const spreadsheetEntry = {
