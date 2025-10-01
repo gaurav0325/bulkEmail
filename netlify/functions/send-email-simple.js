@@ -30,34 +30,25 @@ exports.handler = async (event, context) => {
       console.log('✅ Nodemailer imported successfully');
       console.log('📦 Nodemailer type:', typeof nodemailer);
       console.log('📦 Nodemailer keys:', Object.keys(nodemailer));
-      console.log('📦 createTransporter type:', typeof nodemailer.createTransporter);
+      console.log('📦 createTransport type:', typeof nodemailer.createTransport);
 
-      // Try alternative access methods if standard doesn't work
-      if (typeof nodemailer.createTransporter !== 'function') {
-        console.log('⚠️ createTransporter not found, trying alternative access...');
-        if (nodemailer.default && typeof nodemailer.default.createTransporter === 'function') {
-          console.log('✅ Found createTransporter on default export');
-          nodemailer = nodemailer.default;
-        } else if (typeof nodemailer === 'function') {
-          console.log('✅ Nodemailer itself is the createTransporter function');
-          // Some versions export the createTransporter function directly
-        } else {
-          console.error('❌ Cannot find createTransporter method anywhere');
-          return {
-            statusCode: 500,
-            headers,
-            body: JSON.stringify({
-              success: false,
-              message: 'Nodemailer createTransporter method not found',
-              debug: {
-                type: typeof nodemailer,
-                keys: Object.keys(nodemailer),
-                hasDefault: !!nodemailer.default,
-                defaultType: typeof nodemailer.default
-              }
-            })
-          };
-        }
+      // Check if the correct method exists
+      if (typeof nodemailer.createTransport !== 'function') {
+        console.error('❌ Cannot find createTransport method');
+        return {
+          statusCode: 500,
+          headers,
+          body: JSON.stringify({
+            success: false,
+            message: 'Nodemailer createTransport method not found',
+            debug: {
+              type: typeof nodemailer,
+              keys: Object.keys(nodemailer),
+              hasDefault: !!nodemailer.default,
+              defaultType: typeof nodemailer.default
+            }
+          })
+        };
       }
     } catch (importError) {
       console.error('❌ Failed to import nodemailer:', importError);
@@ -117,7 +108,7 @@ exports.handler = async (event, context) => {
     // Create transporter
     let transporter;
     try {
-      transporter = nodemailer.createTransporter(transporterConfig);
+      transporter = nodemailer.createTransport(transporterConfig);
       console.log('✅ Transporter created successfully');
     } catch (transporterError) {
       console.error('❌ Failed to create transporter:', transporterError);
