@@ -2527,6 +2527,7 @@ Phone: +91-XXXXXXXXXX`;
                 console.log('About to render contacts. Array length:', contacts.length);
                 renderContacts();
                 showAlert(`✅ Loaded ${contacts.length} contacts${file.name.toLowerCase().endsWith('.csv') ? '' : ' from multiple countries'}! (${statusReport.failed} rows had issues)`, statusReport.failed > 0 ? 'error' : 'success');
+                }
 
             } catch (error) {
                 hideProgress();
