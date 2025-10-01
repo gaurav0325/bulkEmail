@@ -882,6 +882,85 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
         const MAX_CONTACTS = 10000; // Limit contact count
         const CHUNK_SIZE = 100; // Process in chunks
 
+        // EARLY FUNCTION DEFINITIONS (must be defined before HTML elements reference them)
+
+        // Advanced file upload handler for multiple document types
+        async function handleAdvancedFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) {
+                console.log('No file selected');
+                return;
+            }
+
+            const fileName = file.name.toLowerCase();
+            const fileExt = fileName.split('.').pop();
+
+            // For Excel/CSV files, use the original handler
+            if (fileExt === 'xlsx' || fileExt === 'xls' || fileExt === 'csv') {
+                return handleFileUpload(event);
+            }
+
+            // Security: File validation
+            if (!validateFileUpload(file)) {
+                return;
+            }
+
+            console.log('=== ADVANCED FILE UPLOAD STARTED ===');
+            console.log('File selected:', file.name, file.type, file.size);
+            showAlert(`Processing ${sanitizeInput(file.name)}...`, 'success');
+
+            // Store the uploaded file name for export
+            currentUploadedFileName = file.name;
+
+            try {
+                // Clear existing data
+                contacts = [];
+                filteredContacts = [];
+                selectedContactIndex = -1;
+                currentUploadProgress = { current: 0, total: 0 };
+
+                showProgress(0, 100, 'Processing document...');
+
+                let extractedContacts = [];
+                const fileType = getDocumentType(fileExt);
+
+                console.log('Document type detected:', fileType);
+
+                switch (fileType) {
+                    case 'PDF':
+                        extractedContacts = await processPDFFile(file);
+                        break;
+                    case 'Word':
+                        extractedContacts = await processWordFile(file);
+                        break;
+                    case 'PowerPoint':
+                        extractedContacts = await processPowerPointFile(file);
+                        break;
+                    case 'Image':
+                        extractedContacts = await processImageFile(file);
+                        break;
+                    default:
+                        throw new Error(`Unsupported file type: ${fileExt}`);
+                }
+
+                console.log('Extracted contacts:', extractedContacts.length);
+                contacts = extractedContacts;
+
+                hideProgress();
+                renderContacts();
+                showAlert(`✅ Extracted ${contacts.length} contacts from ${fileType} document!`, contacts.length > 0 ? 'success' : 'warning');
+
+            } catch (error) {
+                hideProgress();
+                const sanitizedError = sanitizeInput(error.message);
+                showAlert(`Error processing ${fileType} file: ${sanitizedError}`, 'error');
+                console.error('Advanced file processing error:', error);
+            } finally {
+                // Reset file input for reuse
+                document.getElementById('fileUpload').value = '';
+            }
+        }
+
         // Security Functions
         function sanitizeHTML(str) {
             if (!str) return '';
@@ -1111,82 +1190,6 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
             }
         }
 
-        // Advanced file upload handler for multiple document types (declared early for inline event handlers)
-        async function handleAdvancedFileUpload(event) {
-            const file = event.target.files[0];
-            if (!file) {
-                console.log('No file selected');
-                return;
-            }
-
-            const fileName = file.name.toLowerCase();
-            const fileExt = fileName.split('.').pop();
-
-            // For Excel/CSV files, use the original handler
-            if (fileExt === 'xlsx' || fileExt === 'xls' || fileExt === 'csv') {
-                return handleFileUpload(event);
-            }
-
-            // Security: File validation
-            if (!validateFileUpload(file)) {
-                return;
-            }
-
-            console.log('=== ADVANCED FILE UPLOAD STARTED ===');
-            console.log('File selected:', file.name, file.type, file.size);
-            showAlert(`Processing ${sanitizeInput(file.name)}...`, 'success');
-
-            // Store the uploaded file name for export
-            currentUploadedFileName = file.name;
-
-            try {
-                // Clear existing data
-                contacts = [];
-                filteredContacts = [];
-                selectedContactIndex = -1;
-                currentUploadProgress = { current: 0, total: 0 };
-
-                showProgress(0, 100, 'Processing document...');
-
-                let extractedContacts = [];
-                const fileType = getDocumentType(fileExt);
-
-                console.log('Document type detected:', fileType);
-
-                switch (fileType) {
-                    case 'PDF':
-                        extractedContacts = await processPDFFile(file);
-                        break;
-                    case 'Word':
-                        extractedContacts = await processWordFile(file);
-                        break;
-                    case 'PowerPoint':
-                        extractedContacts = await processPowerPointFile(file);
-                        break;
-                    case 'Image':
-                        extractedContacts = await processImageFile(file);
-                        break;
-                    default:
-                        throw new Error(`Unsupported file type: ${fileExt}`);
-                }
-
-                console.log('Extracted contacts:', extractedContacts.length);
-                contacts = extractedContacts;
-
-                hideProgress();
-                renderContacts();
-                showAlert(`✅ Extracted ${contacts.length} contacts from ${fileType} document!`, contacts.length > 0 ? 'success' : 'warning');
-
-            } catch (error) {
-                hideProgress();
-                const sanitizedError = sanitizeInput(error.message);
-                showAlert(`Error processing ${fileType} file: ${sanitizedError}`, 'error');
-                console.error('Advanced file processing error:', error);
-            } finally {
-                // Reset file input for reuse
-                document.getElementById('fileUpload').value = '';
-            }
-        }
 
         // Document processing helper functions (declared early)
         function getDocumentType(extension) {
