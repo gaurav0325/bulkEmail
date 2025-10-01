@@ -1,6 +1,8 @@
 const nodemailer = require('nodemailer');
 
 exports.handler = async (event, context) => {
+  console.log('Function started, nodemailer type:', typeof nodemailer);
+  console.log('nodemailer.createTransporter type:', typeof nodemailer.createTransporter);
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
