@@ -427,6 +427,9 @@
                 <div style="background: #e8f4fd; border: 1px solid #b3d9ff; border-radius: 4px; padding: 8px; margin-top: 5px; font-size: 12px; color: #0056b3;">
                     📧 <strong>Emails will be sent from:</strong> Intex Technologies &lt;info@datanalysisninsights.co.uk&gt;
                 </div>
+                <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 8px; margin-top: 5px; font-size: 12px; color: #856404;">
+                    ⚠️ <strong>Email Setup Required:</strong> To send real emails, configure EmailJS, Formspree, or custom webhook in Data menu > Email Setup
+                </div>
                 <div id="fromEmailError" style="color: #dc3545; font-size: 12px; margin-top: 2px; display: none;" role="alert"></div>
             </div>
 
@@ -3215,7 +3218,7 @@ Phone: +91-XXXXXXXXXX`;
                 } else if (successCount > 0 && failureCount > 0) {
                     showAlert(`⚠️ Sent to ${successCount}, failed to ${failureCount} email(s)`);
                 } else {
-                    showAlert(`❌ Failed to send to all ${failureCount} email(s)`, 'error');
+                    showAlert(`❌ Failed to send to all ${failureCount} email(s). Email services need configuration - check the Data menu > Email Setup`, 'error');
                 }
 
                 // Update contact status if single contact selected
@@ -3557,9 +3560,10 @@ Phone: +91-XXXXXXXXXX`;
                     }
                 }
 
-                // If all services fail, return error
+                // If all services fail, return error with helpful message
                 console.error('All email services failed:', lastError);
-                return { success: false, error: lastError?.message || 'All email services unavailable' };
+                const errorMessage = 'Email services not configured. To send real emails, please configure EmailJS, Formspree, or a custom webhook in the Email Configuration settings.';
+                return { success: false, error: errorMessage };
 
             } catch (error) {
                 console.error('Email sending error:', error);
