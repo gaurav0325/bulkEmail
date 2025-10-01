@@ -32,15 +32,18 @@ exports.handler = async (event, context) => {
     const { smtp_config, ...messageData } = emailData;
 
     // Use environment variables first, then fallback to provided config
-    const zohoEmail = process.env.ZOHO_EMAIL || (smtp_config && smtp_config.auth && smtp_config.auth.user);
-    const zohoPassword = process.env.ZOHO_PASSWORD || (smtp_config && smtp_config.auth && smtp_config.auth.pass);
+    const zohoEmail = process.env.FROM_EMAIL || process.env.SMTP_USERNAME || (smtp_config && smtp_config.auth && smtp_config.auth.user);
+    const zohoPassword = process.env.SMTP_PASSWORD || (smtp_config && smtp_config.auth && smtp_config.auth.pass);
+    const smtpServer = process.env.SMTP_SERVER || 'smtp.zoho.com';
+    const smtpPort = parseInt(process.env.SMTP_PORT) || 587;
 
     console.log(`Attempting to send email via Zoho Mail...`);
     console.log(`From: ${zohoEmail}`);
     console.log(`To: ${messageData.to_email}`);
 
     if (!zohoEmail || !zohoPassword) {
-      console.error('Missing Zoho credentials');
+      console.error('Missing SMTP credentials');
+      console.error('Available env vars:', Object.keys(process.env).filter(key => key.includes('SMTP') || key.includes('EMAIL')));
       return {
         statusCode: 400,
         headers: {
@@ -49,17 +52,23 @@ exports.handler = async (event, context) => {
           'Access-Control-Allow-Methods': 'POST, OPTIONS'
         },
         body: JSON.stringify({
-          error: 'Zoho Mail credentials not configured. Please set ZOHO_EMAIL and ZOHO_PASSWORD environment variables in Netlify.',
-          success: false
+          error: 'SMTP credentials not configured. Please set FROM_EMAIL/SMTP_USERNAME and SMTP_PASSWORD environment variables in Netlify.',
+          success: false,
+          debug: {
+            hasEmail: !!zohoEmail,
+            hasPassword: !!zohoPassword,
+            smtpServer: smtpServer,
+            smtpPort: smtpPort
+          }
         })
       };
     }
 
     // Create transporter for Zoho Mail
     const transporter = nodemailer.createTransporter({
-      host: 'smtp.zoho.com',
-      port: 587,
-      secure: false,
+      host: smtpServer,
+      port: smtpPort,
+      secure: smtpPort === 465, // true for 465, false for other ports
       auth: {
         user: zohoEmail,
         pass: zohoPassword
