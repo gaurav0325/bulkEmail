@@ -867,8 +867,8 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
                 templateId: 'template_bulk_email' // Demo template - replace with your own
             },
             netlify: {
-                enabled: false,
-                endpoint: '/.netlify/functions/send-email'
+                enabled: true,
+                endpoint: '/.netlify/functions/send-zoho-email'
             },
             formspree: {
                 enabled: false, // Set to true and add your Formspree endpoint
@@ -3800,15 +3800,23 @@ Phone: +91-XXXXXXXXXX`;
                 ];
 
                 let lastError = null;
-                for (const service of emailServices) {
+                for (let i = 0; i < emailServices.length; i++) {
+                    const serviceName = ['Zoho', 'EmailJS', 'Netlify', 'Formspree', 'Webhook'][i];
+                    console.log(`🔄 Trying ${serviceName} service...`);
+
                     try {
-                        const result = await service();
+                        const result = await emailServices[i]();
+                        console.log(`✅ ${serviceName} service result:`, result);
+
                         if (result.success) {
-                            console.log('Email sent successfully via service');
-                            return { success: true, service: result.service };
+                            console.log(`✅ Email sent successfully via ${serviceName}!`);
+                            return { success: true, service: result.service || serviceName };
+                        } else {
+                            console.log(`❌ ${serviceName} returned failure:`, result.error);
                         }
                     } catch (error) {
-                        console.log('Email service failed, trying next...', error.message);
+                        console.log(`❌ ${serviceName} service failed:`, error.message);
+                        console.log(`📋 Full error details:`, error);
                         lastError = error;
                         continue;
                     }
@@ -3980,9 +3988,18 @@ Phone: +91-XXXXXXXXXX`;
 
         // Netlify Functions Integration
         async function sendViaNetlifyFunction(emailData) {
+            console.log('🚀 Starting Netlify function call...');
+
             if (!EMAIL_CONFIG.netlify.enabled) {
                 throw new Error('Netlify service disabled');
             }
+
+            console.log('📡 Netlify endpoint:', EMAIL_CONFIG.netlify.endpoint);
+            console.log('📧 Email data being sent:', {
+                to_email: emailData.to_email,
+                from_email: emailData.from_email,
+                subject: emailData.subject
+            });
 
             try {
                 const response = await fetch(EMAIL_CONFIG.netlify.endpoint, {
@@ -3993,17 +4010,25 @@ Phone: +91-XXXXXXXXXX`;
                     body: JSON.stringify(emailData)
                 });
 
+                console.log('📡 Response status:', response.status, response.statusText);
+
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    const errorText = await response.text();
+                    console.error('❌ HTTP Error Response:', errorText);
+                    throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`);
                 }
 
                 const result = await response.json();
+                console.log('📦 Netlify function response:', result);
+
                 if (result.success) {
                     return { success: true, service: 'Netlify', messageId: result.messageId };
                 } else {
+                    console.error('❌ Netlify function returned failure:', result);
                     throw new Error(result.error || 'Netlify function failed');
                 }
             } catch (error) {
+                console.error('💥 Netlify function error:', error);
                 throw new Error(`Netlify function failed: ${error.message}`);
             }
         }
