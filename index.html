@@ -2631,7 +2631,7 @@ Phone: +91-XXXXXXXXXX`;
                             });
                         });
 
-                        console.log(`Processed sheet "${sheetName}": ${table.rows.length} rows`);
+                        console.log(`Processed sheet "${sheetName}": ${tables.reduce((total, t) => total + t.rows.length, 0)} rows from ${tables.length} tables`);
                     });
 
                 console.log(`Total contacts loaded: ${contacts.length}`);
