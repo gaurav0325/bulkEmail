@@ -146,7 +146,7 @@ exports.handler = async (event, context) => {
     const replyToEmail = reply_to || from_email || authorizedSender; // Reply goes to user's email
 
     const mailOptions = {
-      from: `"${from_name || 'Data Analysis Insights'}" <${authorizedSender}>`,
+      from: `"${from_name || process.env.FROM_NAME || 'Intex Technologies'}" <${authorizedSender}>`,
       to: to_email,
       subject: subject,
       html: content,

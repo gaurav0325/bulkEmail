@@ -3763,7 +3763,7 @@ Phone: +91-XXXXXXXXXX`;
                 // Prepare email data with proper formatting preservation
                 const emailData = {
                     from_email: 'info@datanalysisninsights.co.uk', // Always use authorized domain
-                    from_name: window.defaultFromName || 'Data Analysis Insights',
+                    from_name: 'Intex Technologies', // Brand name
                     to_email: contact.email,
                     to_name: contact.contactName,
                     subject: subject,
@@ -3771,7 +3771,7 @@ Phone: +91-XXXXXXXXXX`;
                     text_content: stripHTML(messageHTML), // Plain text fallback
                     company: contact.firm,
                     country: contact.country,
-                    reply_to: document.getElementById('fromEmail').value // User's email for replies
+                    reply_to: 'info@datanalysisninsights.co.uk' // Use same domain for replies
                 };
 
                 console.log('Sending email to:', contact.email);
