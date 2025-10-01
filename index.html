@@ -2440,110 +2440,13 @@ Phone: +91-XXXXXXXXXX`;
                     const workbook = XLSX.read(data, { type: 'array' });
                     console.log('Workbook loaded, sheets:', workbook.SheetNames);
 
-                    // Function to detect multiple tables within a single sheet
-                    function detectTablesInSheet(jsonData) {
-                        const tables = [];
-                        let currentTable = null;
-
-                        for (let rowIndex = 0; rowIndex < jsonData.length; rowIndex++) {
-                            const row = jsonData[rowIndex];
-
-                            // Skip empty rows
-                            if (!row || row.length === 0 || row.every(cell => !cell || cell.toString().trim() === '')) {
-                                continue;
-                            }
-
-                            // Check if this row looks like a header
-                            const isHeaderRow = isLikelyHeaderRow(row);
-
-                            if (isHeaderRow) {
-                                // If we have a current table, finalize it
-                                if (currentTable && currentTable.rows.length > 0) {
-                                    tables.push(currentTable);
-                                }
-
-                                // Start a new table
-                                currentTable = {
-                                    headers: row.map(cell => cell ? cell.toString().trim().toLowerCase() : ''),
-                                    rows: [],
-                                    startRow: rowIndex
-                                };
-                            } else if (currentTable) {
-                                // Add data row to current table
-                                currentTable.rows.push(row);
-                            } else {
-                                // First table without explicit header - treat first row as header
-                                currentTable = {
-                                    headers: row.map(cell => cell ? cell.toString().trim().toLowerCase() : ''),
-                                    rows: [],
-                                    startRow: rowIndex
-                                };
-                            }
-                        }
-
-                        // Add the last table if it exists
-                        if (currentTable && currentTable.rows.length > 0) {
-                            tables.push(currentTable);
-                        }
-
-                        // If no tables found but we have data, treat entire sheet as one table
-                        if (tables.length === 0 && jsonData.length > 1) {
-                            tables.push({
-                                headers: jsonData[0].map(cell => cell ? cell.toString().trim().toLowerCase() : ''),
-                                rows: jsonData.slice(1),
-                                startRow: 0
-                            });
-                        }
-
-                        return tables;
-                    }
-
-                    // Function to determine if a row looks like a header
-                    function isLikelyHeaderRow(row) {
-                        if (!row || row.length === 0) return false;
-
-                        const nonEmptyCells = row.filter(cell => cell && cell.toString().trim() !== '');
-                        if (nonEmptyCells.length < 2) return false; // Need at least 2 columns
-
-                        // Check for common header patterns
-                        const headerPatterns = [
-                            /^(firm|company|organization|business)/i,
-                            /^(name|contact|person)/i,
-                            /^(email|e-mail|mail)/i,
-                            /^(phone|telephone|mobile|contact)/i,
-                            /^(address|location|addr)/i,
-                            /^(website|url|web)/i,
-                            /^(country|nation|region)/i,
-                            /^(category|type|industry|sector)/i,
-                            /^(source|origin|lead)/i
-                        ];
-
-                        let headerMatches = 0;
-                        for (const cell of nonEmptyCells) {
-                            const cellText = cell.toString().trim().toLowerCase();
-                            for (const pattern of headerPatterns) {
-                                if (pattern.test(cellText)) {
-                                    headerMatches++;
-                                    break;
-                                }
-                            }
-                        }
-
-                        // Consider it a header if at least 30% of non-empty cells match header patterns
-                        return headerMatches >= Math.max(1, Math.ceil(nonEmptyCells.length * 0.3));
-                    }
-
-                    // Calculate total rows across all sheets using multi-table detection
+                    // Calculate total rows across all sheets
                     uploadStats.total = 0;
                     workbook.SheetNames.forEach(sheetName => {
                         const worksheet = workbook.Sheets[sheetName];
                         const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
                         if (jsonData.length > 1) {
-                            // Use table detection for accurate counting
-                            const tempTables = detectTablesInSheet(jsonData);
-                            tempTables.forEach(table => {
-                                uploadStats.total += table.rows.length;
-                            });
+                            uploadStats.total += jsonData.length - 1; // Exclude header row
                         }
                     });
 
