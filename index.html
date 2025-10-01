@@ -1880,8 +1880,24 @@ Market Advantages:
             showAlert('Message cleared', 'info');
         }
 
+        // Store selection for color picker
+        let storedSelection = null;
+
         function showColorPicker() {
+            const editor = document.getElementById('messageBody');
             const colorPicker = document.getElementById('colorPicker');
+
+            // Store current selection before showing picker
+            const selection = window.getSelection();
+            if (selection.rangeCount > 0 && !selection.getRangeAt(0).collapsed) {
+                storedSelection = selection.getRangeAt(0).cloneRange();
+                console.log(`💾 Stored selection: "${storedSelection.toString()}"`);
+            } else {
+                storedSelection = null;
+                showAlert('⚠️ Please select text first, then click the color picker', 'warning');
+                return;
+            }
+
             if (colorPicker.style.display === 'none') {
                 colorPicker.style.display = 'block';
             } else {
@@ -1892,69 +1908,128 @@ Market Advantages:
         function applyColor(color) {
             console.log(`🎨 Applying color: ${color}`);
             const editor = document.getElementById('messageBody');
+
+            // Save state before making changes
             saveUndoState();
+
+            // Ensure editor is focused
             editor.focus();
 
-            const selection = window.getSelection();
-            console.log(`Selection range count: ${selection.rangeCount}`);
+            let range;
 
-            // Check if there's a selection
-            if (selection.rangeCount === 0 || selection.getRangeAt(0).collapsed) {
-                showAlert('Please select text first to change its color', 'warning');
-                return;
+            // Use stored selection if available (from color picker)
+            if (storedSelection) {
+                console.log(`📋 Using stored selection: "${storedSelection.toString()}"`);
+                range = storedSelection;
+
+                // Restore the selection
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+            } else {
+                // Try to get current selection
+                const selection = window.getSelection();
+                console.log(`Selection range count: ${selection.rangeCount}`);
+
+                if (selection.rangeCount === 0) {
+                    showAlert('❌ No text selected. Please select text first to change its color.', 'warning');
+                    return;
+                }
+
+                range = selection.getRangeAt(0);
+
+                // Check if selection is collapsed (no text selected)
+                if (range.collapsed) {
+                    showAlert('❌ No text selected. Please drag to select text first.', 'warning');
+                    return;
+                }
             }
 
-            const range = selection.getRangeAt(0);
             const selectedText = range.toString();
-            console.log(`Selected text: "${selectedText}"`);
+            console.log(`📝 Selected text: "${selectedText}"`);
 
             if (!selectedText.trim()) {
-                showAlert('Please select some text to color', 'warning');
+                showAlert('❌ Empty selection. Please select visible text.', 'warning');
                 return;
             }
 
-            // Use the most reliable method for modern browsers
+            console.log(`🎯 Attempting to color "${selectedText}" with ${color}`);
+
+            // Method 1: Use execCommand (most compatible)
             try {
-                // Method 1: Create a styled span and replace the selection
+                // Re-select to ensure we have the selection
+                selection.removeAllRanges();
+                selection.addRange(range);
+
+                // Enable CSS styling
+                document.execCommand('styleWithCSS', false, true);
+
+                // Apply the color
+                const success = document.execCommand('foreColor', false, color);
+
+                if (success) {
+                    console.log(`✅ Color applied via execCommand: ${color}`);
+                    showAlert(`✅ Text colored ${color}!`, 'success');
+                    updateHiddenTextarea();
+                    document.getElementById('colorPicker').style.display = 'none';
+                    return;
+                }
+            } catch (error) {
+                console.warn('execCommand method failed:', error);
+            }
+
+            // Method 2: Manual HTML replacement
+            try {
+                console.log('🔄 Trying manual HTML method...');
+
+                // Get the selected text again
+                const textToColor = range.toString();
+
+                // Create colored HTML
+                const coloredHTML = `<span style="color: ${color} !important; background: transparent;">${textToColor}</span>`;
+
+                // Replace selection with colored HTML
+                const success = document.execCommand('insertHTML', false, coloredHTML);
+
+                if (success) {
+                    console.log(`✅ Color applied via HTML insertion: ${color}`);
+                    showAlert(`✅ Text colored ${color} (HTML method)!`, 'success');
+                    updateHiddenTextarea();
+                    document.getElementById('colorPicker').style.display = 'none';
+                    return;
+                }
+            } catch (error) {
+                console.warn('HTML insertion method failed:', error);
+            }
+
+            // Method 3: DOM manipulation (last resort)
+            try {
+                console.log('🔄 Trying DOM manipulation method...');
+
+                // Create a span element
                 const span = document.createElement('span');
                 span.style.color = color;
                 span.style.backgroundColor = 'transparent';
-                span.textContent = selectedText;
 
-                // Delete the selected content
-                range.deleteContents();
+                // Extract the content and put it in the span
+                const contents = range.extractContents();
+                span.appendChild(contents);
 
                 // Insert the colored span
                 range.insertNode(span);
 
-                // Clear selection to see the result clearly
-                selection.removeAllRanges();
-
-                console.log(`✅ Color applied successfully: ${color} to text: "${selectedText}"`);
-                showAlert(`Text colored ${color}`, 'success');
-
-                // Update hidden textarea for form submission
+                console.log(`✅ Color applied via DOM manipulation: ${color}`);
+                showAlert(`✅ Text colored ${color} (DOM method)!`, 'success');
                 updateHiddenTextarea();
 
             } catch (error) {
-                console.error('Color application failed:', error);
-
-                // Fallback method using execCommand
-                try {
-                    selection.removeAllRanges();
-                    selection.addRange(range);
-                    document.execCommand('styleWithCSS', false, true);
-                    document.execCommand('foreColor', false, color);
-                    console.log(`✅ Fallback color applied: ${color}`);
-                    showAlert(`Text colored ${color} (fallback method)`, 'success');
-                } catch (fallbackError) {
-                    console.error('Fallback color method also failed:', fallbackError);
-                    showAlert('Unable to apply color. Please try selecting the text again.', 'error');
-                }
+                console.error('❌ All color methods failed:', error);
+                showAlert(`❌ Unable to apply color. Try selecting the text again.`, 'error');
             }
 
-            // Hide color picker
+            // Hide color picker and clear stored selection
             document.getElementById('colorPicker').style.display = 'none';
+            storedSelection = null;
         }
 
         // Enhanced formatText function for rich text editor
