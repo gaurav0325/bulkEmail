@@ -2634,12 +2634,12 @@ Phone: +91-XXXXXXXXXX`;
 
                         uploadedSpreadsheetData.push(spreadsheetEntry);
                     });
+                });
 
-                        console.log(`Processed sheet "${sheetName}": ${jsonData.length - 1} rows`);
-                    });
+                console.log(`Processed sheet "${sheetName}": ${jsonData.length - 1} rows`);
+            });
 
-                    console.log(`Total contacts loaded: ${contacts.length}`);
-                }
+            console.log(`Total contacts loaded: ${contacts.length}`);
 
                 // Performance: Cleanup and optimize
                 cleanupContacts();
