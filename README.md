@@ -215,6 +215,16 @@ The application intelligently detects columns containing:
 
 **Never skip the push step** - production deployment is mandatory for all changes.
 
+### 🎯 Scope Limitation Rule
+**CRITICAL**: When working on one enhancement, NEVER change other unrelated functionalities without explicit user confirmation. The development scope rule is:
+1. **Focus Only**: Work exclusively on the requested enhancement or bug fix
+2. **No Side Changes**: Do not modify, improve, or "fix" unrelated features
+3. **Scope Boundary**: Stay within the exact boundaries of the user's request
+4. **Confirm First**: If related changes seem necessary, ask for explicit permission
+5. **One Thing**: Complete one enhancement fully before considering others
+
+**This prevents unintended modifications and maintains system stability.**
+
 ### Contact Information
 - **Email**: vishwas.agarwal@gmail.com
 - **Live Application**: https://bulkemailvishwas.netlify.app
