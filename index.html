@@ -861,10 +861,10 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
                 port: 587
             },
             emailjs: {
-                enabled: false,
-                publicKey: 'your-emailjs-public-key', // Replace with actual key
-                serviceId: 'your-service-id', // Replace with actual service ID
-                templateId: 'your-template-id' // Replace with actual template ID
+                enabled: true,
+                publicKey: 'fBDJ_1yl7sn6rUKbB', // Demo EmailJS key - replace with your own
+                serviceId: 'service_zoho_mail', // Demo service - replace with your own
+                templateId: 'template_bulk_email' // Demo template - replace with your own
             },
             netlify: {
                 enabled: false,
@@ -1755,42 +1755,11 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
             }
         }
 
-        function formatText(type) {
-            const textarea = document.getElementById('messageBody');
-            const start = textarea.selectionStart;
-            const end = textarea.selectionEnd;
-            const selectedText = textarea.value.substring(start, end);
-            let replacement = '';
-
-            switch (type) {
-                case 'bold':
-                    replacement = selectedText ? `**${selectedText}**` : '**bold text**';
-                    break;
-                case 'italic':
-                    replacement = selectedText ? `*${selectedText}*` : '*italic text*';
-                    break;
-                case 'underline':
-                    replacement = selectedText ? `_${selectedText}_` : '_underlined text_';
-                    break;
-                case 'bullet':
-                    const bulletLines = selectedText ? selectedText.split('\n').map(line => `• ${line}`).join('\n') : '• Bullet point 1\n• Bullet point 2\n• Bullet point 3';
-                    replacement = bulletLines;
-                    break;
-                case 'number':
-                    const numberLines = selectedText ? selectedText.split('\n').map((line, index) => `${index + 1}. ${line}`).join('\n') : '1. First item\n2. Second item\n3. Third item';
-                    replacement = numberLines;
-                    break;
-            }
-
-            const newValue = textarea.value.substring(0, start) + replacement + textarea.value.substring(end);
-            textarea.value = newValue;
-            textarea.focus();
-            textarea.setSelectionRange(start, start + replacement.length);
-        }
+        // Removed duplicate formatText function - using the enhanced version below
 
         function insertPersonalization() {
-            const textarea = document.getElementById('messageBody');
-            const start = textarea.selectionStart;
+            const editor = document.getElementById('messageBody');
+            editor.focus();
             const options = [
                 '{contactName}',
                 '{firm}',
@@ -1807,26 +1776,23 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
 
             if (selection && !isNaN(selection) && selection >= 1 && selection <= options.length) {
                 const variable = options[selection - 1];
-                const newValue = textarea.value.substring(0, start) + variable + textarea.value.substring(start);
-                textarea.value = newValue;
-                textarea.focus();
-                textarea.setSelectionRange(start + variable.length, start + variable.length);
+                document.execCommand('insertText', false, variable);
             }
         }
 
         function insertBusinessOpportunity() {
-            const textarea = document.getElementById('messageBody');
-            const start = textarea.selectionStart;
+            const editor = document.getElementById('messageBody');
+            editor.focus();
 
             const businessOpportunities = `
 Potential Business Opportunities for {firm}:
 
-• **Product Distribution**: Exclusive distribution rights for Intex consumer electronics in {country}
-• **Retail Partnership**: Establish Intex branded sections in your existing retail locations
-• **E-commerce Integration**: Online sales partnership through your digital platforms
-• **Corporate Sales**: B2B sales of IT peripherals and office equipment to local businesses
-• **Service Center Network**: Authorized service and support center for Intex products
-• **Market Development**: Joint marketing campaigns and brand awareness initiatives
+• Product Distribution: Exclusive distribution rights for Intex consumer electronics in {country}
+• Retail Partnership: Establish Intex branded sections in your existing retail locations
+• E-commerce Integration: Online sales partnership through your digital platforms
+• Corporate Sales: B2B sales of IT peripherals and office equipment to local businesses
+• Service Center Network: Authorized service and support center for Intex products
+• Market Development: Joint marketing campaigns and brand awareness initiatives
 
 Market Advantages:
 ✓ High-demand consumer electronics market
@@ -1835,18 +1801,15 @@ Market Advantages:
 ✓ Strong potential for mobile accessories sales
 ✓ Expanding home appliance market in {country}`;
 
-            const newValue = textarea.value.substring(0, start) + businessOpportunities + textarea.value.substring(start);
-            textarea.value = newValue;
-            textarea.focus();
-            textarea.setSelectionRange(start + businessOpportunities.length, start + businessOpportunities.length);
+            document.execCommand('insertHTML', false, businessOpportunities.replace(/\n/g, '<br>'));
         }
 
         // Enhanced Formatting Functions
         let undoStack = [];
 
         function saveUndoState() {
-            const textarea = document.getElementById('messageBody');
-            undoStack.push(textarea.value);
+            const editor = document.getElementById('messageBody');
+            undoStack.push(editor.innerHTML);
             if (undoStack.length > 10) {
                 undoStack.shift(); // Keep only last 10 states
             }
@@ -1854,9 +1817,9 @@ Market Advantages:
 
         function undoFormat() {
             if (undoStack.length > 0) {
-                const textarea = document.getElementById('messageBody');
-                textarea.value = undoStack.pop();
-                textarea.focus();
+                const editor = document.getElementById('messageBody');
+                editor.innerHTML = undoStack.pop();
+                editor.focus();
                 showAlert('Undo successful', 'info');
             } else {
                 showAlert('Nothing to undo', 'warning');
@@ -1864,15 +1827,15 @@ Market Advantages:
         }
 
         function clearFormatting() {
-            const textarea = document.getElementById('messageBody');
-            if (textarea.value.trim() === '') {
+            const editor = document.getElementById('messageBody');
+            if (editor.textContent.trim() === '') {
                 showAlert('Message is already empty', 'info');
                 return;
             }
 
             saveUndoState();
-            textarea.value = '';
-            textarea.focus();
+            editor.innerHTML = '';
+            editor.focus();
             showAlert('Message cleared', 'info');
         }
 
