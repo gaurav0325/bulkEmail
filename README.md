@@ -26,6 +26,8 @@ A comprehensive, production-ready bulk email application with advanced features 
 - **File Validation**: Size limits, type checking, security validation
 - **Progress Tracking**: Real-time upload and processing feedback
 - **Large Dataset Support**: Optimized encryption for 250+ contacts without stack overflow
+- **Data Validation**: Enhanced contact validation with firm name and email verification
+- **Accurate Contact Counting**: Resolved discrepancies between processed rows and actual contacts
 
 ### ✉️ Rich Text Email Editor
 - **Visual Formatting**: Bold, italic, underline with real-time preview
@@ -195,9 +197,9 @@ The application intelligently detects columns containing:
 - **[Deployment Guide](./DEPLOYMENT_GUIDE.md)**: Step-by-step deployment instructions
 
 ### Version Information
-- **Current Version**: 2.3 (Multi-Table Excel Processing & Optimized Encryption)
+- **Current Version**: 2.4 (Enhanced Multi-Table Processing with Data Validation)
 - **Release Date**: January 27, 2025
-- **Status**: Production Ready
+- **Status**: Production Ready - Contact Counting Issues Resolved
 - **Live URL**: https://bulkemailvishwas.netlify.app
 
 ## 🤝 Contributing & Support
