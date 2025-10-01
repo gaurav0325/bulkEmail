@@ -2598,41 +2598,41 @@ Phone: +91-XXXXXXXXXX`;
                                     return;
                                 }
 
-                        const contact = {
-                            country: sheetName, // Use sheet name as country
-                            firm: getCellValue(row, columnMap.firm) || 'Unknown Company',
-                            address: getCellValue(row, columnMap.address) || '',
-                            phone: getCellValue(row, columnMap.phone) || '',
-                            contactName: getCellValue(row, columnMap.contactName) || 'Contact Person',
-                            email: getCellValue(row, columnMap.email) || '',
-                            website: getCellValue(row, columnMap.website) || '',
-                            source: getCellValue(row, columnMap.source) || '',
-                            category: getCellValue(row, columnMap.category) || '',
-                            businessFocus: generateBusinessFocus(getCellValue(row, columnMap.category)),
-                            marketStrength: 'High',
-                            emailStatus: 'pending' // pending, sent, failed
-                        };
+                                const contact = {
+                                    country: sheetName, // Use sheet name as country
+                                    firm: getCellValue(row, columnMap.firm) || 'Unknown Company',
+                                    address: getCellValue(row, columnMap.address) || '',
+                                    phone: getCellValue(row, columnMap.phone) || '',
+                                    contactName: getCellValue(row, columnMap.contactName) || 'Contact Person',
+                                    email: getCellValue(row, columnMap.email) || '',
+                                    website: getCellValue(row, columnMap.website) || '',
+                                    source: getCellValue(row, columnMap.source) || '',
+                                    category: getCellValue(row, columnMap.category) || '',
+                                    businessFocus: generateBusinessFocus(getCellValue(row, columnMap.category)),
+                                    marketStrength: 'High',
+                                    emailStatus: 'pending' // pending, sent, failed
+                                };
 
-                        // Track in spreadsheet data
-                        const spreadsheetEntry = {
-                            originalRowIndex: rowIndex + 1, // +1 for header
-                            originalData: row,
-                            sheetName: sheetName,
-                            processedContact: contact
-                        };
+                                // Track in spreadsheet data
+                                const spreadsheetEntry = {
+                                    originalRowIndex: rowIndex + 1, // +1 for header
+                                    originalData: row,
+                                    sheetName: sheetName,
+                                    processedContact: contact
+                                };
 
-                        // Only add if email exists
-                        if (contact.email && contact.email.includes('@')) {
-                            contacts.push(contact);
-                            spreadsheetEntry.status = 'uploaded';
-                            spreadsheetEntry.reason = 'Successfully uploaded';
-                            totalProcessed++;
-                        } else {
-                            spreadsheetEntry.status = 'failed';
-                            spreadsheetEntry.reason = 'Missing or invalid email address';
-                        }
+                                // Only add if email exists
+                                if (contact.email && contact.email.includes('@')) {
+                                    contacts.push(contact);
+                                    spreadsheetEntry.status = 'uploaded';
+                                    spreadsheetEntry.reason = 'Successfully uploaded';
+                                    totalProcessed++;
+                                } else {
+                                    spreadsheetEntry.status = 'failed';
+                                    spreadsheetEntry.reason = 'Missing or invalid email address';
+                                }
 
-                        uploadedSpreadsheetData.push(spreadsheetEntry);
+                                uploadedSpreadsheetData.push(spreadsheetEntry);
                             });
                         });
                     });
