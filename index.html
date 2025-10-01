@@ -2603,13 +2603,30 @@ Phone: +91-XXXXXXXXXX`;
                                     return;
                                 }
 
+                                // Extract firm name and check if it's valid
+                                const firmName = getCellValue(row, columnMap.firm);
+                                const emailValue = getCellValue(row, columnMap.email);
+
+                                // Skip rows with empty firm names (likely invalid data rows)
+                                if (!firmName || firmName.toString().trim() === '') {
+                                    console.log(`⏭️ Skipping row ${rowIndex + 1} in table ${tableIndex + 1} - no firm name`);
+                                    uploadedSpreadsheetData.push({
+                                        originalRowIndex: table.startRow + rowIndex + 1,
+                                        originalData: row,
+                                        status: 'failed',
+                                        reason: 'Missing firm name',
+                                        sheetName: sheetName
+                                    });
+                                    return;
+                                }
+
                                 const contact = {
                                     country: sheetName,
-                                    firm: getCellValue(row, columnMap.firm) || 'Unknown Company',
+                                    firm: firmName,
                                     address: getCellValue(row, columnMap.address) || '',
                                     phone: getCellValue(row, columnMap.phone) || '',
                                     contactName: getCellValue(row, columnMap.contactName) || 'Contact Person',
-                                    email: getCellValue(row, columnMap.email) || '',
+                                    email: emailValue || '',
                                     website: getCellValue(row, columnMap.website) || '',
                                     source: getCellValue(row, columnMap.source) || '',
                                     category: getCellValue(row, columnMap.category) || '',
@@ -2628,7 +2645,7 @@ Phone: +91-XXXXXXXXXX`;
                                     processedContact: contact
                                 };
 
-                                // Only add if email exists
+                                // Only add if both firm and email exist
                                 if (contact.email && contact.email.includes('@')) {
                                     contacts.push(contact);
                                     spreadsheetEntry.status = 'uploaded';
