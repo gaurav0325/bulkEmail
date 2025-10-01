@@ -199,11 +199,21 @@ The application intelligently detects columns containing:
 
 ## 🤝 Contributing & Support
 
-### Development
+### Development Workflow
 - **Repository**: https://github.com/gaurav0325/bulkEmail
 - **Developer**: Vishwas Agarwal
 - **AI Assistant**: Claude Code by Anthropic
 - **License**: Internal Business Use
+
+### 🚀 Deployment Rule
+**CRITICAL**: All code changes MUST be automatically pushed to production on Netlify without requiring user reminders. The workflow is:
+1. Make code changes
+2. Test locally if needed
+3. Git add, commit with descriptive message
+4. **ALWAYS git push to main branch immediately**
+5. Netlify auto-deploys to https://bulkemailvishwas.netlify.app
+
+**Never skip the push step** - production deployment is mandatory for all changes.
 
 ### Contact Information
 - **Email**: vishwas.agarwal@gmail.com
