@@ -141,14 +141,23 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Send email
+    // Send email - use provided from_email instead of SMTP_USERNAME for better deliverability
+    const senderEmail = from_email || process.env.SMTP_USERNAME;
     const mailOptions = {
-      from: `"${from_name || 'Bulk Email Sender'}" <${process.env.SMTP_USERNAME}>`,
+      from: `"${from_name || 'Bulk Email Sender'}" <${senderEmail}>`,
       to: to_email,
       subject: subject,
       html: content,
-      text: content.replace(/<[^>]*>/g, '')
+      text: content.replace(/<[^>]*>/g, ''),
+      replyTo: senderEmail // Set reply-to for responses
     };
+
+    console.log('📤 Mail options:', {
+      from: mailOptions.from,
+      to: mailOptions.to,
+      subject: mailOptions.subject,
+      replyTo: mailOptions.replyTo
+    });
 
     console.log('📤 Sending email...');
     const result = await transporter.sendMail(mailOptions);
@@ -161,7 +170,7 @@ exports.handler = async (event, context) => {
         success: true,
         messageId: result.messageId,
         service: 'Zoho SMTP',
-        details: `Email sent from ${process.env.SMTP_USERNAME} to ${to_email}`
+        details: `Email sent from ${senderEmail} to ${to_email} via ${process.env.SMTP_USERNAME}`
       })
     };
 
