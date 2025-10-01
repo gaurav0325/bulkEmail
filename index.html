@@ -2654,6 +2654,11 @@ Phone: +91-XXXXXXXXXX`;
 
                 // Show upload status report
                 const statusReport = generateStatusReport();
+                console.log(`📊 PROCESSING SUMMARY:`);
+                console.log(`   Total rows processed: ${statusReport.total}`);
+                console.log(`   Valid contacts added: ${statusReport.successful}`);
+                console.log(`   Invalid/failed rows: ${statusReport.failed}`);
+                console.log(`   Displayed contacts: ${contacts.length}`);
                 showUploadStatusReport(statusReport);
 
                 console.log('About to render contacts. Array length:', contacts.length);
