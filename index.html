@@ -868,7 +868,7 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
             },
             netlify: {
                 enabled: true,
-                endpoint: '/.netlify/functions/send-zoho-email'
+                endpoint: '/.netlify/functions/send-email-zoho'
             },
             formspree: {
                 enabled: false, // Set to true and add your Formspree endpoint
@@ -3995,10 +3995,19 @@ Phone: +91-XXXXXXXXXX`;
             }
 
             console.log('📡 Netlify endpoint:', EMAIL_CONFIG.netlify.endpoint);
-            console.log('📧 Email data being sent:', {
-                to_email: emailData.to_email,
+            // Transform data to match existing function format
+            const transformedData = {
                 from_email: emailData.from_email,
-                subject: emailData.subject
+                from_name: emailData.from_name,
+                to_email: emailData.to_email,
+                subject: emailData.subject,
+                content: emailData.html_content || emailData.text_content
+            };
+
+            console.log('📧 Email data being sent:', {
+                to_email: transformedData.to_email,
+                from_email: transformedData.from_email,
+                subject: transformedData.subject
             });
 
             try {
@@ -4007,7 +4016,7 @@ Phone: +91-XXXXXXXXXX`;
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(emailData)
+                    body: JSON.stringify(transformedData)
                 });
 
                 console.log('📡 Response status:', response.status, response.statusText);
