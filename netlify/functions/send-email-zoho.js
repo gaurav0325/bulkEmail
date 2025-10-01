@@ -57,10 +57,11 @@ exports.handler = async (event, context) => {
     }
 
     // Configure Zoho Mail SMTP transport
-    const transporter = nodemailer.createTransport({
+    const smtpPort = parseInt(process.env.SMTP_PORT) || 587;
+    const transporter = nodemailer.createTransporter({
       host: process.env.SMTP_SERVER || 'smtppro.zoho.com',
-      port: parseInt(process.env.SMTP_PORT) || 587,
-      secure: false, // Use TLS
+      port: smtpPort,
+      secure: smtpPort === 465, // true for 465 (SSL), false for 587 (TLS)
       auth: {
         user: process.env.SMTP_USERNAME,
         pass: process.env.SMTP_PASSWORD
@@ -72,7 +73,8 @@ exports.handler = async (event, context) => {
 
     console.log('Zoho Mail transporter configured:', {
       host: process.env.SMTP_SERVER || 'smtppro.zoho.com',
-      port: parseInt(process.env.SMTP_PORT) || 587,
+      port: smtpPort,
+      secure: smtpPort === 465,
       user: process.env.SMTP_USERNAME
     });
 
