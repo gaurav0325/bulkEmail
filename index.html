@@ -860,24 +860,9 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
                 smtp: 'smtp.zoho.com',
                 port: 587
             },
-            emailjs: {
-                enabled: true,
-                publicKey: 'fBDJ_1yl7sn6rUKbB', // Demo EmailJS key - replace with your own
-                serviceId: 'service_zoho_mail', // Demo service - replace with your own
-                templateId: 'template_bulk_email' // Demo template - replace with your own
-            },
             netlify: {
                 enabled: true,
                 endpoint: '/.netlify/functions/send-email-simple'
-            },
-            formspree: {
-                enabled: false, // Set to true and add your Formspree endpoint
-                endpoint: 'https://formspree.io/f/your-formspree-id'
-            },
-            webhook: {
-                enabled: false, // Set to true and add your webhook URL
-                endpoint: 'https://your-email-webhook.com/send',
-                apiKey: 'your-api-key'
             }
         };
 
@@ -3790,18 +3775,14 @@ Phone: +91-XXXXXXXXXX`;
 
                 console.log('Sending email to:', contact.email);
 
-                // Try multiple email service options in order of preference
+                // Use Netlify function for email sending
                 const emailServices = [
-                    () => sendViaZoho(emailData),
-                    () => sendViaEmailJS(emailData),
-                    () => sendViaNetlifyFunction(emailData),
-                    () => sendViaFormspree(emailData),
-                    () => sendViaWebhook(emailData)
+                    () => sendViaNetlifyFunction(emailData)
                 ];
 
                 let lastError = null;
                 for (let i = 0; i < emailServices.length; i++) {
-                    const serviceName = ['Zoho', 'EmailJS', 'Netlify', 'Formspree', 'Webhook'][i];
+                    const serviceName = ['Netlify'][i];
                     console.log(`🔄 Trying ${serviceName} service...`);
 
                     try {

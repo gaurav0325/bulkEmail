@@ -141,15 +141,17 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Send email - use provided from_email instead of SMTP_USERNAME for better deliverability
-    const senderEmail = from_email || process.env.SMTP_USERNAME;
+    // Send email - use SMTP_USERNAME (authorized sender) but set replyTo to user's email
+    const authorizedSender = process.env.SMTP_USERNAME; // Must use authorized domain
+    const replyToEmail = from_email || authorizedSender; // Reply goes to user's email
+
     const mailOptions = {
-      from: `"${from_name || 'Bulk Email Sender'}" <${senderEmail}>`,
+      from: `"${from_name || 'Professional Outreach'}" <${authorizedSender}>`,
       to: to_email,
       subject: subject,
       html: content,
       text: content.replace(/<[^>]*>/g, ''),
-      replyTo: senderEmail // Set reply-to for responses
+      replyTo: replyToEmail // Replies go to user's actual email
     };
 
     console.log('📤 Mail options:', {
@@ -170,7 +172,7 @@ exports.handler = async (event, context) => {
         success: true,
         messageId: result.messageId,
         service: 'Zoho SMTP',
-        details: `Email sent from ${senderEmail} to ${to_email} via ${process.env.SMTP_USERNAME}`
+        details: `Email sent from ${authorizedSender} to ${to_email} (replies to ${replyToEmail})`
       })
     };
 
