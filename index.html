@@ -3762,15 +3762,16 @@ Phone: +91-XXXXXXXXXX`;
             try {
                 // Prepare email data with proper formatting preservation
                 const emailData = {
-                    from_email: document.getElementById('fromEmail').value,
-                    from_name: window.defaultFromName || 'Professional Outreach',
+                    from_email: 'info@datanalysisninsights.co.uk', // Always use authorized domain
+                    from_name: window.defaultFromName || 'Data Analysis Insights',
                     to_email: contact.email,
                     to_name: contact.contactName,
                     subject: subject,
                     html_content: messageHTML, // Preserve HTML formatting
                     text_content: stripHTML(messageHTML), // Plain text fallback
                     company: contact.firm,
-                    country: contact.country
+                    country: contact.country,
+                    reply_to: document.getElementById('fromEmail').value // User's email for replies
                 };
 
                 console.log('Sending email to:', contact.email);

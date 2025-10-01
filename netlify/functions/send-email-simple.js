@@ -64,7 +64,7 @@ exports.handler = async (event, context) => {
     }
 
     // Parse request body
-    const { from_email, from_name, to_email, subject, content } = JSON.parse(event.body);
+    const { from_email, from_name, to_email, subject, content, reply_to } = JSON.parse(event.body);
     console.log('📧 Email request:', { from_email, to_email, subject: subject?.substring(0, 50) });
 
     // Check environment variables
@@ -143,10 +143,10 @@ exports.handler = async (event, context) => {
 
     // Send email - use SMTP_USERNAME (authorized sender) but set replyTo to user's email
     const authorizedSender = process.env.SMTP_USERNAME; // Must use authorized domain
-    const replyToEmail = from_email || authorizedSender; // Reply goes to user's email
+    const replyToEmail = reply_to || from_email || authorizedSender; // Reply goes to user's email
 
     const mailOptions = {
-      from: `"${from_name || 'Professional Outreach'}" <${authorizedSender}>`,
+      from: `"${from_name || 'Data Analysis Insights'}" <${authorizedSender}>`,
       to: to_email,
       subject: subject,
       html: content,
