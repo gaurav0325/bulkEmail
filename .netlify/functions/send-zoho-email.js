@@ -5,20 +5,53 @@ exports.handler = async (event, context) => {
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS'
+      },
       body: JSON.stringify({ error: 'Method not allowed' })
+    };
+  }
+
+  // Handle CORS preflight
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS'
+      },
+      body: ''
     };
   }
 
   try {
     const emailData = JSON.parse(event.body);
-
-    // Extract SMTP configuration
     const { smtp_config, ...messageData } = emailData;
 
-    if (!smtp_config || !smtp_config.auth) {
+    // Use environment variables first, then fallback to provided config
+    const zohoEmail = process.env.ZOHO_EMAIL || (smtp_config && smtp_config.auth && smtp_config.auth.user);
+    const zohoPassword = process.env.ZOHO_PASSWORD || (smtp_config && smtp_config.auth && smtp_config.auth.pass);
+
+    console.log(`Attempting to send email via Zoho Mail...`);
+    console.log(`From: ${zohoEmail}`);
+    console.log(`To: ${messageData.to_email}`);
+
+    if (!zohoEmail || !zohoPassword) {
+      console.error('Missing Zoho credentials');
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: 'SMTP configuration missing' })
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Content-Type',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS'
+        },
+        body: JSON.stringify({
+          error: 'Zoho Mail credentials not configured. Please set ZOHO_EMAIL and ZOHO_PASSWORD environment variables in Netlify.',
+          success: false
+        })
       };
     }
 
@@ -26,10 +59,10 @@ exports.handler = async (event, context) => {
     const transporter = nodemailer.createTransporter({
       host: 'smtp.zoho.com',
       port: 587,
-      secure: false, // true for 465, false for other ports
+      secure: false,
       auth: {
-        user: smtp_config.auth.user,
-        pass: smtp_config.auth.pass
+        user: zohoEmail,
+        pass: zohoPassword
       },
       tls: {
         rejectUnauthorized: false
@@ -38,12 +71,12 @@ exports.handler = async (event, context) => {
 
     // Prepare email options
     const mailOptions = {
-      from: `"${messageData.from_name}" <${smtp_config.auth.user}>`,
+      from: `"${messageData.from_name || 'Bulk Email Sender'}" <${zohoEmail}>`,
       to: messageData.to_email,
       subject: messageData.subject,
       html: messageData.html_content,
       text: messageData.text_content || messageData.html_content.replace(/<[^>]*>/g, ''),
-      replyTo: smtp_config.auth.user
+      replyTo: zohoEmail
     };
 
     // Add attachments if any
@@ -56,10 +89,20 @@ exports.handler = async (event, context) => {
       }));
     }
 
+    // Verify SMTP connection first
+    await transporter.verify();
+    console.log('SMTP connection verified successfully');
+
     // Send email
     const info = await transporter.sendMail(mailOptions);
 
-    console.log('Email sent successfully:', info.messageId);
+    console.log('✅ Email sent successfully via Zoho Mail:', info.messageId);
+    console.log('Email details:', {
+      from: mailOptions.from,
+      to: mailOptions.to,
+      subject: mailOptions.subject,
+      attachments: emailData.attachments ? emailData.attachments.length : 0
+    });
 
     return {
       statusCode: 200,
@@ -71,7 +114,8 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({
         success: true,
         messageId: info.messageId,
-        service: 'Zoho Mail SMTP'
+        service: 'Zoho Mail SMTP',
+        details: `Email sent from ${zohoEmail} to ${messageData.to_email}`
       })
     };
 
