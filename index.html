@@ -2549,54 +2549,54 @@ Phone: +91-XXXXXXXXXX`;
 
                     // Process each worksheet (tab) as a country
                     workbook.SheetNames.forEach(sheetName => {
-                    const worksheet = workbook.Sheets[sheetName];
-                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                        const worksheet = workbook.Sheets[sheetName];
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-                    if (jsonData.length < 2) return; // Skip empty sheets
+                        if (jsonData.length < 2) return; // Skip empty sheets
 
-                    // Detect multiple tables within the sheet by finding header rows
-                    const tables = detectTablesInSheet(jsonData);
-                    console.log(`Found ${tables.length} table(s) in sheet "${sheetName}"`);
+                        // Detect multiple tables within the sheet by finding header rows
+                        const tables = detectTablesInSheet(jsonData);
+                        console.log(`Found ${tables.length} table(s) in sheet "${sheetName}"`);
 
-                    // Process each table found in the sheet
-                    tables.forEach((table, tableIndex) => {
-                        const headers = table.headers;
-                        const rows = table.rows;
+                        // Process each table found in the sheet
+                        tables.forEach((table, tableIndex) => {
+                            const headers = table.headers;
+                            const rows = table.rows;
 
-                        console.log(`Processing table ${tableIndex + 1} in sheet "${sheetName}" with ${rows.length} rows`);
-                        console.log(`Table ${tableIndex + 1} headers:`, headers);
+                            console.log(`Processing table ${tableIndex + 1} in sheet "${sheetName}" with ${rows.length} rows`);
+                            console.log(`Table ${tableIndex + 1} headers:`, headers);
 
-                        // Map column indices for key parameters
-                        const columnMap = {
-                            firm: findColumnIndex(headers, ['firm name', 'company', 'firm', 'organization']),
-                            address: findColumnIndex(headers, ['address', 'location', 'addr']),
-                            phone: findColumnIndex(headers, ['contact number', 'phone', 'telephone', 'mobile']),
-                            contactName: findColumnIndex(headers, ['contact person', 'name', 'contact', 'person']),
-                            email: findColumnIndex(headers, ['email', 'email address', 'e-mail']),
-                            website: findColumnIndex(headers, ['website', 'url', 'web', 'site']),
-                            source: findColumnIndex(headers, ['source', 'lead source', 'origin']),
-                            category: findColumnIndex(headers, ['category', 'type', 'sector', 'industry'])
-                        };
+                            // Map column indices for key parameters
+                            const columnMap = {
+                                firm: findColumnIndex(headers, ['firm name', 'company', 'firm', 'organization']),
+                                address: findColumnIndex(headers, ['address', 'location', 'addr']),
+                                phone: findColumnIndex(headers, ['contact number', 'phone', 'telephone', 'mobile']),
+                                contactName: findColumnIndex(headers, ['contact person', 'name', 'contact', 'person']),
+                                email: findColumnIndex(headers, ['email', 'email address', 'e-mail']),
+                                website: findColumnIndex(headers, ['website', 'url', 'web', 'site']),
+                                source: findColumnIndex(headers, ['source', 'lead source', 'origin']),
+                                category: findColumnIndex(headers, ['category', 'type', 'sector', 'industry'])
+                            };
 
-                        // Only process table if it has email column
-                        if (columnMap.email === -1) {
-                            console.log(`Skipping table ${tableIndex + 1} in "${sheetName}" - no email column found`);
-                            return;
-                        }
+                            // Only process table if it has email column
+                            if (columnMap.email === -1) {
+                                console.log(`Skipping table ${tableIndex + 1} in "${sheetName}" - no email column found`);
+                                return;
+                            }
 
-                        // Process each row
-                        rows.forEach((row, rowIndex) => {
-                        if (!row || row.length === 0) {
-                            // Track empty rows as failed
-                            uploadedSpreadsheetData.push({
-                                originalRowIndex: rowIndex + 1, // +1 for header
-                                originalData: row,
-                                status: 'failed',
-                                reason: 'Empty row',
-                                sheetName: sheetName
-                            });
-                            return;
-                        }
+                            // Process each row
+                            rows.forEach((row, rowIndex) => {
+                                if (!row || row.length === 0) {
+                                    // Track empty rows as failed
+                                    uploadedSpreadsheetData.push({
+                                        originalRowIndex: rowIndex + 1, // +1 for header
+                                        originalData: row,
+                                        status: 'failed',
+                                        reason: 'Empty row',
+                                        sheetName: sheetName
+                                    });
+                                    return;
+                                }
 
                         const contact = {
                             country: sheetName, // Use sheet name as country

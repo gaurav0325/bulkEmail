@@ -8,7 +8,8 @@
       "WebFetch(domain:www.datanalysisninsights.co.uk)",
       "Bash(find:*)",
       "Bash(node:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []
