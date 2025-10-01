@@ -19,10 +19,13 @@ A comprehensive, production-ready bulk email application with advanced features 
 
 ### 🚀 Advanced File Processing
 - **Multi-Document Support**: Excel (.xlsx, .xls), CSV, PDF, Word (.doc, .docx), PowerPoint (.ppt, .pptx), Images
-- **AI Contact Extraction**: Intelligent parsing from various document types
+- **Multi-Table Excel Processing**: Intelligent detection and processing of multiple tables within single worksheets/tabs
+- **Cross-Country Data Extraction**: Processes all worksheets (Kenya, Uganda, Nigeria, Ethiopia, Philippines, Sri Lanka)
+- **AI Contact Extraction**: Intelligent parsing from various document types with header pattern recognition
 - **OCR Simulation**: Text extraction from images and PDFs
 - **File Validation**: Size limits, type checking, security validation
 - **Progress Tracking**: Real-time upload and processing feedback
+- **Large Dataset Support**: Optimized encryption for 250+ contacts without stack overflow
 
 ### ✉️ Rich Text Email Editor
 - **Visual Formatting**: Bold, italic, underline with real-time preview
@@ -192,7 +195,7 @@ The application intelligently detects columns containing:
 - **[Deployment Guide](./DEPLOYMENT_GUIDE.md)**: Step-by-step deployment instructions
 
 ### Version Information
-- **Current Version**: 2.2 (Enhanced with AI Assistant)
+- **Current Version**: 2.3 (Multi-Table Excel Processing & Optimized Encryption)
 - **Release Date**: January 27, 2025
 - **Status**: Production Ready
 - **Live URL**: https://bulkemailvishwas.netlify.app

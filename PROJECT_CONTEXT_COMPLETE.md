@@ -6,7 +6,7 @@
 **Status**: Production Ready
 **Live URL**: https://bulkemailvishwas.netlify.app
 **Repository**: https://github.com/gaurav0325/bulkEmail
-**Version**: 2.2 (Enhanced with AI Assistant)
+**Version**: 2.3 (Multi-Table Excel Processing & Optimized Encryption)
 **Last Updated**: January 27, 2025
 
 **One-Line Description**: A comprehensive, production-ready bulk email application with advanced file processing, AI-powered message enhancement, rich text editing, and complete analytics dashboard.
