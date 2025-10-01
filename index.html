@@ -428,7 +428,7 @@
                     📧 <strong>Emails will be sent from:</strong> Intex Technologies &lt;info@datanalysisninsights.co.uk&gt;
                 </div>
                 <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 8px; margin-top: 5px; font-size: 12px; color: #856404;">
-                    ⚠️ <strong>Email Setup Required:</strong> To send real emails, configure EmailJS, Formspree, or custom webhook in Data menu > Email Setup
+                    🚀 <strong>Zoho Mail Ready:</strong> Enter your Zoho Mail credentials in Data menu > Email Setup to activate production email sending
                 </div>
                 <div id="fromEmailError" style="color: #dc3545; font-size: 12px; margin-top: 2px; display: none;" role="alert"></div>
             </div>
@@ -854,9 +854,9 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
         // Email Service Configuration
         const EMAIL_CONFIG = {
             zoho: {
-                enabled: false,
-                email: '',
-                password: '',
+                enabled: true,
+                email: '', // Will be loaded from saved config
+                password: '', // Will be loaded from saved config
                 smtp: 'smtp.zoho.com',
                 port: 587
             },
@@ -3841,14 +3841,20 @@ Phone: +91-XXXXXXXXXX`;
             });
         }
 
-        // Zoho Mail SMTP Integration (via webhook)
+        // Zoho Mail SMTP Integration (via Netlify Function)
         async function sendViaZoho(emailData) {
             if (!EMAIL_CONFIG.zoho.enabled) {
                 throw new Error('Zoho Mail service disabled');
             }
 
+            if (!EMAIL_CONFIG.zoho.email || !EMAIL_CONFIG.zoho.password) {
+                throw new Error('Zoho Mail credentials not configured. Please set up in Email Configuration.');
+            }
+
             try {
-                // Include attachments in Zoho data
+                console.log('📧 Sending email via Zoho Mail SMTP...');
+
+                // Prepare Zoho SMTP data
                 const zohoData = {
                     ...emailData,
                     smtp_config: {
@@ -3882,8 +3888,7 @@ Phone: +91-XXXXXXXXXX`;
                     console.log(`📎 Including ${attachmentData.length} attachments in Zoho email`);
                 }
 
-                // For demo purposes, we'll use a webhook that handles Zoho SMTP
-                // In production, you'd have a backend service that sends via Zoho SMTP
+                // Send via Netlify function
                 const response = await fetch('/.netlify/functions/send-zoho-email', {
                     method: 'POST',
                     headers: {
@@ -3892,18 +3897,22 @@ Phone: +91-XXXXXXXXXX`;
                     body: JSON.stringify(zohoData)
                 });
 
+                const result = await response.json();
+
                 if (!response.ok) {
-                    // Fallback to simulation if backend not available
-                    console.warn('Zoho backend not available, using simulation');
-                    return { success: true, service: 'Zoho (Simulated)', messageId: 'sim-' + Date.now() };
+                    throw new Error(result.error || `HTTP ${response.status}: ${response.statusText}`);
                 }
 
-                const result = await response.json();
-                return { success: true, service: 'Zoho Mail', messageId: result.messageId };
+                if (result.success) {
+                    console.log(`✅ Email sent successfully via Zoho Mail: ${result.messageId}`);
+                    return { success: true, service: 'Zoho Mail SMTP', messageId: result.messageId };
+                } else {
+                    throw new Error(result.error || 'Unknown error from Zoho Mail service');
+                }
+
             } catch (error) {
-                // For now, simulate successful sending for demo
-                console.warn('Zoho sending error, using simulation:', error.message);
-                return { success: true, service: 'Zoho (Simulated)', messageId: 'sim-' + Date.now() };
+                console.error('❌ Zoho Mail sending failed:', error);
+                throw new Error(`Zoho Mail failed: ${error.message}`);
             }
         }
 
@@ -5051,9 +5060,14 @@ Phone: +91-XXXXXXXXXX`;
                 <div style="background: white; padding: 30px; border-radius: 8px; max-width: 600px; width: 90%; max-height: 80%; overflow-y: auto;">
                     <h3 style="margin: 0 0 20px 0; color: #007bff;">⚙️ Email Service Configuration</h3>
 
+                    <div style="margin-bottom: 20px; padding: 15px; background: #dcfce7; border-radius: 4px; border-left: 4px solid #16a34a;">
+                        <strong>🚀 Zoho Mail Production Ready!</strong>
+                        <p style="margin: 5px 0; font-size: 14px; color: #166534;">Your Zoho Mail integration is configured and ready for production email sending. Enter your Zoho credentials below to activate real email delivery with SMTP.</p>
+                    </div>
+
                     <div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 4px; border-left: 4px solid #17a2b8;">
                         <strong>Setup Instructions:</strong>
-                        <p style="margin: 5px 0; font-size: 14px;">Configure at least one email service to enable real email sending. All credentials are stored securely with encryption.</p>
+                        <p style="margin: 5px 0; font-size: 14px;">Configure your Zoho Mail credentials below. All credentials are stored securely with encryption. The system will try Zoho Mail first, then fallback to other services.</p>
                     </div>
 
                     <!-- Zoho Mail Configuration -->
@@ -5157,7 +5171,16 @@ Phone: +91-XXXXXXXXXX`;
                         if (emailConfig.zoho) {
                             document.getElementById('zohoEmail').value = emailConfig.zoho.email || '';
                             document.getElementById('zohoPassword').value = emailConfig.zoho.password || '';
-                            document.getElementById('zohoEnabled').checked = emailConfig.zoho.enabled || false;
+                            document.getElementById('zohoEnabled').checked = emailConfig.zoho.enabled !== false; // Default to enabled
+
+                            // Update global config
+                            EMAIL_CONFIG.zoho.email = emailConfig.zoho.email || '';
+                            EMAIL_CONFIG.zoho.password = emailConfig.zoho.password || '';
+                            EMAIL_CONFIG.zoho.enabled = emailConfig.zoho.enabled !== false;
+
+                            if (EMAIL_CONFIG.zoho.email && EMAIL_CONFIG.zoho.password) {
+                                console.log('✅ Zoho Mail credentials loaded and ready for production');
+                            }
                         }
 
                         // Load EmailJS config
