@@ -5982,9 +5982,11 @@ Best regards,
                 </div>
             `;
 
-            // Load existing company data
-            CompanyOnboardingModule.loadData();
+            // Add modal to DOM first
             document.body.appendChild(modal);
+
+            // Then load existing company data (after elements exist)
+            CompanyOnboardingModule.loadData();
         };
 
         // Module: Load Company Onboarding Data
@@ -5993,23 +5995,37 @@ Best regards,
                 const savedData = localStorage.getItem(this.storageKey);
                 if (savedData) {
                     this.data = JSON.parse(savedData);
-
-                    // Populate form fields
-                    document.getElementById('companyName').value = this.data.companyName || '';
-                    document.getElementById('companyIndustry').value = this.data.companyIndustry || '';
-                    document.getElementById('companyWebsite').value = this.data.companyWebsite || '';
-                    document.getElementById('companyYears').value = this.data.companyYears || '';
-                    document.getElementById('companyEmail').value = this.data.companyEmail || '';
-                    document.getElementById('companyPhone').value = this.data.companyPhone || '';
-                    document.getElementById('companyAddress').value = this.data.companyAddress || '';
-                    document.getElementById('companyDescription').value = this.data.companyDescription || '';
-                    document.getElementById('companyLogo').value = this.data.companyLogo || '';
-
-                    // Populate template field
-                    document.getElementById('companyEmailTemplate').value = this.data.emailTemplate || this.defaultTemplate;
+                } else {
+                    // Initialize with empty data if no saved data exists
+                    this.data = {};
                 }
+
+                // Populate form fields with safe element access
+                const fields = [
+                    { id: 'companyName', value: this.data.companyName || '' },
+                    { id: 'companyIndustry', value: this.data.companyIndustry || '' },
+                    { id: 'companyWebsite', value: this.data.companyWebsite || '' },
+                    { id: 'companyYears', value: this.data.companyYears || '' },
+                    { id: 'companyEmail', value: this.data.companyEmail || '' },
+                    { id: 'companyPhone', value: this.data.companyPhone || '' },
+                    { id: 'companyAddress', value: this.data.companyAddress || '' },
+                    { id: 'companyDescription', value: this.data.companyDescription || '' },
+                    { id: 'companyLogo', value: this.data.companyLogo || '' },
+                    { id: 'companyEmailTemplate', value: this.data.emailTemplate || this.defaultTemplate }
+                ];
+
+                fields.forEach(field => {
+                    const element = document.getElementById(field.id);
+                    if (element) {
+                        element.value = field.value;
+                    } else {
+                        console.warn(`[CompanyOnboarding] Element ${field.id} not found`);
+                    }
+                });
             } catch (error) {
                 console.error('[CompanyOnboarding] Error loading data:', error);
+                // Initialize with empty data on error
+                this.data = {};
             }
         };
 
