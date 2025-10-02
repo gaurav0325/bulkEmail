@@ -3519,7 +3519,7 @@ Phone: +91-XXXXXXXXXX`;
                     } catch (emailError) {
                         console.error(`Error sending to ${toEmail}:`, emailError);
                         failureCount++;
-                        addToEmailHistory(toEmail, subject, 'failed', Date.now());
+                        addToEmailHistory(toEmail, subject, 'failed', Date.now(), contact.country || 'Unknown');
                     }
                 }
 
@@ -4677,14 +4677,28 @@ Phone: +91-XXXXXXXXXX`;
                 // Resume
                 bulkEmailPaused = false;
                 const bulkBtn = document.getElementById('bulkSendBtn');
-                bulkBtn.innerHTML = 'Pause';
-                showAlert('Bulk email resumed', 'info');
+                const modalBtn = document.getElementById('bulkPauseResumeBtn');
+
+                if (bulkBtn) bulkBtn.innerHTML = 'Pause';
+                if (modalBtn) {
+                    modalBtn.innerHTML = 'Pause';
+                    modalBtn.style.background = '#ffc107';
+                    modalBtn.style.color = 'black';
+                }
+                showAlert('📤 Bulk email resumed', 'success');
             } else {
                 // Pause
                 bulkEmailPaused = true;
                 const bulkBtn = document.getElementById('bulkSendBtn');
-                bulkBtn.innerHTML = 'Resume';
-                showAlert('Bulk email paused', 'info');
+                const modalBtn = document.getElementById('bulkPauseResumeBtn');
+
+                if (bulkBtn) bulkBtn.innerHTML = 'Resume';
+                if (modalBtn) {
+                    modalBtn.innerHTML = 'Resume';
+                    modalBtn.style.background = '#28a745';
+                    modalBtn.style.color = 'white';
+                }
+                showAlert('⏸️ Bulk email paused', 'warning');
             }
         }
 
@@ -4745,7 +4759,10 @@ Phone: +91-XXXXXXXXXX`;
                         <span>❌ Failed: <span id="bulkFailedCount">0</span></span>
                         <span>📊 Total: <span id="bulkTotalCount">${bulkEmailTotal}</span></span>
                     </div>
-                    <button onclick="cancelBulkEmail()" style="background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Cancel</button>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <button id="bulkPauseResumeBtn" onclick="pauseBulkEmail()" style="background: #ffc107; color: black; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 500;">Pause</button>
+                        <button onclick="cancelBulkEmail()" style="background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Cancel</button>
+                    </div>
                 </div>
             `;
 
@@ -6338,14 +6355,23 @@ Phone: +91-XXXXXXXXXX`;
                 const statusIcon = entry.status === 'sent' ? '✅' : '❌';
                 const statusColor = entry.status === 'sent' ? '#10b981' : '#ef4444';
 
+                // Handle different email field formats (legacy and new)
+                const emailDisplay = entry.email || (Array.isArray(entry.toEmails) ? entry.toEmails[0] : entry.toEmails) || 'Unknown';
+
+                // Handle missing country field
+                const countryDisplay = entry.country || 'Unknown';
+
+                // Handle time field - create from timestamp if missing
+                const timeDisplay = entry.time || (entry.timestamp ? new Date(entry.timestamp).toLocaleTimeString() : 'Unknown time');
+
                 return `
                     <div style="padding: 8px; margin-bottom: 6px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;">
-                        <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 4px;">
-                            <span style="font-size: 11px; font-weight: 500; color: #374151;">${entry.email}</span>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <span style="font-size: 11px; font-weight: 500; color: #374151;" title="${emailDisplay}">${emailDisplay.length > 30 ? emailDisplay.substring(0, 30) + '...' : emailDisplay}</span>
                             <span style="font-size: 10px; color: ${statusColor};">${statusIcon}</span>
                         </div>
                         <div style="font-size: 10px; color: #6b7280;">
-                            ${entry.country} • ${entry.time}
+                            ${countryDisplay} • ${timeDisplay}
                         </div>
                     </div>
                 `;
