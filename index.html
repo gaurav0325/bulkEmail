@@ -3813,42 +3813,51 @@ Phone: +91-XXXXXXXXXX`;
                 try {
                     console.log(`Sending email ${i + 1}/${selectedIndices.length} to: ${contact.email}`);
 
-                    // Get fresh content from form and personalize (same as individual emails)
-                    const currentSubject = document.getElementById('subject').value.trim();
-                    const messageBody = document.getElementById('messageBody');
-                    const currentMessageHTML = messageBody.innerHTML.trim();
+                    // Get email template content from form fields
+                    const subjectTemplate = document.getElementById('subject').value || '';
+                    const messageBodyElement = document.getElementById('messageBody');
 
-                    console.log('Raw form content:', {
-                        currentSubject,
-                        currentMessageHTML,
-                        currentMessageHTMLLength: currentMessageHTML.length,
-                        messageBodyExists: !!messageBody,
-                        messageBodyInnerHTML: messageBody.innerHTML,
-                        messageBodyTextContent: messageBody.textContent
+                    // Get the actual content from the message body (the email template)
+                    let messageTemplate = '';
+                    if (messageBodyElement) {
+                        // Try different ways to get the content
+                        messageTemplate = messageBodyElement.innerHTML || messageBodyElement.textContent || messageBodyElement.innerText || '';
+                        // Clean up any extra whitespace but preserve the template
+                        messageTemplate = messageTemplate.trim();
+                    }
+
+                    console.log('Email template extraction:', {
+                        subjectTemplate,
+                        messageTemplate,
+                        messageTemplateLength: messageTemplate.length,
+                        messageBodyElementExists: !!messageBodyElement,
+                        rawInnerHTML: messageBodyElement?.innerHTML || 'null',
+                        rawTextContent: messageBodyElement?.textContent || 'null'
                     });
 
-                    // Use fallback templates if form is empty
-                    const subjectToUse = currentSubject || 'Business Partnership Opportunity - {firm} in {country}';
-                    const messageToUse = currentMessageHTML || 'Dear {contactName},<br><br>I hope this message finds you well. I am reaching out regarding a potential business partnership opportunity with {firm}.<br><br>Best regards,<br>Intex Technologies';
+                    // If no template content, use default business template
+                    const finalSubject = subjectTemplate || 'Business Partnership Opportunity - {firm} in {country}';
+                    const finalMessage = messageTemplate || 'Dear {contactName},<br><br>I hope this message finds you well. I am reaching out regarding a potential business partnership opportunity with {firm}.<br><br>Best regards,<br>Intex Technologies';
 
-                    const personalizedSubject = subjectToUse
+                    // Personalize the templates with contact-specific data
+                    const personalizedSubject = finalSubject
                         .replace(/{contactName}/g, contact.contactName || '')
                         .replace(/{firm}/g, contact.firm || '')
                         .replace(/{country}/g, contact.country || '')
                         .replace(/{email}/g, contact.email || '');
 
-                    const personalizedMessage = messageToUse
+                    const personalizedMessage = finalMessage
                         .replace(/{contactName}/g, contact.contactName || '')
                         .replace(/{firm}/g, contact.firm || '')
                         .replace(/{country}/g, contact.country || '')
                         .replace(/{email}/g, contact.email || '');
 
-                    console.log('Email content being sent:', {
-                        subject: personalizedSubject,
-                        messageHTML: personalizedMessage,
-                        messageHTMLLength: personalizedMessage.length,
-                        subjectToUse,
-                        messageToUse: messageToUse.substring(0, 100)
+                    console.log('Final personalized email content:', {
+                        personalizedSubject,
+                        personalizedMessage,
+                        personalizedMessageLength: personalizedMessage.length,
+                        finalSubject,
+                        finalMessage: finalMessage.substring(0, 100)
                     });
 
                     const emailResult = await sendRealEmail(contact, personalizedSubject, personalizedMessage);
