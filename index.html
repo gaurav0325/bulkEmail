@@ -3562,6 +3562,55 @@ Phone: +91-XXXXXXXXXX`;
         let bulkEmailSuccessCount = 0;
         let bulkEmailFailureCount = 0;
 
+        // Template Content Extraction Helper
+        function extractTemplateContent(template) {
+            if (!template) return { subject: '', content: '' };
+
+            const lines = template.split('\n');
+            let subject = '';
+            let content = '';
+            let contentStartIndex = -1;
+
+            // Find subject line and content start
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+
+                if (line.startsWith('Subject:')) {
+                    subject = line.replace('Subject:', '').trim();
+                } else if (subject && line === '' && contentStartIndex === -1) {
+                    // First empty line after subject marks start of content
+                    contentStartIndex = i + 1;
+                    break;
+                }
+            }
+
+            // Extract content (everything after the first empty line following subject)
+            if (contentStartIndex !== -1) {
+                content = lines.slice(contentStartIndex).join('\n').trim();
+            } else {
+                // Fallback: find content after headers
+                let headersSectionEnded = false;
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (line === '' && !headersSectionEnded) {
+                        content = lines.slice(i + 1).join('\n').trim();
+                        break;
+                    }
+                }
+            }
+
+            // Convert content to HTML format
+            if (content) {
+                content = content
+                    .replace(/\n\n/g, '<br><br>')
+                    .replace(/\n/g, '<br>')
+                    .replace(/•/g, '&bull;')
+                    .replace(/✓/g, '&check;');
+            }
+
+            return { subject, content };
+        }
+
         // Bulk Email Confirmation System
         function showBulkEmailConfirmation() {
             if (contacts.length === 0) {
@@ -3569,11 +3618,44 @@ Phone: +91-XXXXXXXXXX`;
                 return;
             }
 
-            // Get email details - no validation needed for template-based content
-            const subjectValue = document.getElementById('subject').value.trim() || 'Business Partnership Opportunity - {firm} in {country}';
+            // Get email details - integrate template if message body is empty
+            let subjectValue = document.getElementById('subject').value.trim();
             const messageBody = document.getElementById('messageBody');
             const fromEmail = document.getElementById('fromEmail').value;
-            const rawMessageHTML = messageBody.innerHTML.trim();
+            let rawMessageHTML = messageBody.innerHTML.trim();
+
+            // If subject or message is empty, try to get content from template
+            const emailTemplate = document.getElementById('emailTemplate').value.trim();
+
+            if ((!subjectValue || !rawMessageHTML) && emailTemplate) {
+                console.log('Message body or subject is empty, extracting from template...');
+                const templateData = extractTemplateContent(emailTemplate);
+                let templateApplied = false;
+
+                if (!subjectValue && templateData.subject) {
+                    subjectValue = templateData.subject;
+                    // Auto-populate the subject field for user to see
+                    document.getElementById('subject').value = templateData.subject;
+                    templateApplied = true;
+                }
+
+                if (!rawMessageHTML && templateData.content) {
+                    rawMessageHTML = templateData.content;
+                    // Auto-populate the message body for user to see
+                    messageBody.innerHTML = templateData.content;
+                    templateApplied = true;
+                }
+
+                if (templateApplied) {
+                    // Brief notification that template was applied
+                    setTimeout(() => {
+                        showAlert('📧 Email template automatically applied to bulk email!', 'success');
+                    }, 500);
+                }
+            }
+
+            // Apply defaults if still empty
+            const finalSubject = subjectValue || 'Business Partnership Opportunity - {firm} in {country}';
             const messageHTML = rawMessageHTML || 'Dear {contactName},<br><br>I hope this message finds you well. I am reaching out regarding a potential business partnership opportunity with {firm}.<br><br>Best regards,<br>Intex Technologies';
             const rawMessageText = (messageBody.textContent || messageBody.innerText || '').trim();
             const messageText = rawMessageText || 'Dear {contactName}, I hope this message finds you well. I am reaching out regarding a potential business partnership opportunity with {firm}. Best regards, Intex Technologies';
@@ -3590,7 +3672,7 @@ Phone: +91-XXXXXXXXXX`;
             // Generate email previews for ALL contacts - store contact info only, personalize at send time like individual emails
             const emailPreviews = contacts.map(contact => {
                 // Get current templates from form (same as individual emails do)
-                const currentSubject = document.getElementById('subject').value;
+                const currentSubject = document.getElementById('subject').value || finalSubject;
                 const currentMessageBody = document.getElementById('messageBody');
                 const currentMessageHTML = currentMessageBody.innerHTML;
 
@@ -3659,7 +3741,7 @@ Phone: +91-XXXXXXXXXX`;
                             </div>
                             <div>
                                 <div style="font-size: 12px; color: #5f6368; margin-bottom: 4px;">SUBJECT TEMPLATE</div>
-                                <div style="font-size: 14px; color: #202124;">${escapeHTML(subjectValue)}</div>
+                                <div style="font-size: 14px; color: #202124;">${escapeHTML(finalSubject)}</div>
                             </div>
                         </div>
 
@@ -5153,10 +5235,11 @@ Phone: +91-XXXXXXXXXX`;
                     uploadedSpreadsheetData = [];
                     failedUploads = [];
 
-                    // Clear localStorage
+                    // Clear localStorage but preserve tutorial flag
                     Object.values(STORAGE_KEYS).forEach(key => {
                         localStorage.removeItem(key);
                     });
+                    // Note: We intentionally preserve 'bulkEmail_hasVisited' to avoid showing tutorial again
 
                     // Update UI
                     renderContacts();
