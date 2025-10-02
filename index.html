@@ -3500,8 +3500,10 @@ Phone: +91-XXXXXXXXXX`;
             const subjectValue = document.getElementById('subject').value.trim() || 'Business Partnership Opportunity - {firm} in {country}';
             const messageBody = document.getElementById('messageBody');
             const fromEmail = document.getElementById('fromEmail').value;
-            const messageHTML = messageBody.innerHTML || 'Dear {contactName},<br><br>I hope this message finds you well. I am reaching out regarding a potential business partnership opportunity with {firm}.<br><br>Best regards,<br>Intex Technologies';
-            const messageText = messageBody.textContent || messageBody.innerText || 'Dear {contactName}, I hope this message finds you well. I am reaching out regarding a potential business partnership opportunity with {firm}. Best regards, Intex Technologies';
+            const rawMessageHTML = messageBody.innerHTML.trim();
+            const messageHTML = rawMessageHTML || 'Dear {contactName},<br><br>I hope this message finds you well. I am reaching out regarding a potential business partnership opportunity with {firm}.<br><br>Best regards,<br>Intex Technologies';
+            const rawMessageText = (messageBody.textContent || messageBody.innerText || '').trim();
+            const messageText = rawMessageText || 'Dear {contactName}, I hope this message finds you well. I am reaching out regarding a potential business partnership opportunity with {firm}. Best regards, Intex Technologies';
 
             // Create confirmation modal
             const modal = document.createElement('div');
@@ -3514,7 +3516,11 @@ Phone: +91-XXXXXXXXXX`;
 
             // Generate email previews for ALL contacts (not just first few)
             const emailPreviews = contacts.map(contact => {
-                console.log('Original templates:', { subjectValue, messageHTML: messageHTML.substring(0, 100) });
+                console.log('Original templates:', {
+                    subjectValue,
+                    rawMessageHTML: rawMessageHTML,
+                    messageHTML: messageHTML.substring(0, 100)
+                });
                 console.log('Contact data:', { contactName: contact.contactName, firm: contact.firm, country: contact.country, email: contact.email });
 
                 const personalizedSubject = subjectValue
