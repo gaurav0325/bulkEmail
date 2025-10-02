@@ -353,6 +353,7 @@
                     <a href="#" onclick="exportAllData()" style="color: #333; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px; border-bottom: 1px solid #eee;">Export All</a>
                     <a href="#" onclick="importAllData()" style="color: #333; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px; border-bottom: 1px solid #eee;">Import Data</a>
                     <a href="#" onclick="showEmailConfig()" style="color: #6c757d; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px; border-bottom: 1px solid #eee;">Email Setup</a>
+                    <a href="#" onclick="CompanyOnboardingModule.showManager()" style="color: #007bff; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px; border-bottom: 1px solid #eee;">🏢 Company Onboarding Data</a>
                     <a href="#" onclick="clearAllData()" style="color: #dc3545; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px;">Clear All</a>
                 </div>
             </div>
@@ -3676,18 +3677,9 @@ Phone: +91-XXXXXXXXXX`;
                 const currentMessageBody = document.getElementById('messageBody');
                 const currentMessageHTML = currentMessageBody.innerHTML;
 
-                // Personalize for preview display (same logic as individual emails)
-                const personalizedSubject = currentSubject
-                    .replace(/{contactName}/g, contact.contactName || '')
-                    .replace(/{firm}/g, contact.firm || '')
-                    .replace(/{country}/g, contact.country || '')
-                    .replace(/{email}/g, contact.email || '');
-
-                const personalizedMessageHTML = currentMessageHTML
-                    .replace(/{contactName}/g, contact.contactName || '')
-                    .replace(/{firm}/g, contact.firm || '')
-                    .replace(/{country}/g, contact.country || '')
-                    .replace(/{email}/g, contact.email || '');
+                // Personalize for preview display using enhanced personalization engine
+                const personalizedSubject = personalizeEmailContent(currentSubject, contact);
+                const personalizedMessageHTML = personalizeEmailContent(currentMessageHTML, contact);
 
                 const personalizedMessageText = personalizedMessageHTML.replace(/<[^>]*>/g, ''); // Strip HTML for preview
 
@@ -4089,18 +4081,10 @@ Phone: +91-XXXXXXXXXX`;
                         // Create a copy of contact with current email
                         const contactCopy = { ...contact, email: emailAddress };
 
-                        // Personalize the templates with contact-specific data
-                        const personalizedSubject = finalSubject
-                            .replace(/{contactName}/g, contact.contactName || '')
-                            .replace(/{firm}/g, contact.firm || '')
-                            .replace(/{country}/g, contact.country || '')
-                            .replace(/{email}/g, emailAddress);
-
-                        const personalizedMessage = finalMessage
-                            .replace(/{contactName}/g, contact.contactName || '')
-                            .replace(/{firm}/g, contact.firm || '')
-                            .replace(/{country}/g, contact.country || '')
-                            .replace(/{email}/g, emailAddress);
+                        // Personalize the templates with contact-specific data using enhanced engine
+                        const contactCopyForPersonalization = { ...contact, email: emailAddress };
+                        const personalizedSubject = personalizeEmailContent(finalSubject, contactCopyForPersonalization);
+                        const personalizedMessage = personalizeEmailContent(finalMessage, contactCopyForPersonalization);
 
                         // Send actual email with preserved formatting
                         const emailResult = await sendRealEmail(contactCopy, personalizedSubject, personalizedMessage);
@@ -4254,19 +4238,10 @@ Phone: +91-XXXXXXXXXX`;
                         // Create a copy of contact with current email
                         const contactCopy = { ...contact, email: emailAddress };
 
-                        // Get personalized subject and message
-                        const personalizedSubject = document.getElementById('subject').value
-                            .replace('{contactName}', contact.contactName || '')
-                            .replace('{firm}', contact.firm || '')
-                            .replace('{country}', contact.country || '')
-                            .replace('{email}', emailAddress);
-
-                        const messageBody = document.getElementById('messageBody');
-                        const personalizedMessage = messageBody.innerHTML
-                            .replace(/{contactName}/g, contact.contactName || '')
-                            .replace(/{firm}/g, contact.firm || '')
-                            .replace(/{country}/g, contact.country || '')
-                            .replace(/{email}/g, emailAddress);
+                        // Get personalized subject and message using enhanced engine
+                        const contactCopyForPersonalization = { ...contact, email: emailAddress };
+                        const personalizedSubject = personalizeEmailContent(document.getElementById('subject').value, contactCopyForPersonalization);
+                        const personalizedMessage = personalizeEmailContent(document.getElementById('messageBody').innerHTML, contactCopyForPersonalization);
 
                         // Send actual email with preserved formatting
                         const emailResult = await sendRealEmail(contactCopy, personalizedSubject, personalizedMessage);
@@ -5984,6 +5959,394 @@ Phone: +91-XXXXXXXXXX`;
                 modal.remove();
             }
         }
+
+        // =====================================================
+        // COMPANY ONBOARDING DATA MODULE
+        // =====================================================
+        const CompanyOnboardingModule = {
+            // Module state
+            data: {},
+            storageKey: 'bulkEmail_companyOnboardingData',
+
+            // Module configuration
+            availableFields: [
+                'companyName', 'companyIndustry', 'companyWebsite', 'companyYears',
+                'companyEmail', 'companyPhone', 'companyAddress', 'companyDescription', 'companyLogo'
+            ]
+        };
+
+        // Module: Show Company Onboarding Data Manager
+        CompanyOnboardingModule.showManager = function() {
+            const modal = document.createElement('div');
+            modal.id = 'companyDataModal';
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;
+                z-index: 10000; padding: 20px;
+            `;
+
+            modal.innerHTML = `
+                <div style="background: white; padding: 30px; border-radius: 8px; max-width: 800px; width: 90%; max-height: 80%; overflow-y: auto;">
+                    <h2 style="margin: 0 0 20px 0; color: #007bff; display: flex; align-items: center; gap: 10px;">
+                        <span>🏢</span> Company Onboarding Data Manager
+                    </h2>
+                    <p style="color: #666; margin-bottom: 25px;">
+                        Configure your company information for automatic personalization in all email campaigns. Data will be used for both single and bulk emails.
+                    </p>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px;">
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">Company Name*</label>
+                            <input type="text" id="companyName" placeholder="e.g., Intex Technologies" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">Industry</label>
+                            <input type="text" id="companyIndustry" placeholder="e.g., Electronics & Technology" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">Website URL</label>
+                            <input type="url" id="companyWebsite" placeholder="https://your-company.com" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">Years in Business</label>
+                            <input type="number" id="companyYears" placeholder="e.g., 29" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">Contact Email*</label>
+                            <input type="email" id="companyEmail" placeholder="info@your-company.com" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">Phone Number</label>
+                            <input type="tel" id="companyPhone" placeholder="+1 (555) 123-4567" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 25px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">Company Address</label>
+                        <textarea id="companyAddress" placeholder="123 Business Street, City, Country" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; height: 60px; resize: vertical;"></textarea>
+                    </div>
+
+                    <div style="margin-bottom: 25px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">Company Description</label>
+                        <textarea id="companyDescription" placeholder="Brief description of your company, products, and services..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; height: 80px; resize: vertical;"></textarea>
+                    </div>
+
+                    <div style="margin-bottom: 25px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">Logo URL (Optional)</label>
+                        <input type="url" id="companyLogo" placeholder="https://your-company.com/logo.png" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        <small style="color: #666;">Enter a direct link to your company logo image</small>
+                    </div>
+
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin-bottom: 25px;">
+                        <h4 style="margin: 0 0 10px 0; color: #007bff;">Available Template Variables</h4>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-family: monospace; font-size: 12px;">
+                            <span><strong>{companyName}</strong> - Company name</span>
+                            <span><strong>{companyIndustry}</strong> - Industry</span>
+                            <span><strong>{companyWebsite}</strong> - Website URL</span>
+                            <span><strong>{companyYears}</strong> - Years in business</span>
+                            <span><strong>{companyEmail}</strong> - Contact email</span>
+                            <span><strong>{companyPhone}</strong> - Phone number</span>
+                            <span><strong>{companyAddress}</strong> - Address</span>
+                            <span><strong>{companyDescription}</strong> - Description</span>
+                            <span><strong>{companyLogo}</strong> - Logo URL</span>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <button onclick="CompanyOnboardingModule.loadProfessionalTemplate()" style="background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin-right: 10px;">📧 Load Professional Template</button>
+                            <button onclick="CompanyOnboardingModule.exportData()" style="background: #17a2b8; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">📤 Export Data</button>
+                        </div>
+                        <div>
+                            <button onclick="CompanyOnboardingModule.saveData()" class="button button-primary" style="margin-right: 10px;">💾 Save & Apply</button>
+                            <button onclick="CompanyOnboardingModule.closeManager()" class="button">Close</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Load existing company data
+            CompanyOnboardingModule.loadData();
+            document.body.appendChild(modal);
+        };
+
+        // Module: Load Company Onboarding Data
+        CompanyOnboardingModule.loadData = function() {
+            try {
+                const savedData = localStorage.getItem(this.storageKey);
+                if (savedData) {
+                    this.data = JSON.parse(savedData);
+
+                    // Populate form fields
+                    document.getElementById('companyName').value = this.data.companyName || '';
+                    document.getElementById('companyIndustry').value = this.data.companyIndustry || '';
+                    document.getElementById('companyWebsite').value = this.data.companyWebsite || '';
+                    document.getElementById('companyYears').value = this.data.companyYears || '';
+                    document.getElementById('companyEmail').value = this.data.companyEmail || '';
+                    document.getElementById('companyPhone').value = this.data.companyPhone || '';
+                    document.getElementById('companyAddress').value = this.data.companyAddress || '';
+                    document.getElementById('companyDescription').value = this.data.companyDescription || '';
+                    document.getElementById('companyLogo').value = this.data.companyLogo || '';
+                }
+            } catch (error) {
+                console.error('[CompanyOnboarding] Error loading data:', error);
+            }
+        };
+
+        // Module: Save Company Onboarding Data
+        CompanyOnboardingModule.saveData = function() {
+            try {
+                this.data = {
+                    companyName: document.getElementById('companyName').value,
+                    companyIndustry: document.getElementById('companyIndustry').value,
+                    companyWebsite: document.getElementById('companyWebsite').value,
+                    companyYears: document.getElementById('companyYears').value,
+                    companyEmail: document.getElementById('companyEmail').value,
+                    companyPhone: document.getElementById('companyPhone').value,
+                    companyAddress: document.getElementById('companyAddress').value,
+                    companyDescription: document.getElementById('companyDescription').value,
+                    companyLogo: document.getElementById('companyLogo').value
+                };
+
+                localStorage.setItem(this.storageKey, JSON.stringify(this.data));
+                showAlert('Company onboarding data saved! All emails will now automatically use your company information. 🎉', 'success');
+                this.closeManager();
+            } catch (error) {
+                console.error('[CompanyOnboarding] Error saving data:', error);
+                showAlert('Failed to save company information', 'error');
+            }
+        };
+
+        // Module: Export Company Onboarding Data
+        CompanyOnboardingModule.exportData = function() {
+            try {
+                const dataStr = JSON.stringify(this.data, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'company-onboarding-data.json';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                showAlert('Company onboarding data exported successfully!', 'success');
+            } catch (error) {
+                console.error('[CompanyOnboarding] Error exporting data:', error);
+                showAlert('Failed to export company data', 'error');
+            }
+        };
+
+        // Module: Close Company Onboarding Manager
+        CompanyOnboardingModule.closeManager = function() {
+            const modal = document.getElementById('companyDataModal');
+            if (modal) {
+                modal.remove();
+            }
+        };
+
+        // Module: Get Company Data for Personalization
+        CompanyOnboardingModule.getData = function() {
+            // Load data if not already loaded
+            if (!this.data || Object.keys(this.data).length === 0) {
+                const savedData = localStorage.getItem(this.storageKey);
+                if (savedData) {
+                    try {
+                        this.data = JSON.parse(savedData);
+                    } catch (error) {
+                        console.error('[CompanyOnboarding] Error loading data:', error);
+                        this.data = {};
+                    }
+                }
+            }
+            return this.data;
+        };
+
+        // Enhanced Personalization Engine - handles both contact and company variables
+        function personalizeEmailContent(content, contact) {
+            if (!content) return '';
+
+            let personalizedContent = content;
+
+            // Replace contact variables (existing functionality)
+            if (contact) {
+                personalizedContent = personalizedContent
+                    .replace(/{contactName}/g, contact.contactName || '')
+                    .replace(/{firm}/g, contact.firm || '')
+                    .replace(/{country}/g, contact.country || '')
+                    .replace(/{email}/g, contact.email || '');
+            }
+
+            // Get company data from module
+            const companyData = CompanyOnboardingModule.getData();
+
+            // Replace company variables (new functionality) - only if data exists
+            CompanyOnboardingModule.availableFields.forEach(field => {
+                if (companyData[field]) {
+                    const regex = new RegExp(`{${field}}`, 'g');
+                    personalizedContent = personalizedContent.replace(regex, companyData[field]);
+                }
+            });
+
+            // Remove any remaining empty company placeholders (smart variable handling)
+            CompanyOnboardingModule.availableFields.forEach(field => {
+                const regex = new RegExp(`{${field}}`, 'g');
+                personalizedContent = personalizedContent.replace(regex, '');
+            });
+
+            return personalizedContent;
+        }
+
+
+                // Module: Load Professional Email Template
+        CompanyOnboardingModule.loadProfessionalTemplate = function() {
+            // Professional HTML email template with company data variables
+            const professionalTemplate = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{companyName} Campaign Email</title>
+  <style>
+    /* Basic reset / mobile-friendly rules */
+    body, table, td, a {
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+    }
+    img {
+      border: 0;
+      height: auto;
+      line-height: 100%;
+      outline: none;
+      text-decoration: none;
+      max-width: 100%;
+    }
+    table {
+      border-collapse: collapse !important;
+    }
+    body {
+      width: 100% !important;
+      height: 100% !important;
+      margin: 0;
+      padding: 0;
+    }
+    /* Responsive */
+    @media screen and (max-width:600px) {
+      .responsive-table {
+        width: 100% !important;
+      }
+      .padding {
+        padding: 10px !important;
+      }
+    }
+    /* Button style */
+    .btn {
+      display: inline-block;
+      background-color: #007bff;
+      color: #ffffff;
+      padding: 12px 24px;
+      text-decoration: none;
+      font-weight: bold;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body style="background-color: #f4f4f4; margin:0; padding:0;">
+
+  <!-- Wrapper / outer table -->
+  <table border="0" cellpadding="0" cellspacing="0" width="100%">
+    <tr>
+      <td align="center" style="padding: 20px 0;">
+        <!-- Main container -->
+        <table class="responsive-table" border="0" cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 8px; overflow: hidden;">
+
+          <!-- Header / logo -->
+          <tr>
+            <td align="center" style="padding: 20px;">
+              <img src="{companyLogo}" alt="{companyName} Logo" width="200" style="display: block;">
+            </td>
+          </tr>
+
+          <!-- Hero / banner image -->
+          <tr>
+            <td align="center">
+              <img src="https://via.placeholder.com/600x200/007bff/ffffff?text={companyName}" alt="Main banner image" style="display: block; width:100%; height: auto;">
+            </td>
+          </tr>
+
+          <!-- Content block -->
+          <tr>
+            <td class="padding" style="padding: 20px; font-family: Arial, sans-serif; color: #333333;">
+              <h1 style="font-size: 24px; margin: 0 0 10px;">Partnership Opportunity with {companyName}</h1>
+              <p style="font-size: 16px; line-height: 1.5; margin: 0 0 15px;">
+                Dear {contactName},
+              </p>
+              <p style="font-size: 16px; line-height: 1.5; margin: 0 0 15px;">
+                We are excited to introduce you to {companyName}, a leading company in the {companyIndustry} industry with {companyYears} years of proven expertise and excellence.
+              </p>
+              <p style="font-size: 16px; line-height: 1.5; margin: 0 0 15px;">
+                {companyDescription}
+              </p>
+
+              <hr style="border: 0; border-top: 1px solid #dddddd; margin: 20px 0;">
+
+              <h2 style="font-size: 20px; margin: 0 0 10px;">Why Partner with {companyName}?</h2>
+              <ul style="font-size: 16px; line-height: 1.5; margin: 0 0 20px; padding-left: 20px;">
+                <li>{companyYears} years of industry leadership and expertise</li>
+                <li>Comprehensive solutions in {companyIndustry}</li>
+                <li>Proven track record of successful partnerships</li>
+                <li>Dedicated support and professional service</li>
+                <li>Competitive terms and mutual growth opportunities</li>
+              </ul>
+
+              <p style="font-size: 16px; line-height: 1.5; margin: 0 0 20px;">
+                We believe that {firm} in {country} would be an excellent partner for expanding our market presence and delivering exceptional value to customers in your region.
+              </p>
+
+              <p style="text-align: center; margin: 20px 0;">
+                <a href="{companyWebsite}" class="btn" target="_blank">Learn More About {companyName}</a>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Contact / social block -->
+          <tr>
+            <td class="padding" style="padding: 20px; font-family: Arial, sans-serif; color: #777777; font-size: 14px;">
+              <p>We would love to discuss partnership opportunities with {firm}. Please feel free to contact us:</p>
+              <p><strong>Email:</strong> <a href="mailto:{companyEmail}" style="color:#007bff;">{companyEmail}</a></p>
+              <p><strong>Phone:</strong> {companyPhone}</p>
+              <p><strong>Website:</strong> <a href="{companyWebsite}" style="color:#007bff;">{companyWebsite}</a></p>
+
+              <p style="margin-top: 20px;">
+                We look forward to exploring how {companyName} and {firm} can create a successful partnership that benefits both our organizations and the customers we serve in {country}.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="padding: 20px; background-color: #f9f9f9; font-family: Arial, sans-serif; font-size: 12px; color: #999999;">
+              <p>{companyName}</p>
+              <p>{companyAddress}</p>
+              <p><a href="{companyWebsite}" style="color: #999999;">{companyWebsite}</a> | <a href="mailto:{companyEmail}" style="color: #999999;">{companyEmail}</a></p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>`;
+
+            // Set the subject and message body
+            document.getElementById('subject').value = 'Partnership Opportunity - {companyName} & {firm}';
+            document.getElementById('messageBody').innerHTML = professionalTemplate;
+
+            showAlert('Professional email template loaded! 📧 All company variables will be automatically replaced when sending.', 'success');
+            this.closeManager();
+        };
         // Email Analytics Dashboard Functions
         let autoRedirectEnabled = true;
 
