@@ -4715,7 +4715,7 @@ Phone: +91-XXXXXXXXXX`;
             // Update UI
             const bulkBtn = document.getElementById('bulkSendBtn');
             bulkBtn.innerHTML = 'Bulk Email';
-            bulkBtn.onclick = () => startBulkEmailSending();
+            bulkBtn.onclick = () => showBulkEmailConfirmation();
             document.getElementById('sendBtn').disabled = false;
 
             // Hide progress modal
@@ -4732,6 +4732,28 @@ Phone: +91-XXXXXXXXXX`;
             // Show completion message
             if (!bulkEmailCancelled) {
                 showAlert(`Bulk email complete! ${bulkEmailSuccessCount} sent, ${bulkEmailFailureCount} failed`, 'success');
+                // Play completion sound
+                try {
+                    // Create a simple success notification sound
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+
+                    oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+                    oscillator.frequency.setValueAtTime(1000, audioContext.currentTime + 0.1);
+                    oscillator.frequency.setValueAtTime(1200, audioContext.currentTime + 0.2);
+
+                    gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + 0.3);
+                } catch (e) {
+                    // Ignore sound errors
+                }
             }
         }
 
