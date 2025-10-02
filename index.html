@@ -425,7 +425,7 @@
                 <label for="fromEmail" style="font-size: 14px; font-weight: bold; color: #333; display: block; margin-bottom: 5px;">From:</label>
                 <input type="text" id="fromEmail" value="Emails will be sent from Intex Technologies <info@datanalysisninsights.co.uk>" placeholder="Sender email" style="font-size: 14px; padding: 10px; width: 100%; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa;" readonly aria-required="true">
                 <div style="background: #e8f4fd; border: 1px solid #b3d9ff; border-radius: 4px; padding: 8px; margin-top: 5px; font-size: 12px; color: #0056b3;">
-                    💬 <strong>Replies go to:</strong> info@datanalysisninsights.co.uk
+                    💬 <strong>Replies go to:</strong> Intex Technologies &lt;info@datanalysisninsights.co.uk&gt;
                 </div>
                 <div id="fromEmailError" style="color: #dc3545; font-size: 12px; margin-top: 2px; display: none;" role="alert"></div>
             </div>
@@ -3217,6 +3217,12 @@ Phone: +91-XXXXXXXXXX`;
                     statusBorder = 'border-left: 4px solid #ef4444; border: 1px solid #fca5a5;';
                     statusIcon = '✗'; // Simple X mark
                     statusBadge = '<span style="background: #ef4444; color: white; padding: 2px 6px; border-radius: 10px; font-size: 9px; font-weight: 500;">FAILED</span>';
+                } else if (contact.emailStatus === 'partial') {
+                    // Soft orange for partial success - pleasing to eyes
+                    statusColor = 'background: linear-gradient(135deg, #fff7ed 0%, #fef3e2 100%);';
+                    statusBorder = 'border-left: 4px solid #f59e0b; border: 1px solid #fbbf24;';
+                    statusIcon = '◐'; // Half circle for partial
+                    statusBadge = '<span style="background: #f59e0b; color: white; padding: 2px 6px; border-radius: 10px; font-size: 9px; font-weight: 500;">PARTIAL</span>';
                 } else {
                     // Soft blue for pending - pleasing to eyes
                     statusColor = 'background: linear-gradient(135deg, #f0f9ff 0%, #f8fafc 100%);';
@@ -4087,6 +4093,24 @@ Phone: +91-XXXXXXXXXX`;
             await processBulkEmails();
         }
 
+        function parseMultipleEmails(emailString) {
+            if (!emailString) return [];
+
+            // Split by multiple delimiters: / ; , :
+            const emails = emailString
+                .split(/[\/;,:]+/)
+                .map(email => email.trim())
+                .filter(email => email.length > 0)
+                .filter(email => {
+                    // Basic email validation
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    return emailRegex.test(email);
+                });
+
+            // Return unique emails only
+            return [...new Set(emails)];
+        }
+
         async function processBulkEmails() {
             while (bulkEmailCurrentIndex < bulkEmailTotal && !bulkEmailCancelled) {
                 if (bulkEmailPaused) {
@@ -4108,39 +4132,73 @@ Phone: +91-XXXXXXXXXX`;
                 updateBulkEmailProgress();
 
                 try {
-                    // Get personalized subject and message
-                    const personalizedSubject = document.getElementById('subject').value
-                        .replace('{contactName}', contact.contactName || '')
-                        .replace('{firm}', contact.firm || '')
-                        .replace('{country}', contact.country || '')
-                        .replace('{email}', contact.email || '');
+                    // Parse multiple emails from contact.email field
+                    const emailAddresses = parseMultipleEmails(contact.email);
+                    console.log(`Contact ${contact.firm} has ${emailAddresses.length} email(s):`, emailAddresses);
 
-                    const messageBody = document.getElementById('messageBody');
-                    const personalizedMessage = messageBody.innerHTML
-                        .replace(/{contactName}/g, contact.contactName || '')
-                        .replace(/{firm}/g, contact.firm || '')
-                        .replace(/{country}/g, contact.country || '')
-                        .replace(/{email}/g, contact.email || '');
+                    let contactSuccessCount = 0;
+                    let contactFailureCount = 0;
 
-                    // Send actual email with preserved formatting
-                    const emailResult = await sendRealEmail(contact, personalizedSubject, personalizedMessage);
-                    const success = emailResult.success;
+                    // Send email to each address for this contact
+                    for (let emailIndex = 0; emailIndex < emailAddresses.length; emailIndex++) {
+                        const emailAddress = emailAddresses[emailIndex];
 
-                    if (success) {
-                        bulkEmailSuccessCount++;
-                        contact.emailStatus = 'sent';
-                        addToEmailHistory(contact.email, personalizedSubject, 'sent', Date.now(), contact.country);
-                    } else {
-                        bulkEmailFailureCount++;
-                        contact.emailStatus = 'failed';
-                        addToEmailHistory(contact.email, personalizedSubject, 'failed', Date.now(), contact.country);
+                        // Create a copy of contact with current email
+                        const contactCopy = { ...contact, email: emailAddress };
+
+                        // Get personalized subject and message
+                        const personalizedSubject = document.getElementById('subject').value
+                            .replace('{contactName}', contact.contactName || '')
+                            .replace('{firm}', contact.firm || '')
+                            .replace('{country}', contact.country || '')
+                            .replace('{email}', emailAddress);
+
+                        const messageBody = document.getElementById('messageBody');
+                        const personalizedMessage = messageBody.innerHTML
+                            .replace(/{contactName}/g, contact.contactName || '')
+                            .replace(/{firm}/g, contact.firm || '')
+                            .replace(/{country}/g, contact.country || '')
+                            .replace(/{email}/g, emailAddress);
+
+                        // Send actual email with preserved formatting
+                        const emailResult = await sendRealEmail(contactCopy, personalizedSubject, personalizedMessage);
+                        const success = emailResult.success;
+
+                        if (success) {
+                            contactSuccessCount++;
+                            addToEmailHistory(emailAddress, personalizedSubject, 'sent', Date.now(), contact.country);
+                        } else {
+                            contactFailureCount++;
+                            addToEmailHistory(emailAddress, personalizedSubject, 'failed', Date.now(), contact.country);
+                        }
+
+                        // Rate limiting between emails for same contact
+                        if (emailIndex < emailAddresses.length - 1) {
+                            await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second between emails for same contact
+                        }
                     }
 
-                    // Rate limiting - delay between emails
+                    // Update contact status based on overall success
+                    if (contactSuccessCount > 0 && contactFailureCount === 0) {
+                        contact.emailStatus = 'sent';
+                        bulkEmailSuccessCount++;
+                    } else if (contactSuccessCount > 0 && contactFailureCount > 0) {
+                        contact.emailStatus = 'partial'; // New status for partial success
+                        bulkEmailSuccessCount++;
+                    } else {
+                        contact.emailStatus = 'failed';
+                        bulkEmailFailureCount++;
+                    }
+
+                    // Update overall counters
+                    bulkEmailSuccessCount += Math.max(0, contactSuccessCount - 1); // -1 because we already added 1 above
+                    bulkEmailFailureCount += contactFailureCount;
+
+                    // Rate limiting - delay between contacts
                     await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay
 
                 } catch (error) {
-                    console.error('Error sending email to:', contact.email, error);
+                    console.error('Error sending emails to contact:', contact.email, error);
                     bulkEmailFailureCount++;
                     contact.emailStatus = 'failed';
                     addToEmailHistory(contact.email, 'Failed to send', 'failed', Date.now(), contact.country);
@@ -4171,7 +4229,7 @@ Phone: +91-XXXXXXXXXX`;
                     text_content: stripHTML(messageHTML), // Plain text fallback
                     company: contact.firm,
                     country: contact.country,
-                    reply_to: 'info@datanalysisninsights.co.uk' // Use same domain for replies
+                    reply_to: 'Intex Technologies <info@datanalysisninsights.co.uk>' // Use company name with email for replies
                 };
 
                 console.log('Sending email to:', contact.email);
@@ -5771,17 +5829,8 @@ Phone: +91-XXXXXXXXXX`;
         let autoRedirectEnabled = true;
 
         function toggleAnalytics() {
-            const container = document.getElementById('analyticsContainer');
-            const button = document.getElementById('analyticsToggle');
-
-            if (container.style.display === 'none') {
-                container.style.display = 'block';
-                button.textContent = '📈 Collapse';
-                updateAnalytics();
-            } else {
-                container.style.display = 'none';
-                button.textContent = '📈 Expand';
-            }
+            // Open analytics in a popup window instead of expanding
+            showAnalyticsPopup();
         }
 
         function updateAnalytics() {
@@ -5816,6 +5865,287 @@ Phone: +91-XXXXXXXXXX`;
                 topCountriesDiv.innerHTML = countryStats.map(stat =>
                     `<div style="margin-bottom: 4px;">${stat.country}: ${stat.sent}/${stat.total} sent</div>`
                 ).join('');
+            }
+        }
+
+        function showAnalyticsPopup() {
+            // Create comprehensive analytics popup
+            const modal = document.createElement('div');
+            modal.id = 'analyticsPopupModal';
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;
+                z-index: 20000; padding: 20px;
+            `;
+
+            // Calculate comprehensive analytics
+            const currentSpreadsheetEmails = emailHistory.filter(email => email.timestamp >= (Date.now() - 30 * 24 * 60 * 60 * 1000)); // Last 30 days as "current"
+            const allTimeEmails = emailHistory;
+
+            const currentStats = calculateDetailedStats(currentSpreadsheetEmails);
+            const allTimeStats = calculateDetailedStats(allTimeEmails);
+
+            // Get contact statistics
+            const totalContacts = contacts.length;
+            const sentContacts = contacts.filter(c => c.emailStatus === 'sent').length;
+            const failedContacts = contacts.filter(c => c.emailStatus === 'failed').length;
+            const partialContacts = contacts.filter(c => c.emailStatus === 'partial').length;
+            const pendingContacts = contacts.filter(c => c.emailStatus === 'pending').length;
+
+            modal.innerHTML = `
+                <div style="background: white; border-radius: 12px; max-width: 1200px; width: 95%; max-height: 90%; overflow-y: auto; padding: 0;">
+                    <!-- Header -->
+                    <div style="padding: 20px 24px; border-bottom: 2px solid #e5e7eb; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 12px 12px 0 0;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <h2 style="margin: 0; font-size: 24px; font-weight: 600;">📊 Comprehensive Email Analytics</h2>
+                                <p style="margin: 8px 0 0 0; opacity: 0.9; font-size: 14px;">Complete analysis of email campaigns and performance metrics</p>
+                            </div>
+                            <button onclick="closeAnalyticsPopup()" style="background: rgba(255,255,255,0.2); border: none; color: white; font-size: 24px; cursor: pointer; padding: 8px; border-radius: 6px; line-height: 1;">
+                                ✕
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Content -->
+                    <div style="padding: 24px;">
+                        <!-- Quick Overview -->
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px;">
+                            <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 20px; border-radius: 12px; text-align: center;">
+                                <div style="font-size: 32px; font-weight: bold; margin-bottom: 8px;">${allTimeStats.sent}</div>
+                                <div style="font-size: 14px; opacity: 0.9;">Total Sent</div>
+                            </div>
+                            <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 20px; border-radius: 12px; text-align: center;">
+                                <div style="font-size: 32px; font-weight: bold; margin-bottom: 8px;">${allTimeStats.successRate}%</div>
+                                <div style="font-size: 14px; opacity: 0.9;">Success Rate</div>
+                            </div>
+                            <div style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; padding: 20px; border-radius: 12px; text-align: center;">
+                                <div style="font-size: 32px; font-weight: bold; margin-bottom: 8px;">${totalContacts}</div>
+                                <div style="font-size: 14px; opacity: 0.9;">Total Contacts</div>
+                            </div>
+                            <div style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; padding: 20px; border-radius: 12px; text-align: center;">
+                                <div style="font-size: 32px; font-weight: bold; margin-bottom: 8px;">${allTimeStats.countries}</div>
+                                <div style="font-size: 14px; opacity: 0.9;">Countries</div>
+                            </div>
+                        </div>
+
+                        <!-- Detailed Analytics Sections -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px;">
+                            <!-- Current Upload Analytics -->
+                            <div style="background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 12px; padding: 20px;">
+                                <h3 style="margin: 0 0 16px 0; color: #1e293b; font-size: 18px; display: flex; align-items: center;">
+                                    📈 Current Upload Analytics
+                                </h3>
+                                <div style="margin-bottom: 16px;">
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                        <span>📤 Emails Sent:</span>
+                                        <strong style="color: #059669;">${currentStats.sent}</strong>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                        <span>❌ Emails Failed:</span>
+                                        <strong style="color: #dc2626;">${currentStats.failed}</strong>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                        <span>📊 Success Rate:</span>
+                                        <strong style="color: #7c3aed;">${currentStats.successRate}%</strong>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                        <span>🌍 Countries Reached:</span>
+                                        <strong>${currentStats.countries}</strong>
+                                    </div>
+                                </div>
+                                <!-- Contact Status Breakdown -->
+                                <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                                    <h4 style="margin: 0 0 8px 0; font-size: 14px; color: #64748b;">Contact Status Breakdown</h4>
+                                    <div style="font-size: 12px;">
+                                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                            <span style="color: #059669;">✅ Sent Contacts:</span>
+                                            <strong>${sentContacts}</strong>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                            <span style="color: #dc2626;">❌ Failed Contacts:</span>
+                                            <strong>${failedContacts}</strong>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                            <span style="color: #f59e0b;">◐ Partial Contacts:</span>
+                                            <strong>${partialContacts}</strong>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between;">
+                                            <span style="color: #6b7280;">⏳ Pending Contacts:</span>
+                                            <strong>${pendingContacts}</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- All-Time Analytics -->
+                            <div style="background: #fefce8; border: 2px solid #fde047; border-radius: 12px; padding: 20px;">
+                                <h3 style="margin: 0 0 16px 0; color: #1e293b; font-size: 18px; display: flex; align-items: center;">
+                                    🏆 All-Time Analytics
+                                </h3>
+                                <div style="margin-bottom: 16px;">
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                        <span>📧 Total Emails Sent:</span>
+                                        <strong style="color: #059669;">${allTimeStats.sent}</strong>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                        <span>❌ Total Failed:</span>
+                                        <strong style="color: #dc2626;">${allTimeStats.failed}</strong>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                        <span>📊 Overall Success Rate:</span>
+                                        <strong style="color: #7c3aed;">${allTimeStats.successRate}%</strong>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                        <span>🌍 Total Countries:</span>
+                                        <strong>${allTimeStats.countries}</strong>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between;">
+                                        <span>📅 Days Active:</span>
+                                        <strong>${allTimeStats.daysActive}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Top Countries Performance -->
+                        <div style="background: #f0f9ff; border: 2px solid #93c5fd; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+                            <h3 style="margin: 0 0 16px 0; color: #1e293b; font-size: 18px;">🌍 Top Countries by Email Volume</h3>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px;">
+                                ${generateTopCountriesHTML(allTimeStats.topCountries)}
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div style="display: flex; justify-content: center; gap: 16px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
+                            <button onclick="exportAnalyticsData()" style="background: #059669; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: 500;">
+                                📊 Export Data
+                            </button>
+                            <button onclick="clearAnalyticsData()" style="background: #dc2626; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: 500;">
+                                🗑️ Clear History
+                            </button>
+                            <button onclick="closeAnalyticsPopup()" style="background: #6b7280; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: 500;">
+                                ✕ Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+        }
+
+        function calculateDetailedStats(emailData) {
+            const sent = emailData.filter(email => email.status === 'sent').length;
+            const failed = emailData.filter(email => email.status === 'failed').length;
+            const total = emailData.length;
+            const successRate = total > 0 ? Math.round((sent / total) * 100) : 0;
+
+            const countries = [...new Set(emailData.map(email => email.country))].length;
+
+            // Calculate top countries
+            const countryStats = {};
+            emailData.forEach(email => {
+                if (!countryStats[email.country]) {
+                    countryStats[email.country] = { sent: 0, failed: 0, total: 0 };
+                }
+                countryStats[email.country].total++;
+                if (email.status === 'sent') {
+                    countryStats[email.country].sent++;
+                } else {
+                    countryStats[email.country].failed++;
+                }
+            });
+
+            const topCountries = Object.entries(countryStats)
+                .map(([country, stats]) => ({
+                    country,
+                    ...stats,
+                    successRate: stats.total > 0 ? Math.round((stats.sent / stats.total) * 100) : 0
+                }))
+                .sort((a, b) => b.total - a.total)
+                .slice(0, 5);
+
+            // Calculate days active
+            const dates = emailData.map(email => new Date(email.timestamp).toDateString());
+            const uniqueDates = [...new Set(dates)].length;
+
+            return {
+                sent,
+                failed,
+                total,
+                successRate,
+                countries,
+                topCountries,
+                daysActive: uniqueDates
+            };
+        }
+
+        function generateTopCountriesHTML(topCountries) {
+            if (topCountries.length === 0) {
+                return '<div style="text-align: center; color: #6b7280; padding: 20px;">No country data available</div>';
+            }
+
+            return topCountries.map(country => `
+                <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #bfdbfe;">
+                    <div style="font-weight: 600; color: #1e293b; margin-bottom: 8px;">${country.country}</div>
+                    <div style="font-size: 12px; color: #64748b;">
+                        <div>📧 Total: ${country.total} emails</div>
+                        <div>✅ Sent: ${country.sent}</div>
+                        <div>❌ Failed: ${country.failed}</div>
+                        <div style="font-weight: 500; color: ${country.successRate >= 80 ? '#059669' : country.successRate >= 60 ? '#f59e0b' : '#dc2626'};">
+                            📊 Success: ${country.successRate}%
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function closeAnalyticsPopup() {
+            const modal = document.getElementById('analyticsPopupModal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        function exportAnalyticsData() {
+            // Export comprehensive analytics data
+            const allTimeStats = calculateDetailedStats(emailHistory);
+            const exportData = {
+                generated: new Date().toISOString(),
+                summary: allTimeStats,
+                contacts: contacts.map(c => ({
+                    firm: c.firm,
+                    country: c.country,
+                    emailStatus: c.emailStatus,
+                    email: c.email
+                })),
+                emailHistory: emailHistory,
+                topCountries: allTimeStats.topCountries
+            };
+
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `email_analytics_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showAlert('Analytics data exported successfully!', 'success');
+        }
+
+        function clearAnalyticsData() {
+            if (confirm('Are you sure you want to clear all email history and analytics data? This action cannot be undone.')) {
+                emailHistory.length = 0; // Clear email history
+                contacts.forEach(contact => contact.emailStatus = 'pending'); // Reset contact statuses
+                updateAnalytics();
+                renderContacts();
+                saveToLocalStorage();
+                closeAnalyticsPopup();
+                showAlert('Analytics data cleared successfully!', 'success');
             }
         }
 
