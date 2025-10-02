@@ -583,74 +583,6 @@
 
         <!-- RIGHT PANEL: Templates & Status -->
         <div class="panel right-panel" style="padding: 15px;">
-            <!-- Email Template Section -->
-            <div style="border: 1px solid #ddd; border-radius: 6px; margin-bottom: 15px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: #f8f9fa; border-bottom: 1px solid #ddd;">
-                    <h3 style="margin: 0; color: #007bff; font-size: 14px;">📧 Template</h3>
-                    <button onclick="toggleTemplate()" id="templateToggle" class="button">
-                        Expand
-                    </button>
-                </div>
-                <div id="templateContainer" style="display: none; padding: 8px;">
-                    <div style="margin-bottom: 8px;">
-                        <button onclick="applyTemplateToMessage()" style="background: #007bff; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer;">Use Template</button>
-                        <span style="font-size: 11px; color: #666; margin-left: 8px;">Apply template to message body</span>
-                    </div>
-                    <textarea id="emailTemplate" placeholder="Edit your email template..." style="min-height: 200px; width: 100%; border: 1px solid #ddd; border-radius: 4px; font-size: 10px;">From: vishwas.agarwal@gmail.com
-From-Name: Intex Technologies
-To: {email}
-Subject: Business Partnership Opportunity - Intex Technologies in {country}
-
-Dear Valued Prospective Partner,
-
-We are pleased to introduce Intex Technologies, a globally recognized brand with a rich legacy spanning 29 years in the consumer electronics and technology sectors.
-
-Since our inception in 1996, we have been at the forefront of innovation, designing and manufacturing cutting-edge products that enhance the daily lives of millions of consumers worldwide. Our commitment to excellence has made us a trusted name in markets across the globe.
-
-Our Product Portfolio:
-• IT Peripherals: Speakers, keyboards, mice, webcams, and computer accessories
-• Home Appliances: Air coolers, room heaters, water purifiers, and kitchen appliances
-• Mobile Accessories: Power banks, chargers, cables, and smartphone accessories
-• Audio Solutions: Wireless speakers, headphones, and sound systems
-
-We are actively seeking distribution partners in {country} who share our vision of delivering high-quality, innovative products to consumers. We believe {firm}, with its established market presence and commitment to excellence, would be an ideal partner for expanding our reach in the {country} market.
-
-Specific Opportunities for {firm} in {country}:
-{businessOpportunities}
-
-What We Offer Our Partners:
-✓ Competitive pricing with attractive profit margins
-✓ Comprehensive marketing support and co-branding opportunities
-✓ Technical training and ongoing product support
-✓ Flexible payment terms and credit facilities
-✓ Exclusive territory rights (subject to discussion)
-✓ Access to our complete product catalog and new launches
-
-Why Partner with Intex Technologies:
-- 29+ years of industry experience and innovation
-- Global presence with operations in 40+ countries
-- ISO certified manufacturing facilities
-- Strong R&D capabilities with continuous product development
-- Proven track record of successful partnerships worldwide
-
-We would welcome the opportunity to discuss how we can work together to bring Intex Technologies' innovative products to the {country} market through {firm}. Our team is available to provide detailed product catalogs, pricing structures, and partnership terms that align with your business objectives.
-
-Please feel free to contact us at your earliest convenience to explore this exciting business opportunity. We are confident that a partnership between Intex Technologies and {firm} will be mutually beneficial and contribute to significant growth in the {country} market.
-
-Thank you for your time and consideration. We look forward to hearing from you soon and to the possibility of establishing a long-term, successful business relationship.
-
-Best regards,
-
-Vishwas Agarwal
-Business Development Manager
-Intex Technologies
-Email: vishwas.agarwal@gmail.com
-Phone: +91-11-4716-1111
-Website: www.intex.in
-
-P.S. We are also interested in exploring private label manufacturing opportunities and joint ventures for established brands in the {country} market. Please let us know if {firm} has any interest in such collaborations.</textarea>
-                </div>
-            </div>
 
             <!-- Email Analytics Dashboard -->
             <div style="border: 1px solid #ddd; border-radius: 6px; margin-bottom: 15px;">
@@ -1713,83 +1645,6 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
             showAlert('Message updated successfully!', 'success');
         }
 
-        function toggleTemplate() {
-            const container = document.getElementById('templateContainer');
-            const button = document.getElementById('templateToggle');
-
-            if (container.style.display === 'none') {
-                container.style.display = 'block';
-                button.textContent = 'Collapse';
-            } else {
-                container.style.display = 'none';
-                button.textContent = 'Expand';
-            }
-        }
-
-        function applyTemplateToMessage() {
-            const template = document.getElementById('emailTemplate').value;
-            const messageBody = document.getElementById('messageBody');
-            const subjectField = document.getElementById('subject');
-
-            if (!template) {
-                showAlert('Template is empty. Please enter template content first.', 'warning');
-                return;
-            }
-
-            // Extract subject and message content from template
-            const lines = template.split('\n');
-            let subject = '';
-            let messageContent = '';
-            let isSubjectFound = false;
-            let messageStartIndex = -1;
-
-            // Find subject line and message content
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i].trim();
-
-                if (line.startsWith('Subject:')) {
-                    subject = line.replace('Subject:', '').trim();
-                    isSubjectFound = true;
-                } else if (isSubjectFound && line === '' && messageStartIndex === -1) {
-                    // First empty line after subject marks start of message
-                    messageStartIndex = i + 1;
-                    break;
-                }
-            }
-
-            // Extract message content (everything after the first empty line following subject)
-            if (messageStartIndex !== -1) {
-                messageContent = lines.slice(messageStartIndex).join('\n').trim();
-            } else {
-                // Fallback: find content after headers
-                let startFound = false;
-                for (let i = 0; i < lines.length; i++) {
-                    const line = lines[i].trim();
-                    if (line === '' && !startFound) {
-                        messageContent = lines.slice(i + 1).join('\n').trim();
-                        break;
-                    }
-                }
-            }
-
-            // Apply to form fields
-            if (subject) {
-                subjectField.value = subject;
-            }
-
-            if (messageContent) {
-                // Convert line breaks to HTML br tags for the contenteditable div
-                const htmlContent = messageContent
-                    .replace(/\n\n/g, '<br><br>')
-                    .replace(/\n/g, '<br>')
-                    .replace(/•/g, '&bull;')
-                    .replace(/✓/g, '&check;');
-
-                messageBody.innerHTML = htmlContent;
-            }
-
-            showAlert('Template applied successfully!', 'success');
-        }
 
         // Message Formatting Functions
         function toggleFormatting() {
@@ -3625,12 +3480,13 @@ Phone: +91-XXXXXXXXXX`;
             const fromEmail = document.getElementById('fromEmail').value;
             let rawMessageHTML = messageBody.innerHTML.trim();
 
-            // If subject or message is empty, try to get content from template
-            const emailTemplate = document.getElementById('emailTemplate').value.trim();
+            // If subject or message is empty, try to get content from Company Onboarding template
+            const companyData = CompanyOnboardingModule.getData();
+            const emailTemplate = companyData.emailTemplate || '';
 
             if ((!subjectValue || !rawMessageHTML) && emailTemplate) {
-                console.log('Message body or subject is empty, extracting from template...');
-                const templateData = extractTemplateContent(emailTemplate);
+                console.log('Message body or subject is empty, extracting from Company Onboarding template...');
+                const templateData = CompanyOnboardingModule.extractTemplateContent(emailTemplate);
                 let templateApplied = false;
 
                 if (!subjectValue && templateData.subject) {
@@ -5603,7 +5459,8 @@ Phone: +91-XXXXXXXXXX`;
         // Test connection functionality removed
 
         function extractTemplateHeaders() {
-            const template = document.getElementById('emailTemplate').value;
+            const companyData = CompanyOnboardingModule.getData();
+            const template = companyData.emailTemplate || '';
             const headerLines = template.split('\n');
 
             // Set default values
@@ -5972,7 +5829,30 @@ Phone: +91-XXXXXXXXXX`;
             availableFields: [
                 'companyName', 'companyIndustry', 'companyWebsite', 'companyYears',
                 'companyEmail', 'companyPhone', 'companyAddress', 'companyDescription', 'companyLogo'
-            ]
+            ],
+
+            // Default template content
+            defaultTemplate: `From: {companyEmail}
+From-Name: {companyName}
+To: {email}
+Subject: Partnership Opportunity - {companyName} & {firm} in {country}
+
+Dear {contactName},
+
+We are excited to introduce you to {companyName}, a leading company in the {companyIndustry} industry with {companyYears} years of proven expertise and excellence.
+
+{companyDescription}
+
+We believe that {firm} in {country} would be an excellent partner for expanding our market presence and delivering exceptional value to customers in your region.
+
+Please feel free to contact us:
+Email: {companyEmail}
+Phone: {companyPhone}
+Website: {companyWebsite}
+
+Best regards,
+{companyName}
+{companyAddress}`
         };
 
         // Module: Show Company Onboarding Data Manager
@@ -6037,6 +5917,43 @@ Phone: +91-XXXXXXXXXX`;
                         <small style="color: #666;">Enter a direct link to your company logo image</small>
                     </div>
 
+                    <!-- Email Template Management Section -->
+                    <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 15px; margin-bottom: 25px;">
+                        <h4 style="margin: 0 0 15px 0; color: #007bff; display: flex; align-items: center; gap: 8px;">
+                            <span>📧</span> Email Template Management
+                        </h4>
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">Custom Email Template</label>
+                            <textarea id="companyEmailTemplate" placeholder="Create your custom email template with variables..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; height: 200px; resize: vertical; font-size: 12px;">From: {companyEmail}
+From-Name: {companyName}
+To: {email}
+Subject: Partnership Opportunity - {companyName} & {firm} in {country}
+
+Dear {contactName},
+
+We are excited to introduce you to {companyName}, a leading company in the {companyIndustry} industry with {companyYears} years of proven expertise and excellence.
+
+{companyDescription}
+
+We believe that {firm} in {country} would be an excellent partner for expanding our market presence and delivering exceptional value to customers in your region.
+
+Please feel free to contact us:
+Email: {companyEmail}
+Phone: {companyPhone}
+Website: {companyWebsite}
+
+Best regards,
+{companyName}
+{companyAddress}</textarea>
+                            <small style="color: #666; display: block; margin-top: 5px;">Use company and contact variables in your template. Available variables are shown above.</small>
+                        </div>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button onclick="CompanyOnboardingModule.applyTemplateToMessage()" style="background: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px;">📝 Apply Template to Composer</button>
+                            <button onclick="CompanyOnboardingModule.saveTemplate()" style="background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px;">💾 Save Template</button>
+                            <button onclick="CompanyOnboardingModule.resetTemplate()" style="background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px;">🔄 Reset to Default</button>
+                        </div>
+                    </div>
+
                     <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin-bottom: 25px;">
                         <h4 style="margin: 0 0 10px 0; color: #007bff;">Available Template Variables</h4>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-family: monospace; font-size: 12px;">
@@ -6087,6 +6004,9 @@ Phone: +91-XXXXXXXXXX`;
                     document.getElementById('companyAddress').value = this.data.companyAddress || '';
                     document.getElementById('companyDescription').value = this.data.companyDescription || '';
                     document.getElementById('companyLogo').value = this.data.companyLogo || '';
+
+                    // Populate template field
+                    document.getElementById('companyEmailTemplate').value = this.data.emailTemplate || this.defaultTemplate;
                 }
             } catch (error) {
                 console.error('[CompanyOnboarding] Error loading data:', error);
@@ -6105,7 +6025,8 @@ Phone: +91-XXXXXXXXXX`;
                     companyPhone: document.getElementById('companyPhone').value,
                     companyAddress: document.getElementById('companyAddress').value,
                     companyDescription: document.getElementById('companyDescription').value,
-                    companyLogo: document.getElementById('companyLogo').value
+                    companyLogo: document.getElementById('companyLogo').value,
+                    emailTemplate: document.getElementById('companyEmailTemplate').value
                 };
 
                 localStorage.setItem(this.storageKey, JSON.stringify(this.data));
@@ -6346,6 +6267,90 @@ Phone: +91-XXXXXXXXXX`;
 
             showAlert('Professional email template loaded! 📧 All company variables will be automatically replaced when sending.', 'success');
             this.closeManager();
+        };
+
+        // Module: Apply Template to Message Composer
+        CompanyOnboardingModule.applyTemplateToMessage = function() {
+            const template = document.getElementById('companyEmailTemplate').value;
+            if (!template) {
+                showAlert('Template is empty. Please enter template content first.', 'warning');
+                return;
+            }
+
+            // Use the existing template extraction logic
+            const templateData = this.extractTemplateContent(template);
+
+            // Apply to subject and message body
+            if (templateData.subject) {
+                document.getElementById('subject').value = templateData.subject;
+            }
+
+            if (templateData.content) {
+                const messageBody = document.getElementById('messageBody');
+                const sanitizedContent = templateData.content.replace(/\n/g, '<br>');
+                messageBody.innerHTML = sanitizedContent;
+            }
+
+            showAlert('Template applied to message composer! 📧', 'success');
+            this.closeManager();
+        };
+
+        // Module: Save Template Only
+        CompanyOnboardingModule.saveTemplate = function() {
+            try {
+                // Load existing data first
+                const savedData = localStorage.getItem(this.storageKey);
+                if (savedData) {
+                    this.data = JSON.parse(savedData);
+                }
+
+                // Update only the template
+                this.data.emailTemplate = document.getElementById('companyEmailTemplate').value;
+
+                localStorage.setItem(this.storageKey, JSON.stringify(this.data));
+                showAlert('Email template saved successfully! 📧', 'success');
+            } catch (error) {
+                console.error('[CompanyOnboarding] Error saving template:', error);
+                showAlert('Failed to save template', 'error');
+            }
+        };
+
+        // Module: Reset Template to Default
+        CompanyOnboardingModule.resetTemplate = function() {
+            if (confirm('Are you sure you want to reset the template to default? This will overwrite your current template.')) {
+                document.getElementById('companyEmailTemplate').value = this.defaultTemplate;
+                showAlert('Template reset to default! 🔄', 'success');
+            }
+        };
+
+        // Module: Extract Template Content (same logic as existing function)
+        CompanyOnboardingModule.extractTemplateContent = function(template) {
+            if (!template) return { subject: '', content: '' };
+
+            const lines = template.split('\n');
+            let subject = '';
+            let content = '';
+            let contentStartIndex = -1;
+
+            // Find subject line and content start
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+
+                if (line.startsWith('Subject:')) {
+                    subject = line.replace('Subject:', '').trim();
+                } else if (subject && line === '' && contentStartIndex === -1) {
+                    // First empty line after subject marks start of content
+                    contentStartIndex = i + 1;
+                    break;
+                }
+            }
+
+            // Extract content
+            if (contentStartIndex !== -1) {
+                content = lines.slice(contentStartIndex).join('\n').trim();
+            }
+
+            return { subject, content };
         };
         // Email Analytics Dashboard Functions
         let autoRedirectEnabled = true;
