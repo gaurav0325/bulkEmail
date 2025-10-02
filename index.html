@@ -3497,11 +3497,11 @@ Phone: +91-XXXXXXXXXX`;
             }
 
             // Basic validation - just check if fields have content
-            const subject = document.getElementById('subject').value.trim();
+            const subjectValue = document.getElementById('subject').value.trim();
             const messageBody = document.getElementById('messageBody');
             const messageContent = messageBody.textContent || messageBody.innerText || messageBody.innerHTML;
 
-            if (!subject) {
+            if (!subjectValue) {
                 showAlert('Please enter a subject line before proceeding with bulk email', 'error');
                 return;
             }
@@ -3528,7 +3528,7 @@ Phone: +91-XXXXXXXXXX`;
 
             // Generate email previews for ALL contacts (not just first few)
             const emailPreviews = contacts.map(contact => {
-                const personalizedSubject = subject
+                const personalizedSubject = subjectValue
                     .replace(/{contactName}/g, contact.contactName || '')
                     .replace(/{firm}/g, contact.firm || '')
                     .replace(/{country}/g, contact.country || '')
@@ -3578,7 +3578,7 @@ Phone: +91-XXXXXXXXXX`;
                             </div>
                             <div>
                                 <div style="font-size: 12px; color: #5f6368; margin-bottom: 4px;">SUBJECT TEMPLATE</div>
-                                <div style="font-size: 14px; color: #202124;">${escapeHTML(subject)}</div>
+                                <div style="font-size: 14px; color: #202124;">${escapeHTML(subjectValue)}</div>
                             </div>
                         </div>
 
