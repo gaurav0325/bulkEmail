@@ -3496,13 +3496,18 @@ Phone: +91-XXXXXXXXXX`;
                 return;
             }
 
-            // Validate email fields first
-            const fromEmailValid = validateEmail(document.getElementById('fromEmail'));
-            const subjectValid = validateSubject(document.getElementById('subject'));
-            const messageValid = validateMessage(document.getElementById('messageBody'));
+            // Basic validation - just check if fields have content
+            const subject = document.getElementById('subject').value.trim();
+            const messageBody = document.getElementById('messageBody');
+            const messageContent = messageBody.textContent || messageBody.innerText || messageBody.innerHTML;
 
-            if (!fromEmailValid || !subjectValid || !messageValid) {
-                showAlert('Please fix all validation errors before proceeding with bulk email', 'error');
+            if (!subject) {
+                showAlert('Please enter a subject line before proceeding with bulk email', 'error');
+                return;
+            }
+
+            if (!messageContent.trim()) {
+                showAlert('Please enter a message before proceeding with bulk email', 'error');
                 return;
             }
 
@@ -3522,19 +3527,21 @@ Phone: +91-XXXXXXXXXX`;
                 z-index: 15000; padding: 20px;
             `;
 
-            // Get first few contacts for preview
-            const previewContacts = contacts.slice(0, 5);
-            const remainingCount = contacts.length - previewContacts.length;
-
-            // Generate email previews for first few contacts
-            const emailPreviews = previewContacts.map(contact => {
+            // Generate email previews for ALL contacts (not just first few)
+            const emailPreviews = contacts.map(contact => {
                 const personalizedSubject = subject
                     .replace(/{contactName}/g, contact.contactName || '')
                     .replace(/{firm}/g, contact.firm || '')
                     .replace(/{country}/g, contact.country || '')
                     .replace(/{email}/g, contact.email || '');
 
-                const personalizedMessage = messageText
+                const personalizedMessageHTML = messageHTML
+                    .replace(/{contactName}/g, contact.contactName || '')
+                    .replace(/{firm}/g, contact.firm || '')
+                    .replace(/{country}/g, contact.country || '')
+                    .replace(/{email}/g, contact.email || '');
+
+                const personalizedMessageText = messageText
                     .replace(/{contactName}/g, contact.contactName || '')
                     .replace(/{firm}/g, contact.firm || '')
                     .replace(/{country}/g, contact.country || '')
@@ -3543,7 +3550,9 @@ Phone: +91-XXXXXXXXXX`;
                 return {
                     contact,
                     subject: personalizedSubject,
-                    message: personalizedMessage.substring(0, 200) + (personalizedMessage.length > 200 ? '...' : '')
+                    messageHTML: personalizedMessageHTML,
+                    messageText: personalizedMessageText,
+                    messagePreview: personalizedMessageText.substring(0, 150) + (personalizedMessageText.length > 150 ? '...' : '')
                 };
             });
 
@@ -3582,29 +3591,41 @@ Phone: +91-XXXXXXXXXX`;
                             </div>
                         </div>
 
-                        <!-- Personalized Previews -->
+                        <!-- All Contacts with Personalized Content -->
                         <div style="margin-bottom: 24px;">
-                            <h3 style="margin: 0 0 12px 0; color: #202124; font-size: 16px; font-weight: 500;">Personalized Email Previews</h3>
-                            <div style="font-size: 12px; color: #5f6368; margin-bottom: 12px;">Preview of how emails will look for first ${previewContacts.length} contacts${remainingCount > 0 ? ` (${remainingCount} more contacts will receive similar personalized emails)` : ''}</div>
+                            <h3 style="margin: 0 0 12px 0; color: #202124; font-size: 16px; font-weight: 500;">All Contacts - Personalized Emails Ready to Send</h3>
+                            <div style="font-size: 12px; color: #5f6368; margin-bottom: 12px;">Review all ${contacts.length} personalized emails. You can send to all contacts or select individual contacts to send.</div>
 
-                            ${emailPreviews.map((preview, index) => `
-                                <div style="border: 1px solid #e0e0e0; border-radius: 8px; margin-bottom: 12px; overflow: hidden;">
-                                    <div style="background: #f8f9fa; padding: 12px 16px; border-bottom: 1px solid #e0e0e0;">
-                                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                                            <div>
-                                                <div style="font-size: 14px; font-weight: 500; color: #202124;">${escapeHTML(preview.contact.contactName || 'N/A')} (${escapeHTML(preview.contact.email)})</div>
+                            <div style="max-height: 400px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 8px;">
+                                ${emailPreviews.map((preview, index) => `
+                                    <div style="border-bottom: 1px solid #f0f0f0; overflow: hidden;" id="contact-${index}">
+                                        <div style="background: #f8f9fa; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+                                            <div style="flex: 1;">
+                                                <div style="font-size: 14px; font-weight: 500; color: #202124;">
+                                                    <input type="checkbox" id="contact-checkbox-${index}" checked style="margin-right: 8px;">
+                                                    ${escapeHTML(preview.contact.contactName || 'N/A')} (${escapeHTML(preview.contact.email)})
+                                                </div>
                                                 <div style="font-size: 12px; color: #5f6368;">${escapeHTML(preview.contact.firm || 'N/A')} • ${escapeHTML(preview.contact.country || 'N/A')}</div>
+                                            </div>
+                                            <button onclick="sendIndividualEmail(${index})" style="background: #1a73e8; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer;">Send Now</button>
+                                        </div>
+                                        <div style="padding: 12px 16px; background: white;">
+                                            <div style="margin-bottom: 8px;">
+                                                <div style="font-size: 11px; color: #5f6368; margin-bottom: 2px;">TO:</div>
+                                                <div style="font-size: 13px; color: #202124;">${escapeHTML(preview.contact.email)}</div>
+                                            </div>
+                                            <div style="margin-bottom: 8px;">
+                                                <div style="font-size: 11px; color: #5f6368; margin-bottom: 2px;">SUBJECT:</div>
+                                                <div style="font-size: 13px; color: #202124; font-weight: 500;">${escapeHTML(preview.subject)}</div>
+                                            </div>
+                                            <div>
+                                                <div style="font-size: 11px; color: #5f6368; margin-bottom: 2px;">MESSAGE:</div>
+                                                <div style="font-size: 12px; color: #202124; line-height: 1.4; max-height: 80px; overflow-y: auto; border: 1px solid #e0e0e0; padding: 8px; border-radius: 4px;">${preview.messageHTML}</div>
                                             </div>
                                         </div>
                                     </div>
-                                    <div style="padding: 12px 16px;">
-                                        <div style="font-size: 12px; color: #5f6368; margin-bottom: 4px;">SUBJECT:</div>
-                                        <div style="font-size: 14px; color: #202124; margin-bottom: 8px; font-weight: 500;">${escapeHTML(preview.subject)}</div>
-                                        <div style="font-size: 12px; color: #5f6368; margin-bottom: 4px;">MESSAGE PREVIEW:</div>
-                                        <div style="font-size: 13px; color: #202124; line-height: 1.4;">${escapeHTML(preview.message)}</div>
-                                    </div>
-                                </div>
-                            `).join('')}
+                                `).join('')}
+                            </div>
                         </div>
 
                         <!-- Warning Notice -->
@@ -3625,19 +3646,33 @@ Phone: +91-XXXXXXXXXX`;
                     </div>
 
                     <!-- Footer Actions -->
-                    <div style="padding: 16px 24px; border-top: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; background: #f8f9fa;">
-                        <div style="font-size: 13px; color: #5f6368;">
-                            Ready to send ${contacts.length} personalized emails?
+                    <div style="padding: 16px 24px; border-top: 1px solid #e0e0e0; background: #f8f9fa;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <div style="font-size: 13px; color: #5f6368;">
+                                <span id="selected-count">${contacts.length}</span> contacts selected for sending
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <button onclick="selectAllContacts()" style="background: #f1f3f4; border: 1px solid #dadce0; padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer;">Select All</button>
+                                <button onclick="deselectAllContacts()" style="background: #f1f3f4; border: 1px solid #dadce0; padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer;">Deselect All</button>
+                            </div>
                         </div>
-                        <div style="display: flex; gap: 12px;">
-                            <button onclick="closeBulkEmailConfirmation()" class="button">Cancel</button>
-                            <button onclick="confirmBulkEmailSending()" class="button button-primary">Send All Emails</button>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="font-size: 13px; color: #5f6368;">
+                                Ready to send personalized emails?
+                            </div>
+                            <div style="display: flex; gap: 12px;">
+                                <button onclick="closeBulkEmailConfirmation()" class="button">Cancel</button>
+                                <button onclick="sendSelectedEmails()" class="button button-primary">Send Selected Emails</button>
+                            </div>
                         </div>
                     </div>
                 </div>
             `;
 
             document.body.appendChild(modal);
+
+            // Store email previews globally for later use
+            window.bulkEmailPreviews = emailPreviews;
         }
 
         function closeBulkEmailConfirmation() {
@@ -3645,6 +3680,152 @@ Phone: +91-XXXXXXXXXX`;
             if (modal) {
                 modal.remove();
             }
+            window.bulkEmailPreviews = null;
+        }
+
+        function selectAllContacts() {
+            const checkboxes = document.querySelectorAll('[id^="contact-checkbox-"]');
+            checkboxes.forEach(checkbox => checkbox.checked = true);
+            updateSelectedCount();
+        }
+
+        function deselectAllContacts() {
+            const checkboxes = document.querySelectorAll('[id^="contact-checkbox-"]');
+            checkboxes.forEach(checkbox => checkbox.checked = false);
+            updateSelectedCount();
+        }
+
+        function updateSelectedCount() {
+            const checkboxes = document.querySelectorAll('[id^="contact-checkbox-"]');
+            const selectedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+            const countElement = document.getElementById('selected-count');
+            if (countElement) {
+                countElement.textContent = selectedCount;
+            }
+        }
+
+        async function sendIndividualEmail(index) {
+            if (!window.bulkEmailPreviews || !window.bulkEmailPreviews[index]) {
+                showAlert('Email data not found', 'error');
+                return;
+            }
+
+            const preview = window.bulkEmailPreviews[index];
+            const contact = preview.contact;
+
+            try {
+                console.log(`Sending individual email to: ${contact.email}`);
+
+                // Send email using the personalized content
+                const emailResult = await sendRealEmail(contact, preview.subject, preview.messageHTML);
+
+                if (emailResult.success) {
+                    showAlert(`Email sent successfully to ${contact.email}`, 'success');
+
+                    // Update the contact row to show sent status
+                    const contactRow = document.getElementById(`contact-${index}`);
+                    if (contactRow) {
+                        contactRow.style.backgroundColor = '#e8f5e8';
+                        const sendButton = contactRow.querySelector('button');
+                        if (sendButton) {
+                            sendButton.textContent = 'Sent ✓';
+                            sendButton.style.backgroundColor = '#28a745';
+                            sendButton.disabled = true;
+                        }
+                    }
+
+                    // Add to email history
+                    addToEmailHistory(contact.email, preview.subject, 'sent', Date.now(), contact.country);
+                } else {
+                    showAlert(`Failed to send email to ${contact.email}: ${emailResult.error}`, 'error');
+                    addToEmailHistory(contact.email, preview.subject, 'failed', Date.now(), contact.country);
+                }
+            } catch (error) {
+                console.error('Error sending individual email:', error);
+                showAlert(`Error sending email to ${contact.email}`, 'error');
+            }
+        }
+
+        async function sendSelectedEmails() {
+            const checkboxes = document.querySelectorAll('[id^="contact-checkbox-"]');
+            const selectedIndices = Array.from(checkboxes)
+                .map((checkbox, index) => checkbox.checked ? index : null)
+                .filter(index => index !== null);
+
+            if (selectedIndices.length === 0) {
+                showAlert('Please select at least one contact to send emails', 'error');
+                return;
+            }
+
+            closeBulkEmailConfirmation();
+
+            // Show progress modal
+            showBulkEmailProgress();
+
+            // Initialize bulk email session for selected contacts
+            bulkEmailInProgress = true;
+            bulkEmailPaused = false;
+            bulkEmailCancelled = false;
+            bulkEmailCurrentIndex = 0;
+            bulkEmailTotal = selectedIndices.length;
+            bulkEmailSuccessCount = 0;
+            bulkEmailFailureCount = 0;
+
+            // Update UI
+            const bulkBtn = document.getElementById('bulkSendBtn');
+            bulkBtn.innerHTML = 'Pause';
+            bulkBtn.onclick = () => pauseBulkEmail();
+            document.getElementById('sendBtn').disabled = true;
+
+            // Send emails to selected contacts
+            for (let i = 0; i < selectedIndices.length && !bulkEmailCancelled; i++) {
+                if (bulkEmailPaused) {
+                    await new Promise(resolve => {
+                        const checkPause = () => {
+                            if (!bulkEmailPaused || bulkEmailCancelled) {
+                                resolve();
+                            } else {
+                                setTimeout(checkPause, 1000);
+                            }
+                        };
+                        checkPause();
+                    });
+                }
+
+                if (bulkEmailCancelled) break;
+
+                const contactIndex = selectedIndices[i];
+                const preview = window.bulkEmailPreviews[contactIndex];
+                const contact = preview.contact;
+
+                bulkEmailCurrentIndex = i + 1;
+                updateBulkEmailProgress();
+
+                try {
+                    console.log(`Sending email ${i + 1}/${selectedIndices.length} to: ${contact.email}`);
+
+                    const emailResult = await sendRealEmail(contact, preview.subject, preview.messageHTML);
+
+                    if (emailResult.success) {
+                        bulkEmailSuccessCount++;
+                        addToEmailHistory(contact.email, preview.subject, 'sent', Date.now(), contact.country);
+                    } else {
+                        bulkEmailFailureCount++;
+                        addToEmailHistory(contact.email, preview.subject, 'failed', Date.now(), contact.country);
+                    }
+
+                    // Rate limiting - delay between emails
+                    await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay
+
+                } catch (error) {
+                    console.error('Error sending email to:', contact.email, error);
+                    bulkEmailFailureCount++;
+                    addToEmailHistory(contact.email, preview.subject, 'failed', Date.now(), contact.country);
+                }
+            }
+
+            // Complete bulk email session
+            completeBulkEmail();
         }
 
         function confirmBulkEmailSending() {
