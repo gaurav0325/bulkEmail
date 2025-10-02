@@ -3820,8 +3820,11 @@ Phone: +91-XXXXXXXXXX`;
 
                     console.log('Raw form content:', {
                         currentSubject,
-                        currentMessageHTML: currentMessageHTML.substring(0, 100),
-                        messageBodyExists: !!messageBody
+                        currentMessageHTML,
+                        currentMessageHTMLLength: currentMessageHTML.length,
+                        messageBodyExists: !!messageBody,
+                        messageBodyInnerHTML: messageBody.innerHTML,
+                        messageBodyTextContent: messageBody.textContent
                     });
 
                     // Use fallback templates if form is empty
@@ -3842,7 +3845,10 @@ Phone: +91-XXXXXXXXXX`;
 
                     console.log('Email content being sent:', {
                         subject: personalizedSubject,
-                        messageHTML: personalizedMessage.substring(0, 200)
+                        messageHTML: personalizedMessage,
+                        messageHTMLLength: personalizedMessage.length,
+                        subjectToUse,
+                        messageToUse: messageToUse.substring(0, 100)
                     });
 
                     const emailResult = await sendRealEmail(contact, personalizedSubject, personalizedMessage);
