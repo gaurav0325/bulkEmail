@@ -3768,9 +3768,6 @@ Phone: +91-XXXXXXXXXX`;
 
             closeBulkEmailConfirmation();
 
-            // Show progress modal
-            showBulkEmailProgress();
-
             // Initialize bulk email session for selected contacts
             bulkEmailInProgress = true;
             bulkEmailPaused = false;
@@ -3779,6 +3776,9 @@ Phone: +91-XXXXXXXXXX`;
             bulkEmailTotal = selectedIndices.length;
             bulkEmailSuccessCount = 0;
             bulkEmailFailureCount = 0;
+
+            // Show progress modal (after setting bulkEmailTotal)
+            showBulkEmailProgress();
 
             // Update UI
             const bulkBtn = document.getElementById('bulkSendBtn');
@@ -3975,9 +3975,11 @@ Phone: +91-XXXXXXXXXX`;
 
                     if (success) {
                         bulkEmailSuccessCount++;
+                        contact.emailStatus = 'sent';
                         addToEmailHistory(contact.email, personalizedSubject, 'sent', Date.now(), contact.country);
                     } else {
                         bulkEmailFailureCount++;
+                        contact.emailStatus = 'failed';
                         addToEmailHistory(contact.email, personalizedSubject, 'failed', Date.now(), contact.country);
                     }
 
@@ -3987,11 +3989,17 @@ Phone: +91-XXXXXXXXXX`;
                 } catch (error) {
                     console.error('Error sending email to:', contact.email, error);
                     bulkEmailFailureCount++;
+                    contact.emailStatus = 'failed';
                     addToEmailHistory(contact.email, 'Failed to send', 'failed', Date.now(), contact.country);
                 }
 
                 bulkEmailCurrentIndex++;
+                // Update progress after each email is processed
+                updateBulkEmailProgress();
             }
+
+            // Final progress update to show 100% completion
+            updateBulkEmailProgress();
 
             // Complete bulk email session
             completeBulkEmail();
@@ -4380,6 +4388,10 @@ Phone: +91-XXXXXXXXXX`;
             // Hide progress modal
             hideBulkEmailProgress();
 
+            // Update contact list to show email statuses
+            renderContacts();
+            updateContactCounts();
+
             // Update analytics
             updateAnalytics();
             renderEmailHistory();
@@ -4400,8 +4412,11 @@ Phone: +91-XXXXXXXXXX`;
             `;
 
             modal.innerHTML = `
-                <div style="background: white; padding: 30px; border-radius: 8px; max-width: 500px; width: 90%;">
-                    <h3 style="margin: 0 0 20px 0; color: #007bff;">📧 Bulk Email Progress</h3>
+                <div id="bulkProgressContainer" style="background: white; padding: 30px; border-radius: 8px; max-width: 500px; width: 90%;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h3 style="margin: 0; color: #007bff;">📧 Bulk Email Progress</h3>
+                        <button id="minimizeProgressBtn" onclick="minimizeBulkProgress()" style="background: #6c757d; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">Minimize</button>
+                    </div>
                     <div id="bulkProgressText" style="margin-bottom: 15px; font-size: 14px;">Preparing to send...</div>
                     <div style="background: #f0f0f0; border-radius: 4px; height: 20px; margin-bottom: 15px; overflow: hidden;">
                         <div id="bulkProgressBar" style="background: #007bff; height: 100%; width: 0%; transition: width 0.3s;"></div>
@@ -4423,6 +4438,7 @@ Phone: +91-XXXXXXXXXX`;
             const progressBar = document.getElementById('bulkProgressBar');
             const successCount = document.getElementById('bulkSuccessCount');
             const failedCount = document.getElementById('bulkFailedCount');
+            const minimizedIndicator = document.getElementById('bulkProgressMinimized');
 
             if (progressText) {
                 const contact = contacts[bulkEmailCurrentIndex];
@@ -4436,12 +4452,68 @@ Phone: +91-XXXXXXXXXX`;
 
             if (successCount) successCount.textContent = bulkEmailSuccessCount;
             if (failedCount) failedCount.textContent = bulkEmailFailureCount;
+
+            // Update minimized indicator if it exists
+            if (minimizedIndicator) {
+                const percentage = bulkEmailTotal > 0 ? Math.round((bulkEmailCurrentIndex / bulkEmailTotal) * 100) : 0;
+                minimizedIndicator.innerHTML = `📧 ${percentage}% (${bulkEmailSuccessCount}/${bulkEmailTotal})`;
+            }
         }
 
         function hideBulkEmailProgress() {
             const modal = document.getElementById('bulkEmailModal');
+            const minimized = document.getElementById('bulkProgressMinimized');
+
             if (modal) {
                 modal.remove();
+            }
+
+            if (minimized) {
+                minimized.remove();
+            }
+        }
+
+        function minimizeBulkProgress() {
+            const modal = document.getElementById('bulkEmailModal');
+            if (modal) {
+                modal.style.display = 'none';
+
+                // Create minimized indicator in top-right corner
+                const minimizedIndicator = document.createElement('div');
+                minimizedIndicator.id = 'bulkProgressMinimized';
+                minimizedIndicator.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: #007bff;
+                    color: white;
+                    padding: 10px 15px;
+                    border-radius: 20px;
+                    cursor: pointer;
+                    z-index: 9999;
+                    font-size: 12px;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+                    transition: all 0.3s ease;
+                `;
+
+                const percentage = bulkEmailTotal > 0 ? Math.round((bulkEmailCurrentIndex / bulkEmailTotal) * 100) : 0;
+                minimizedIndicator.innerHTML = `📧 ${percentage}% (${bulkEmailSuccessCount}/${bulkEmailTotal})`;
+                minimizedIndicator.onclick = () => restoreBulkProgress();
+
+                document.body.appendChild(minimizedIndicator);
+            }
+        }
+
+        function restoreBulkProgress() {
+            const modal = document.getElementById('bulkEmailModal');
+            const minimized = document.getElementById('bulkProgressMinimized');
+
+            if (modal) {
+                modal.style.display = 'flex';
+            }
+
+            if (minimized) {
+                minimized.remove();
             }
         }
 
