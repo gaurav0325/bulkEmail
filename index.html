@@ -3718,30 +3718,8 @@ Phone: +91-XXXXXXXXXX`;
 
             try {
                 console.log(`Sending individual email to: ${contact.email}`);
-
-                // Get fresh content from form and personalize (same as bulk sending)
-                const currentSubject = document.getElementById('subject').value.trim();
-                const messageBody = document.getElementById('messageBody');
-                const currentMessageHTML = messageBody.innerHTML.trim();
-
-                // Use fallback templates if form is empty
-                const subjectToUse = currentSubject || 'Business Partnership Opportunity - {firm} in {country}';
-                const messageToUse = currentMessageHTML || 'Dear {contactName},<br><br>I hope this message finds you well. I am reaching out regarding a potential business partnership opportunity with {firm}.<br><br>Best regards,<br>Intex Technologies';
-
-                const personalizedSubject = subjectToUse
-                    .replace(/{contactName}/g, contact.contactName || '')
-                    .replace(/{firm}/g, contact.firm || '')
-                    .replace(/{country}/g, contact.country || '')
-                    .replace(/{email}/g, contact.email || '');
-
-                const personalizedMessage = messageToUse
-                    .replace(/{contactName}/g, contact.contactName || '')
-                    .replace(/{firm}/g, contact.firm || '')
-                    .replace(/{country}/g, contact.country || '')
-                    .replace(/{email}/g, contact.email || '');
-
-                // Send email using the personalized content
-                const emailResult = await sendRealEmail(contact, personalizedSubject, personalizedMessage);
+                // Send email using the personalized content from preview
+                const emailResult = await sendRealEmail(contact, preview.subject, preview.messageHTML);
 
                 if (emailResult.success) {
                     showAlert(`Email sent successfully to ${contact.email}`, 'success');
@@ -3759,10 +3737,10 @@ Phone: +91-XXXXXXXXXX`;
                     }
 
                     // Add to email history
-                    addToEmailHistory(contact.email, personalizedSubject, 'sent', Date.now(), contact.country);
+                    addToEmailHistory(contact.email, preview.subject, 'sent', Date.now(), contact.country);
                 } else {
                     showAlert(`Failed to send email to ${contact.email}: ${emailResult.error}`, 'error');
-                    addToEmailHistory(contact.email, personalizedSubject, 'failed', Date.now(), contact.country);
+                    addToEmailHistory(contact.email, preview.subject, 'failed', Date.now(), contact.country);
                 }
             } catch (error) {
                 console.error('Error sending individual email:', error);
