@@ -427,9 +427,6 @@
                 <div style="background: #e8f4fd; border: 1px solid #b3d9ff; border-radius: 4px; padding: 8px; margin-top: 5px; font-size: 12px; color: #0056b3;">
                     💬 <strong>Replies go to:</strong> info@datanalysisninsights.co.uk
                 </div>
-                <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 8px; margin-top: 5px; font-size: 12px; color: #856404;">
-                    🚀 <strong>Zoho Mail Ready:</strong> Enter your Zoho Mail credentials in Data menu > Email Setup to activate production email sending
-                </div>
                 <div id="fromEmailError" style="color: #dc3545; font-size: 12px; margin-top: 2px; display: none;" role="alert"></div>
             </div>
 
@@ -594,6 +591,10 @@
                     </button>
                 </div>
                 <div id="templateContainer" style="display: none; padding: 8px;">
+                    <div style="margin-bottom: 8px;">
+                        <button onclick="applyTemplateToMessage()" style="background: #007bff; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer;">Use Template</button>
+                        <span style="font-size: 11px; color: #666; margin-left: 8px;">Apply template to message body</span>
+                    </div>
                     <textarea id="emailTemplate" placeholder="Edit your email template..." style="min-height: 200px; width: 100%; border: 1px solid #ddd; border-radius: 4px; font-size: 10px;">From: vishwas.agarwal@gmail.com
 From-Name: Intex Technologies
 To: {email}
@@ -784,8 +785,9 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
 
     <!-- Bottom-right Response Email Management -->
     <div id="responseEmailManager" style="position: fixed; bottom: 20px; right: 20px; z-index: 1000;">
-        <button onclick="toggleResponseManager()" id="responseBtn" class="button button-primary" style="width: 50px; height: 50px; border-radius: 50%; font-size: 12px; padding: 0;" title="Response Email Manager">
+        <button onclick="toggleResponseManager()" id="responseBtn" class="button button-primary" style="width: 50px; height: 50px; border-radius: 50%; font-size: 12px; padding: 0; position: relative;" title="Response Email Manager">
             Replies
+            <span id="responseCounter" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; display: flex; align-items: center; justify-content: center; font-weight: bold; display: none;">0</span>
         </button>
 
         <div id="responsePanel" style="display: none; position: absolute; bottom: 60px; right: 0; width: 300px; background: white; border: 1px solid #d1d5db; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); overflow: hidden;">
@@ -1716,11 +1718,76 @@ P.S. We are also interested in exploring private label manufacturing opportuniti
 
             if (container.style.display === 'none') {
                 container.style.display = 'block';
-                button.textContent = '📝 Collapse';
+                button.textContent = 'Collapse';
             } else {
                 container.style.display = 'none';
-                button.textContent = '📝 Expand';
+                button.textContent = 'Expand';
             }
+        }
+
+        function applyTemplateToMessage() {
+            const template = document.getElementById('emailTemplate').value;
+            const messageBody = document.getElementById('messageBody');
+            const subjectField = document.getElementById('subject');
+
+            if (!template) {
+                showAlert('Template is empty. Please enter template content first.', 'warning');
+                return;
+            }
+
+            // Extract subject and message content from template
+            const lines = template.split('\n');
+            let subject = '';
+            let messageContent = '';
+            let isSubjectFound = false;
+            let messageStartIndex = -1;
+
+            // Find subject line and message content
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+
+                if (line.startsWith('Subject:')) {
+                    subject = line.replace('Subject:', '').trim();
+                    isSubjectFound = true;
+                } else if (isSubjectFound && line === '' && messageStartIndex === -1) {
+                    // First empty line after subject marks start of message
+                    messageStartIndex = i + 1;
+                    break;
+                }
+            }
+
+            // Extract message content (everything after the first empty line following subject)
+            if (messageStartIndex !== -1) {
+                messageContent = lines.slice(messageStartIndex).join('\n').trim();
+            } else {
+                // Fallback: find content after headers
+                let startFound = false;
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (line === '' && !startFound) {
+                        messageContent = lines.slice(i + 1).join('\n').trim();
+                        break;
+                    }
+                }
+            }
+
+            // Apply to form fields
+            if (subject) {
+                subjectField.value = subject;
+            }
+
+            if (messageContent) {
+                // Convert line breaks to HTML br tags for the contenteditable div
+                const htmlContent = messageContent
+                    .replace(/\n\n/g, '<br><br>')
+                    .replace(/\n/g, '<br>')
+                    .replace(/•/g, '&bull;')
+                    .replace(/✓/g, '&check;');
+
+                messageBody.innerHTML = htmlContent;
+            }
+
+            showAlert('Template applied successfully!', 'success');
         }
 
         // Message Formatting Functions
@@ -3598,6 +3665,34 @@ Phone: +91-XXXXXXXXXX`;
                             </div>
                         </div>
 
+                        <!-- Attachment Options -->
+                        <div style="margin-bottom: 24px;">
+                            <h3 style="margin: 0 0 12px 0; color: #202124; font-size: 16px; font-weight: 500;">📎 Attachment Options</h3>
+                            <div style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; background: white;">
+                                <!-- Global Attachment -->
+                                <div style="margin-bottom: 16px;">
+                                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                                        <input type="checkbox" id="bulkGlobalAttachment" style="margin-right: 8px;">
+                                        <label for="bulkGlobalAttachment" style="font-weight: 500; color: #202124;">Send same attachment to all contacts</label>
+                                    </div>
+                                    <input type="file" id="bulkGlobalAttachmentFile" multiple style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;" disabled>
+                                    <div style="font-size: 12px; color: #5f6368; margin-top: 4px;">Select files to attach to all emails (max 10MB per file)</div>
+                                </div>
+
+                                <!-- Individual Attachments -->
+                                <div>
+                                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                                        <input type="checkbox" id="bulkIndividualAttachments" style="margin-right: 8px;">
+                                        <label for="bulkIndividualAttachments" style="font-weight: 500; color: #202124;">Individual attachments per contact</label>
+                                    </div>
+                                    <div style="font-size: 12px; color: #5f6368; margin-bottom: 8px;">When enabled, you can add specific attachments for each contact in the contact list below</div>
+                                    <div id="bulkAttachmentNote" style="background: #e3f2fd; border: 1px solid #bbdefb; border-radius: 4px; padding: 8px; font-size: 12px; color: #1565c0; display: none;">
+                                        Individual attachment options will appear for each contact in the list below when this is enabled.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- All Contacts with Personalized Content -->
                         <div style="margin-bottom: 24px;">
                             <h3 style="margin: 0 0 12px 0; color: #202124; font-size: 16px; font-weight: 500;">All Contacts - Personalized Emails Ready to Send</h3>
@@ -3659,6 +3754,9 @@ Phone: +91-XXXXXXXXXX`;
 
             // Store email previews globally for later use
             window.bulkEmailPreviews = emailPreviews;
+
+            // Setup attachment event handlers
+            setupBulkAttachmentHandlers();
         }
 
         function closeBulkEmailConfirmation() {
@@ -3667,6 +3765,61 @@ Phone: +91-XXXXXXXXXX`;
                 modal.remove();
             }
             window.bulkEmailPreviews = null;
+        }
+
+        function setupBulkAttachmentHandlers() {
+            const globalAttachmentCheckbox = document.getElementById('bulkGlobalAttachment');
+            const globalAttachmentFile = document.getElementById('bulkGlobalAttachmentFile');
+            const individualAttachmentsCheckbox = document.getElementById('bulkIndividualAttachments');
+            const attachmentNote = document.getElementById('bulkAttachmentNote');
+
+            // Handle global attachment checkbox
+            globalAttachmentCheckbox.addEventListener('change', function() {
+                globalAttachmentFile.disabled = !this.checked;
+                if (!this.checked) {
+                    globalAttachmentFile.value = '';
+                }
+            });
+
+            // Handle individual attachments checkbox
+            individualAttachmentsCheckbox.addEventListener('change', function() {
+                if (this.checked) {
+                    attachmentNote.style.display = 'block';
+                    addIndividualAttachmentFields();
+                } else {
+                    attachmentNote.style.display = 'none';
+                    removeIndividualAttachmentFields();
+                }
+            });
+        }
+
+        function addIndividualAttachmentFields() {
+            // Add attachment input for each contact in the list
+            const contactItems = document.querySelectorAll('[id^="contact-"]');
+            contactItems.forEach((contactItem, index) => {
+                const contactId = `contact-${index}`;
+                let attachmentDiv = contactItem.querySelector('.individual-attachment');
+
+                if (!attachmentDiv) {
+                    attachmentDiv = document.createElement('div');
+                    attachmentDiv.className = 'individual-attachment';
+                    attachmentDiv.style.cssText = 'margin-top: 8px; padding: 8px; background: #f8f9fa; border-radius: 4px;';
+
+                    attachmentDiv.innerHTML = `
+                        <div style="font-size: 12px; font-weight: 500; color: #5f6368; margin-bottom: 4px;">📎 Individual Attachment:</div>
+                        <input type="file" id="attachment-${index}" multiple style="width: 100%; padding: 4px; border: 1px solid #ddd; border-radius: 3px; font-size: 12px;">
+                        <div style="font-size: 11px; color: #666; margin-top: 2px;">Max 10MB per file</div>
+                    `;
+
+                    contactItem.appendChild(attachmentDiv);
+                }
+            });
+        }
+
+        function removeIndividualAttachmentFields() {
+            // Remove all individual attachment fields
+            const attachmentDivs = document.querySelectorAll('.individual-attachment');
+            attachmentDivs.forEach(div => div.remove());
         }
 
         function selectAllContacts() {
@@ -5779,36 +5932,88 @@ Phone: +91-XXXXXXXXXX`;
             showAlert('Checking for response emails...', 'info');
 
             setTimeout(() => {
-                // Simulate some responses (in real implementation, this would fetch from email server)
-                const newResponses = [
+                // Simulate some realistic responses based on sent emails
+                const responseTemplates = [
                     {
-                        id: Date.now() + 1,
-                        from: 'john.smith@abc-corp.com',
-                        subject: 'Re: Business Partnership Opportunity',
-                        timestamp: new Date(),
-                        content: 'Thank you for your email. We are interested in discussing this partnership opportunity.'
+                        from: 'john.smith@techcorp.com',
+                        subject: 'Re: Business Partnership Opportunity - Intex Technologies',
+                        content: 'Thank you for reaching out. We are interested in discussing partnership opportunities with Intex Technologies. Could we schedule a call next week?'
+                    },
+                    {
+                        from: 'maria.garcia@globaltrading.es',
+                        subject: 'Re: Partnership Inquiry',
+                        content: 'Hello, thank you for your email. We would like to learn more about your product portfolio. Please send us your complete catalog and pricing information.'
+                    },
+                    {
+                        from: 'david.wong@asiaimports.sg',
+                        subject: 'Re: Distribution Partnership',
+                        content: 'We are a leading distributor in Singapore and are interested in your electronics products. Please share your distribution terms and minimum order quantities.'
+                    },
+                    {
+                        from: 'sarah.johnson@electronicplus.ca',
+                        subject: 'Re: Business Collaboration',
+                        content: 'Your products look interesting. We operate 50+ retail stores across Canada. Would like to discuss exclusive distribution rights for certain product lines.'
+                    },
+                    {
+                        from: 'ahmed.hassan@middleeasttech.ae',
+                        subject: 'Re: Partnership Opportunity',
+                        content: 'Greetings from UAE! We are impressed by Intex Technologies reputation. We handle electronics distribution across Middle East. Can we arrange a video conference?'
                     }
                 ];
 
-                if (Math.random() > 0.7) { // 30% chance of new responses
-                    responseEmails = [...newResponses, ...responseEmails];
-                    renderResponseEmails();
+                const newResponses = [];
 
-                    if (autoRedirectEnabled) {
-                        newResponses.forEach(response => {
-                            redirectResponseEmail(response);
-                        });
+                // 40% chance of getting 1-3 new responses
+                if (Math.random() > 0.6) {
+                    const numResponses = Math.floor(Math.random() * 3) + 1;
+
+                    for (let i = 0; i < numResponses; i++) {
+                        const template = responseTemplates[Math.floor(Math.random() * responseTemplates.length)];
+                        const response = {
+                            id: Date.now() + i,
+                            from: template.from,
+                            subject: template.subject,
+                            timestamp: new Date(Date.now() - Math.random() * 24 * 60 * 60 * 1000), // Random time in last 24 hours
+                            content: template.content
+                        };
+                        newResponses.push(response);
                     }
 
-                    showAlert(`Found ${newResponses.length} new response(s)`, 'success');
+                    // Add to existing responses (avoid duplicates)
+                    const existingIds = responseEmails.map(r => r.from);
+                    const uniqueResponses = newResponses.filter(r => !existingIds.includes(r.from));
+
+                    if (uniqueResponses.length > 0) {
+                        responseEmails = [...uniqueResponses, ...responseEmails];
+                        renderResponseEmails();
+
+                        if (autoRedirectEnabled) {
+                            uniqueResponses.forEach(response => {
+                                redirectResponseEmail(response);
+                            });
+                        }
+
+                        showAlert(`📬 Found ${uniqueResponses.length} new response(s)!`, 'success');
+                    } else {
+                        showAlert('No new responses found', 'info');
+                    }
                 } else {
                     showAlert('No new responses found', 'info');
                 }
-            }, 1000);
+            }, 1500);
         }
 
         function renderResponseEmails() {
             const container = document.getElementById('responseList');
+            const counter = document.getElementById('responseCounter');
+
+            // Update counter
+            if (responseEmails.length > 0) {
+                counter.textContent = responseEmails.length;
+                counter.style.display = 'flex';
+            } else {
+                counter.style.display = 'none';
+            }
 
             if (responseEmails.length === 0) {
                 container.innerHTML = `
