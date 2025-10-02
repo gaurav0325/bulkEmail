@@ -3514,37 +3514,32 @@ Phone: +91-XXXXXXXXXX`;
                 z-index: 15000; padding: 20px;
             `;
 
-            // Generate email previews for ALL contacts (not just first few)
+            // Generate email previews for ALL contacts - store contact info only, personalize at send time like individual emails
             const emailPreviews = contacts.map(contact => {
-                console.log('Original templates:', {
-                    subjectValue,
-                    rawMessageHTML: rawMessageHTML,
-                    messageHTML: messageHTML.substring(0, 100)
-                });
-                console.log('Contact data:', { contactName: contact.contactName, firm: contact.firm, country: contact.country, email: contact.email });
+                // Get current templates from form (same as individual emails do)
+                const currentSubject = document.getElementById('subject').value;
+                const currentMessageBody = document.getElementById('messageBody');
+                const currentMessageHTML = currentMessageBody.innerHTML;
 
-                const personalizedSubject = subjectValue
+                // Personalize for preview display (same logic as individual emails)
+                const personalizedSubject = currentSubject
                     .replace(/{contactName}/g, contact.contactName || '')
                     .replace(/{firm}/g, contact.firm || '')
                     .replace(/{country}/g, contact.country || '')
                     .replace(/{email}/g, contact.email || '');
 
-                const personalizedMessageHTML = messageHTML
+                const personalizedMessageHTML = currentMessageHTML
                     .replace(/{contactName}/g, contact.contactName || '')
                     .replace(/{firm}/g, contact.firm || '')
                     .replace(/{country}/g, contact.country || '')
                     .replace(/{email}/g, contact.email || '');
 
-                console.log('Personalized content:', {
+                const personalizedMessageText = personalizedMessageHTML.replace(/<[^>]*>/g, ''); // Strip HTML for preview
+
+                console.log('Personalized for', contact.email, {
                     personalizedSubject,
                     personalizedMessageHTML: personalizedMessageHTML.substring(0, 100)
                 });
-
-                const personalizedMessageText = messageText
-                    .replace(/{contactName}/g, contact.contactName || '')
-                    .replace(/{firm}/g, contact.firm || '')
-                    .replace(/{country}/g, contact.country || '')
-                    .replace(/{email}/g, contact.email || '');
 
                 return {
                     contact,
@@ -3818,19 +3813,34 @@ Phone: +91-XXXXXXXXXX`;
 
                 try {
                     console.log(`Sending email ${i + 1}/${selectedIndices.length} to: ${contact.email}`);
+
+                    // Get fresh content from form and personalize (same as individual emails)
+                    const personalizedSubject = document.getElementById('subject').value
+                        .replace(/{contactName}/g, contact.contactName || '')
+                        .replace(/{firm}/g, contact.firm || '')
+                        .replace(/{country}/g, contact.country || '')
+                        .replace(/{email}/g, contact.email || '');
+
+                    const messageBody = document.getElementById('messageBody');
+                    const personalizedMessage = messageBody.innerHTML
+                        .replace(/{contactName}/g, contact.contactName || '')
+                        .replace(/{firm}/g, contact.firm || '')
+                        .replace(/{country}/g, contact.country || '')
+                        .replace(/{email}/g, contact.email || '');
+
                     console.log('Email content being sent:', {
-                        subject: preview.subject,
-                        messageHTML: preview.messageHTML.substring(0, 200)
+                        subject: personalizedSubject,
+                        messageHTML: personalizedMessage.substring(0, 200)
                     });
 
-                    const emailResult = await sendRealEmail(contact, preview.subject, preview.messageHTML);
+                    const emailResult = await sendRealEmail(contact, personalizedSubject, personalizedMessage);
 
                     if (emailResult.success) {
                         bulkEmailSuccessCount++;
-                        addToEmailHistory(contact.email, preview.subject, 'sent', Date.now(), contact.country);
+                        addToEmailHistory(contact.email, personalizedSubject, 'sent', Date.now(), contact.country);
                     } else {
                         bulkEmailFailureCount++;
-                        addToEmailHistory(contact.email, preview.subject, 'failed', Date.now(), contact.country);
+                        addToEmailHistory(contact.email, personalizedSubject, 'failed', Date.now(), contact.country);
                     }
 
                     // Rate limiting - delay between emails
@@ -3839,7 +3849,9 @@ Phone: +91-XXXXXXXXXX`;
                 } catch (error) {
                     console.error('Error sending email to:', contact.email, error);
                     bulkEmailFailureCount++;
-                    addToEmailHistory(contact.email, preview.subject, 'failed', Date.now(), contact.country);
+                    // Use current subject since personalizedSubject might not be defined due to error
+                    const currentSubject = document.getElementById('subject').value || 'Email';
+                    addToEmailHistory(contact.email, currentSubject, 'failed', Date.now(), contact.country);
                 }
             }
 
