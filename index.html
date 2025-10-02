@@ -3514,6 +3514,9 @@ Phone: +91-XXXXXXXXXX`;
 
             // Generate email previews for ALL contacts (not just first few)
             const emailPreviews = contacts.map(contact => {
+                console.log('Original templates:', { subjectValue, messageHTML: messageHTML.substring(0, 100) });
+                console.log('Contact data:', { contactName: contact.contactName, firm: contact.firm, country: contact.country, email: contact.email });
+
                 const personalizedSubject = subjectValue
                     .replace(/{contactName}/g, contact.contactName || '')
                     .replace(/{firm}/g, contact.firm || '')
@@ -3525,6 +3528,11 @@ Phone: +91-XXXXXXXXXX`;
                     .replace(/{firm}/g, contact.firm || '')
                     .replace(/{country}/g, contact.country || '')
                     .replace(/{email}/g, contact.email || '');
+
+                console.log('Personalized content:', {
+                    personalizedSubject,
+                    personalizedMessageHTML: personalizedMessageHTML.substring(0, 100)
+                });
 
                 const personalizedMessageText = messageText
                     .replace(/{contactName}/g, contact.contactName || '')
@@ -3804,6 +3812,10 @@ Phone: +91-XXXXXXXXXX`;
 
                 try {
                     console.log(`Sending email ${i + 1}/${selectedIndices.length} to: ${contact.email}`);
+                    console.log('Email content being sent:', {
+                        subject: preview.subject,
+                        messageHTML: preview.messageHTML.substring(0, 200)
+                    });
 
                     const emailResult = await sendRealEmail(contact, preview.subject, preview.messageHTML);
 
