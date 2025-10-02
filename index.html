@@ -3496,17 +3496,9 @@ Phone: +91-XXXXXXXXXX`;
                 return;
             }
 
-            // Basic validation - just check if message has content
+            // Get email details - no validation needed for template-based content
             const subjectValue = document.getElementById('subject').value.trim();
             const messageBody = document.getElementById('messageBody');
-            const messageContent = messageBody.textContent || messageBody.innerText || messageBody.innerHTML;
-
-            if (!messageContent.trim()) {
-                showAlert('Please enter a message before proceeding with bulk email', 'error');
-                return;
-            }
-
-            // Get email details
             const fromEmail = document.getElementById('fromEmail').value;
             const messageHTML = messageBody.innerHTML;
             const messageText = messageBody.textContent || messageBody.innerText;
