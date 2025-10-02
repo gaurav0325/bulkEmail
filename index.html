@@ -3751,6 +3751,13 @@ Phone: +91-XXXXXXXXXX`;
                 return;
             }
 
+            // Store email previews before closing modal
+            const emailPreviews = window.bulkEmailPreviews;
+            if (!emailPreviews) {
+                showAlert('Email data not found. Please try again.', 'error');
+                return;
+            }
+
             closeBulkEmailConfirmation();
 
             // Show progress modal
@@ -3789,7 +3796,7 @@ Phone: +91-XXXXXXXXXX`;
                 if (bulkEmailCancelled) break;
 
                 const contactIndex = selectedIndices[i];
-                const preview = window.bulkEmailPreviews[contactIndex];
+                const preview = emailPreviews[contactIndex];
                 const contact = preview.contact;
 
                 bulkEmailCurrentIndex = i + 1;
