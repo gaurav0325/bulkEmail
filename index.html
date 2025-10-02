@@ -3496,15 +3496,10 @@ Phone: +91-XXXXXXXXXX`;
                 return;
             }
 
-            // Basic validation - just check if fields have content
+            // Basic validation - just check if message has content
             const subjectValue = document.getElementById('subject').value.trim();
             const messageBody = document.getElementById('messageBody');
             const messageContent = messageBody.textContent || messageBody.innerText || messageBody.innerHTML;
-
-            if (!subjectValue) {
-                showAlert('Please enter a subject line before proceeding with bulk email', 'error');
-                return;
-            }
 
             if (!messageContent.trim()) {
                 showAlert('Please enter a message before proceeding with bulk email', 'error');
