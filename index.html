@@ -4048,80 +4048,106 @@ Phone: +91-XXXXXXXXXX`;
                 const preview = emailPreviews[contactIndex];
                 const contact = preview.contact;
 
+                // Set current contact for progress display
+                window.currentSendingContact = contact;
                 bulkEmailCurrentIndex = i + 1;
                 updateBulkEmailProgress();
 
                 try {
-                    console.log(`Sending email ${i + 1}/${selectedIndices.length} to: ${contact.email}`);
+                    // Parse multiple emails from contact.email field (same logic as processBulkEmails)
+                    const emailAddresses = parseMultipleEmails(contact.email);
+                    console.log(`Contact ${contact.firm} has ${emailAddresses.length} email(s):`, emailAddresses);
 
-                    // Get email template content from form fields
-                    const subjectTemplate = document.getElementById('subject').value || '';
-                    const messageBodyElement = document.getElementById('messageBody');
+                    let contactSuccessCount = 0;
+                    let contactFailureCount = 0;
 
-                    // Get the actual content from the message body (the email template)
-                    let messageTemplate = '';
-                    if (messageBodyElement) {
-                        // Try different ways to get the content
-                        messageTemplate = messageBodyElement.innerHTML || messageBodyElement.textContent || messageBodyElement.innerText || '';
-                        // Clean up any extra whitespace but preserve the template
-                        messageTemplate = messageTemplate.trim();
+                    // Send email to each address for this contact
+                    for (let emailIndex = 0; emailIndex < emailAddresses.length; emailIndex++) {
+                        const emailAddress = emailAddresses[emailIndex];
+
+                        // Update progress display with current email
+                        window.currentSendingContact = { ...contact, email: emailAddress };
+                        updateBulkEmailProgress();
+
+                        console.log(`Sending email ${i + 1}/${selectedIndices.length} to: ${emailAddress} (${emailIndex + 1}/${emailAddresses.length})`);
+
+                        // Get email template content from form fields
+                        const subjectTemplate = document.getElementById('subject').value || '';
+                        const messageBodyElement = document.getElementById('messageBody');
+
+                        // Get the actual content from the message body (the email template)
+                        let messageTemplate = '';
+                        if (messageBodyElement) {
+                            messageTemplate = messageBodyElement.innerHTML || messageBodyElement.textContent || messageBodyElement.innerText || '';
+                            messageTemplate = messageTemplate.trim();
+                        }
+
+                        // If no template content, use default business template
+                        const finalSubject = subjectTemplate || 'Business Partnership Opportunity - {firm} in {country}';
+                        const finalMessage = messageTemplate || 'Dear {contactName},<br><br>I hope this message finds you well. I am reaching out regarding a potential business partnership opportunity with {firm}.<br><br>Best regards,<br>Intex Technologies';
+
+                        // Create a copy of contact with current email
+                        const contactCopy = { ...contact, email: emailAddress };
+
+                        // Personalize the templates with contact-specific data
+                        const personalizedSubject = finalSubject
+                            .replace(/{contactName}/g, contact.contactName || '')
+                            .replace(/{firm}/g, contact.firm || '')
+                            .replace(/{country}/g, contact.country || '')
+                            .replace(/{email}/g, emailAddress);
+
+                        const personalizedMessage = finalMessage
+                            .replace(/{contactName}/g, contact.contactName || '')
+                            .replace(/{firm}/g, contact.firm || '')
+                            .replace(/{country}/g, contact.country || '')
+                            .replace(/{email}/g, emailAddress);
+
+                        // Send actual email with preserved formatting
+                        const emailResult = await sendRealEmail(contactCopy, personalizedSubject, personalizedMessage);
+
+                        if (emailResult.success) {
+                            contactSuccessCount++;
+                            addToEmailHistory(emailAddress, personalizedSubject, 'sent', Date.now(), contact.country);
+                        } else {
+                            contactFailureCount++;
+                            addToEmailHistory(emailAddress, personalizedSubject, 'failed', Date.now(), contact.country);
+                        }
+
+                        // Rate limiting between emails for same contact
+                        if (emailIndex < emailAddresses.length - 1) {
+                            await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second between emails for same contact
+                        }
                     }
 
-                    console.log('Email template extraction:', {
-                        subjectTemplate,
-                        messageTemplate,
-                        messageTemplateLength: messageTemplate.length,
-                        messageBodyElementExists: !!messageBodyElement,
-                        rawInnerHTML: messageBodyElement?.innerHTML || 'null',
-                        rawTextContent: messageBodyElement?.textContent || 'null'
-                    });
-
-                    // If no template content, use default business template
-                    const finalSubject = subjectTemplate || 'Business Partnership Opportunity - {firm} in {country}';
-                    const finalMessage = messageTemplate || 'Dear {contactName},<br><br>I hope this message finds you well. I am reaching out regarding a potential business partnership opportunity with {firm}.<br><br>Best regards,<br>Intex Technologies';
-
-                    // Personalize the templates with contact-specific data
-                    const personalizedSubject = finalSubject
-                        .replace(/{contactName}/g, contact.contactName || '')
-                        .replace(/{firm}/g, contact.firm || '')
-                        .replace(/{country}/g, contact.country || '')
-                        .replace(/{email}/g, contact.email || '');
-
-                    const personalizedMessage = finalMessage
-                        .replace(/{contactName}/g, contact.contactName || '')
-                        .replace(/{firm}/g, contact.firm || '')
-                        .replace(/{country}/g, contact.country || '')
-                        .replace(/{email}/g, contact.email || '');
-
-                    console.log('Final personalized email content:', {
-                        personalizedSubject,
-                        personalizedMessage,
-                        personalizedMessageLength: personalizedMessage.length,
-                        finalSubject,
-                        finalMessage: finalMessage.substring(0, 100)
-                    });
-
-                    const emailResult = await sendRealEmail(contact, personalizedSubject, personalizedMessage);
-
-                    if (emailResult.success) {
+                    // Update contact status based on overall success
+                    if (contactSuccessCount > 0 && contactFailureCount === 0) {
+                        contact.emailStatus = 'sent';
                         bulkEmailSuccessCount++;
-                        addToEmailHistory(contact.email, personalizedSubject, 'sent', Date.now(), contact.country);
+                    } else if (contactSuccessCount > 0 && contactFailureCount > 0) {
+                        contact.emailStatus = 'partial'; // New status for partial success
+                        bulkEmailSuccessCount++;
                     } else {
+                        contact.emailStatus = 'failed';
                         bulkEmailFailureCount++;
-                        addToEmailHistory(contact.email, personalizedSubject, 'failed', Date.now(), contact.country);
                     }
 
-                    // Rate limiting - delay between emails
+                    // Update overall counters
+                    bulkEmailSuccessCount += Math.max(0, contactSuccessCount - 1); // -1 because we already added 1 above
+                    bulkEmailFailureCount += contactFailureCount;
+
+                    // Rate limiting - delay between contacts
                     await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay
 
                 } catch (error) {
-                    console.error('Error sending email to:', contact.email, error);
+                    console.error('Error sending emails to contact:', contact.email, error);
                     bulkEmailFailureCount++;
-                    // Use current subject since personalizedSubject might not be defined due to error
-                    const currentSubject = document.getElementById('subject').value || 'Email';
-                    addToEmailHistory(contact.email, currentSubject, 'failed', Date.now(), contact.country);
+                    contact.emailStatus = 'failed';
+                    addToEmailHistory(contact.email, 'Failed to send', 'failed', Date.now(), contact.country);
                 }
             }
+
+            // Clean up current sending contact reference
+            window.currentSendingContact = null;
 
             // Complete bulk email session
             completeBulkEmail();
@@ -4734,7 +4760,18 @@ Phone: +91-XXXXXXXXXX`;
             const minimizedIndicator = document.getElementById('bulkProgressMinimized');
 
             if (progressText) {
-                const contact = contacts[bulkEmailCurrentIndex];
+                // Handle both selected emails (sendSelectedEmails) and full bulk processing (processBulkEmails)
+                let contact;
+                if (window.currentSendingContact) {
+                    // Use the contact that's currently being processed
+                    contact = window.currentSendingContact;
+                } else if (contacts[bulkEmailCurrentIndex]) {
+                    // Fall back to index-based lookup for full bulk processing
+                    contact = contacts[bulkEmailCurrentIndex];
+                } else {
+                    // Safe fallback
+                    contact = { contactName: 'Contact', email: 'processing...' };
+                }
                 progressText.textContent = `Sending to: ${contact.contactName} (${contact.email})`;
             }
 
