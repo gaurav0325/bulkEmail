@@ -3232,16 +3232,82 @@ Phone: +91-XXXXXXXXXX`;
                 toEmailField.value = contact.email;
             }
 
+            // Get company onboarding data for personalization
+            const companyData = CompanyOnboardingModule.getData();
+
+            // Check if company data exists and use personalized template
+            if (companyData && companyData.emailTemplate) {
+                console.log('[ContactSelection] Using personalized template with company onboarding data');
+
+                try {
+                    // Extract template content
+                    const templateData = CompanyOnboardingModule.extractTemplateContent(companyData.emailTemplate);
+
+                    // Populate subject line with personalization
+                    const subjectField = document.getElementById('subject');
+                    if (subjectField && templateData.subject) {
+                        const personalizedSubject = personalizeEmailContent(templateData.subject, contact);
+                        subjectField.value = personalizedSubject;
+                    } else if (subjectField) {
+                        // Fallback subject if no template subject
+                        subjectField.value = `Business Partnership Opportunity - ${companyData.companyName || 'Our Company'} & ${contact.firm} in ${contact.country}`;
+                    }
+
+                    // Populate message body with full personalization
+                    const messageBody = document.getElementById('messageBody');
+                    if (messageBody && templateData.content) {
+                        const personalizedContent = personalizeEmailContent(templateData.content, contact);
+                        const sanitizedContent = sanitizeHTML(personalizedContent.replace(/\n/g, '<br>'));
+                        messageBody.innerHTML = sanitizedContent;
+
+                        // Update hidden textarea
+                        const hiddenTextarea = document.getElementById('messageBodyHidden');
+                        if (hiddenTextarea) {
+                            hiddenTextarea.value = messageBody.innerHTML;
+                        }
+                    }
+
+                    // Show visual indicator for personalized content
+                    showPersonalizationIndicator(true, companyData);
+
+                    // Show success message with personalization info
+                    showAlert(`✨ Personalized email populated for ${contact.contactName} from ${contact.firm} using company template!`, 'success');
+
+                } catch (error) {
+                    console.error('[ContactSelection] Error applying personalized template:', error);
+                    // Fall back to default template on error
+                    applyFallbackTemplate(contact);
+                }
+
+            } else {
+                // No company data - use fallback template
+                console.log('[ContactSelection] No company onboarding data found, using fallback template');
+                applyFallbackTemplate(contact);
+
+                // Suggest setting up company data
+                setTimeout(() => {
+                    showAlert('💡 Tip: Configure your company data in "🏢 Company Onboarding Data" for fully personalized emails!', 'info');
+                }, 2000);
+            }
+
+            const sendBtn = document.getElementById('sendBtn');
+            if (sendBtn) {
+                sendBtn.disabled = false;
+            }
+        }
+
+        // Fallback template function
+        function applyFallbackTemplate(contact) {
             // Populate subject line
             const subjectField = document.getElementById('subject');
             if (subjectField) {
                 subjectField.value = `Business Partnership Opportunity - Intex Technologies in ${contact.country}`;
             }
 
-            // Populate message body
+            // Populate message body with default template
             const messageBody = document.getElementById('messageBody');
             if (messageBody) {
-                const personalizedMessage = `Dear ${contact.contactName},
+                const fallbackMessage = `Dear ${contact.contactName},
 
 We are pleased to introduce Intex Technologies to ${contact.firm}.
 
@@ -3275,8 +3341,8 @@ Intex Technologies
 Email: vishwas.agarwal@gmail.com
 Phone: +91-XXXXXXXXXX`;
 
-                // Sanitize the personalized message before setting innerHTML
-                const sanitizedMessage = sanitizeHTML(personalizedMessage.replace(/\n/g, '<br>'));
+                // Sanitize the fallback message before setting innerHTML
+                const sanitizedMessage = sanitizeHTML(fallbackMessage.replace(/\n/g, '<br>'));
                 messageBody.innerHTML = sanitizedMessage;
 
                 // Update hidden textarea
@@ -3286,12 +3352,104 @@ Phone: +91-XXXXXXXXXX`;
                 }
             }
 
-            const sendBtn = document.getElementById('sendBtn');
-            if (sendBtn) {
-                sendBtn.disabled = false;
+            // Show visual indicator for default template
+            showPersonalizationIndicator(false);
+
+            showAlert(`Selected: ${contact.contactName} from ${contact.firm} (using default template)`, 'success');
+        }
+
+        // Visual indicator for personalization status
+        function showPersonalizationIndicator(isPersonalized, companyData = null) {
+            // Remove existing indicators
+            const existingIndicators = document.querySelectorAll('.personalization-indicator');
+            existingIndicators.forEach(indicator => indicator.remove());
+
+            if (isPersonalized && companyData) {
+                // Create personalized indicator
+                const indicator = document.createElement('div');
+                indicator.className = 'personalization-indicator';
+                indicator.style.cssText = `
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    padding: 8px 12px;
+                    border-radius: 6px;
+                    font-size: 12px;
+                    margin: 10px 0;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+                    animation: slideInDown 0.3s ease-out;
+                `;
+
+                // Count populated fields
+                const populatedFields = CompanyOnboardingModule.availableFields.filter(field =>
+                    companyData[field] && companyData[field].trim()
+                ).length;
+
+                indicator.innerHTML = `
+                    <span>✨</span>
+                    <span><strong>Personalized Email Active</strong></span>
+                    <span style="opacity: 0.8;">• ${populatedFields}/${CompanyOnboardingModule.availableFields.length} company fields • Smart content & grammar</span>
+                `;
+
+                // Add to message composition area
+                const messageContainer = document.querySelector('.message-container') ||
+                                       document.getElementById('messageBody')?.parentNode;
+                if (messageContainer) {
+                    messageContainer.insertBefore(indicator, messageContainer.firstChild);
+                }
+
+            } else {
+                // Create default template indicator
+                const indicator = document.createElement('div');
+                indicator.className = 'personalization-indicator';
+                indicator.style.cssText = `
+                    background: #f8f9fa;
+                    border: 1px solid #dee2e6;
+                    color: #6c757d;
+                    padding: 8px 12px;
+                    border-radius: 6px;
+                    font-size: 12px;
+                    margin: 10px 0;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    animation: slideInDown 0.3s ease-out;
+                `;
+
+                indicator.innerHTML = `
+                    <span>📝</span>
+                    <span>Default Template</span>
+                    <span style="opacity: 0.7;">• <a href="#" onclick="CompanyOnboardingModule.showManager()" style="color: #007bff; text-decoration: none;">Set up company data</a> for personalization</span>
+                `;
+
+                // Add to message composition area
+                const messageContainer = document.querySelector('.message-container') ||
+                                       document.getElementById('messageBody')?.parentNode;
+                if (messageContainer) {
+                    messageContainer.insertBefore(indicator, messageContainer.firstChild);
+                }
             }
 
-            showAlert(`Selected: ${contact.contactName} from ${contact.firm}`, 'success');
+            // Add CSS animation
+            if (!document.getElementById('personalizationStyles')) {
+                const style = document.createElement('style');
+                style.id = 'personalizationStyles';
+                style.textContent = `
+                    @keyframes slideInDown {
+                        from {
+                            opacity: 0;
+                            transform: translateY(-10px);
+                        }
+                        to {
+                            opacity: 1;
+                            transform: translateY(0);
+                        }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
         }
 
         // Switch to Personalized Email function
@@ -3330,6 +3488,9 @@ Phone: +91-XXXXXXXXXX`;
                     const sanitizedContent = personalizedContent.replace(/\n/g, '<br>');
                     messageBody.innerHTML = sanitizedContent;
                 }
+
+                // Show personalization indicator
+                showPersonalizationIndicator(true, companyData);
 
                 showAlert('✨ Personalized email template applied! \n\n🎯 Smart content hiding and grammar checking enabled.\n📧 Ready for professional outreach.', 'success');
 
