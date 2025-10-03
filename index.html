@@ -298,6 +298,23 @@
             /* Let inline styles take precedence */
         }
 
+        /* Authentication Gate Button Styles */
+        #loginBtn:hover {
+            background: #0056b3 !important;
+            transform: translateY(-2px) !important;
+            box-shadow: 0 6px 20px rgba(0,123,255,0.4) !important;
+        }
+
+        #registerBtn:hover {
+            background: #218838 !important;
+            transform: translateY(-2px) !important;
+            box-shadow: 0 6px 20px rgba(40,167,69,0.4) !important;
+        }
+
+        #loginBtn:active, #registerBtn:active {
+            transform: translateY(0) !important;
+        }
+
         /* Formatting Toolbar Styles */
         .format-btn {
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -416,13 +433,13 @@
             </div>
 
             <div style="display: grid; gap: 15px;">
-                <button onclick="UserManager.showAuthModal('login')" style="
+                <button id="loginBtn" onclick="showLoginModal()" style="
                     width: 100%; padding: 15px; background: #007bff; color: white;
                     border: none; border-radius: 8px; font-size: 16px; font-weight: 600;
                     cursor: pointer; transition: all 0.2s ease;
                     ">🔐 Login to Your Account</button>
 
-                <button onclick="UserManager.showAuthModal('register')" style="
+                <button id="registerBtn" onclick="showRegisterModal()" style="
                     width: 100%; padding: 15px; background: #28a745; color: white;
                     border: none; border-radius: 8px; font-size: 16px; font-weight: 600;
                     cursor: pointer; transition: all 0.2s ease;
@@ -5744,6 +5761,39 @@ Phone: +91-XXXXXXXXXX`;
             }
         }
 
+        // Global functions for authentication gate buttons
+        function showLoginModal() {
+            console.log('showLoginModal called');
+            if (typeof UserManager !== 'undefined' && UserManager.showAuthModal) {
+                UserManager.showAuthModal('login');
+            } else {
+                console.error('UserManager not available, retrying in 1 second...');
+                setTimeout(() => {
+                    if (typeof UserManager !== 'undefined' && UserManager.showAuthModal) {
+                        UserManager.showAuthModal('login');
+                    } else {
+                        alert('Authentication system not ready. Please refresh the page.');
+                    }
+                }, 1000);
+            }
+        }
+
+        function showRegisterModal() {
+            console.log('showRegisterModal called');
+            if (typeof UserManager !== 'undefined' && UserManager.showAuthModal) {
+                UserManager.showAuthModal('register');
+            } else {
+                console.error('UserManager not available, retrying in 1 second...');
+                setTimeout(() => {
+                    if (typeof UserManager !== 'undefined' && UserManager.showAuthModal) {
+                        UserManager.showAuthModal('register');
+                    } else {
+                        alert('Authentication system not ready. Please refresh the page.');
+                    }
+                }, 1000);
+            }
+        }
+
         function closeDataMenu(event) {
             const menu = document.getElementById('dataMenu');
             const button = document.getElementById('dataMenuBtn');
@@ -6068,6 +6118,54 @@ Phone: +91-XXXXXXXXXX`;
 
             // Initialize User Management System
             UserManager.init();
+
+            // Add event listeners for authentication gate buttons
+            const loginBtn = document.getElementById('loginBtn');
+            const registerBtn = document.getElementById('registerBtn');
+
+            console.log('Looking for auth buttons...');
+            console.log('Login button found:', !!loginBtn);
+            console.log('Register button found:', !!registerBtn);
+
+            if (loginBtn) {
+                loginBtn.addEventListener('click', function(e) {
+                    console.log('Login button clicked!');
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (typeof UserManager !== 'undefined' && UserManager.showAuthModal) {
+                        UserManager.showAuthModal('login');
+                    } else {
+                        console.error('UserManager not available');
+                    }
+                });
+
+                // Add visual feedback
+                loginBtn.style.cursor = 'pointer';
+                loginBtn.title = 'Click to login to your account';
+                console.log('Login button event listener added');
+            } else {
+                console.error('Login button not found!');
+            }
+
+            if (registerBtn) {
+                registerBtn.addEventListener('click', function(e) {
+                    console.log('Register button clicked!');
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (typeof UserManager !== 'undefined' && UserManager.showAuthModal) {
+                        UserManager.showAuthModal('register');
+                    } else {
+                        console.error('UserManager not available');
+                    }
+                });
+
+                // Add visual feedback
+                registerBtn.style.cursor = 'pointer';
+                registerBtn.title = 'Click to create a new account';
+                console.log('Register button event listener added');
+            } else {
+                console.error('Register button not found!');
+            }
 
             // Initialize Company Onboarding Data persistence system
             CompanyOnboardingModule.initializePersistence();
