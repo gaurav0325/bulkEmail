@@ -11,7 +11,8 @@
       "Bash(grep:*)",
       "Bash(cat:*)",
       "Bash(npm install)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(timeout:*)"
     ],
     "deny": [],
     "ask": []

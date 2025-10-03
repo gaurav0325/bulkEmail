@@ -6081,6 +6081,134 @@ Phone: +91-XXXXXXXXXX`;
                 console.log('🔰 9. Test keyboard navigation (Tab/Enter)');
                 console.log('🔰 10. Test responsive design on different screen sizes');
                 console.log('\n📝 Report any issues found during manual testing');
+            },
+
+            // Execute live testing scenarios
+            executeLiveTests: function() {
+                console.log('\n🎯 EXECUTING LIVE TESTING SCENARIOS');
+                console.log('========================================================');
+
+                this.testRegistrationFlow();
+                this.testLoginFlow();
+                this.testFormValidation();
+                this.testButtonFunctionality();
+                this.testModalBehavior();
+            },
+
+            testRegistrationFlow: function() {
+                console.log('\n📝 TESTING: User Registration Flow');
+                try {
+                    // Test if registration modal can open
+                    if (typeof showRegisterModal === 'function') {
+                        console.log('✅ [LIVE] showRegisterModal function available');
+                        // Test weak passwords
+                        if (typeof UserManager !== 'undefined' && UserManager.validatePassword) {
+                            const weakPasswords = ['123', 'abc', 'password', '12345'];
+                            weakPasswords.forEach(pwd => {
+                                const isValid = UserManager.validatePassword(pwd);
+                                console.log(`${isValid ? '❌' : '✅'} [LIVE] Password "${pwd}": ${isValid ? 'FAIL - Should reject weak password' : 'PASS - Correctly rejected'}`);
+                            });
+                        }
+                    }
+                } catch (error) {
+                    console.log('❌ [LIVE] Registration flow error:', error.message);
+                }
+            },
+
+            testLoginFlow: function() {
+                console.log('\n🔐 TESTING: User Login Flow');
+                try {
+                    if (typeof showLoginModal === 'function') {
+                        console.log('✅ [LIVE] showLoginModal function available');
+
+                        // Test invalid email formats
+                        if (typeof UserManager !== 'undefined' && UserManager.validateEmail) {
+                            const invalidEmails = ['invalid', 'test@', '@domain.com', 'test..test@domain.com'];
+                            invalidEmails.forEach(email => {
+                                const isValid = UserManager.validateEmail(email);
+                                console.log(`${isValid ? '❌' : '✅'} [LIVE] Email "${email}": ${isValid ? 'FAIL - Should reject invalid email' : 'PASS - Correctly rejected'}`);
+                            });
+                        }
+                    }
+                } catch (error) {
+                    console.log('❌ [LIVE] Login flow error:', error.message);
+                }
+            },
+
+            testFormValidation: function() {
+                console.log('\n📋 TESTING: Form Validation');
+                try {
+                    // Test empty form submission
+                    if (typeof UserManager !== 'undefined') {
+                        console.log('✅ [LIVE] Form validation system ready');
+
+                        // Test required field validation
+                        const testEmpty = UserManager.validateEmail('');
+                        console.log(`${testEmpty ? '❌' : '✅'} [LIVE] Empty email validation: ${testEmpty ? 'FAIL - Should reject empty' : 'PASS - Correctly rejected'}`);
+                    }
+                } catch (error) {
+                    console.log('❌ [LIVE] Form validation error:', error.message);
+                }
+            },
+
+            testButtonFunctionality: function() {
+                console.log('\n🎮 TESTING: Button Functionality');
+                const loginBtn = document.getElementById('loginBtn');
+                const registerBtn = document.getElementById('registerBtn');
+
+                if (loginBtn) {
+                    const hasClickHandler = loginBtn.onclick !== null;
+                    console.log(`${hasClickHandler ? '✅' : '❌'} [LIVE] Login button click handler: ${hasClickHandler ? 'PASS' : 'FAIL'}`);
+
+                    // Test button is clickable
+                    const isClickable = !loginBtn.disabled && loginBtn.style.pointerEvents !== 'none';
+                    console.log(`${isClickable ? '✅' : '❌'} [LIVE] Login button clickable: ${isClickable ? 'PASS' : 'FAIL'}`);
+                }
+
+                if (registerBtn) {
+                    const hasClickHandler = registerBtn.onclick !== null;
+                    console.log(`${hasClickHandler ? '✅' : '❌'} [LIVE] Register button click handler: ${hasClickHandler ? 'PASS' : 'FAIL'}`);
+
+                    const isClickable = !registerBtn.disabled && registerBtn.style.pointerEvents !== 'none';
+                    console.log(`${isClickable ? '✅' : '❌'} [LIVE] Register button clickable: ${isClickable ? 'PASS' : 'FAIL'}`);
+                }
+            },
+
+            testModalBehavior: function() {
+                console.log('\n💬 TESTING: Modal Behavior');
+                try {
+                    // Test if modals can be created
+                    if (typeof UserManager !== 'undefined' && UserManager.showAuthModal) {
+                        console.log('✅ [LIVE] Modal system ready');
+
+                        // Test close functionality
+                        console.log('📝 [LIVE] Manual test required: Try opening modal and closing with X button');
+                        console.log('📝 [LIVE] Manual test required: Try closing modal by clicking outside');
+                        console.log('📝 [LIVE] Manual test required: Try pressing Escape key to close modal');
+                    }
+                } catch (error) {
+                    console.log('❌ [LIVE] Modal behavior error:', error.message);
+                }
+            },
+
+            // Test specific edge cases
+            testEdgeCases: function() {
+                console.log('\n⚡ TESTING: Edge Cases');
+
+                // Test multiple rapid clicks
+                console.log('📝 [LIVE] Manual test: Rapidly click login button multiple times');
+
+                // Test browser refresh during registration
+                console.log('📝 [LIVE] Manual test: Start registration, refresh page, check data persistence');
+
+                // Test network connectivity
+                console.log('📝 [LIVE] Manual test: Disconnect network, try to register/login');
+
+                // Test session expiry
+                console.log('📝 [LIVE] Manual test: Set system clock forward, test session validity');
+
+                // Test password visibility toggle
+                console.log('📝 [LIVE] Manual test: Click password visibility toggle in forms');
             }
         };
 
@@ -6412,6 +6540,11 @@ Phone: +91-XXXXXXXXXX`;
             setTimeout(() => {
                 console.log('\n🧪 EXECUTING COMPREHENSIVE USER MANAGEMENT TESTING');
                 TestSuite.runAllTests();
+
+                // Run live testing scenarios
+                setTimeout(() => {
+                    TestSuite.executeLiveTests();
+                }, 2000);
             }, 3000);
 
             // Initialize User Management System
