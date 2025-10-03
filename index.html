@@ -6363,12 +6363,9 @@ Phone: +91-XXXXXXXXXX`;
                             console.log('[CompanyOnboarding] Auto-selected first company:', firstCompanyId);
                         } else {
                             console.log('[CompanyOnboarding] No companies found');
+                            // Migrate legacy single company data if exists
+                            this.migrateLegacyData();
                         }
-                    }
-                        this.data = this.companies[currentId];
-                    } else {
-                        // Migrate legacy single company data if exists
-                        this.migrateLegacyData();
                     }
 
                     console.log('[CompanyOnboarding] Loaded companies:', Object.keys(this.companies).length);
