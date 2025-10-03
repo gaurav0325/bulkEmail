@@ -5574,6 +5574,9 @@ Phone: +91-XXXXXXXXXX`;
         document.addEventListener('DOMContentLoaded', async function() {
             console.log('Secure email sender loaded');
 
+            // Initialize Company Onboarding Data persistence system
+            CompanyOnboardingModule.initializePersistence();
+
             // Initialize undo system
             const editor = document.getElementById('messageBody');
             if (editor) {
@@ -5881,6 +5884,10 @@ Phone: +91-XXXXXXXXXX`;
             // Module state
             data: {},
             storageKey: 'bulkEmail_companyOnboardingData',
+            backupKey: 'bulkEmail_companyOnboardingData_backup',
+            autoSaveEnabled: true,
+            autoSaveTimeout: null,
+            dataVersion: '2.0', // For data migration compatibility
 
             // Module configuration
             availableFields: [
@@ -5895,6 +5902,10 @@ Phone: +91-XXXXXXXXXX`;
             mandatoryFields: ['businesDevelopementManagerName', 'businesDevelopementManagerDesignation'],
             optionalFields: ['productPortfolioPoints', 'OfferingPoints', 'companyShortName',
                            'Link1', 'Link2', 'Link3', 'Image1', 'Image2'],
+
+            // Data persistence tracking
+            lastSaveTime: null,
+            unsavedChanges: false,
 
             // Default template content
             defaultTemplate: `From: {companyEmail}
@@ -5932,9 +5943,16 @@ Best regards,
 
             modal.innerHTML = `
                 <div style="background: white; padding: 30px; border-radius: 8px; max-width: 800px; width: 90%; max-height: 80%; overflow-y: auto;">
-                    <h2 style="margin: 0 0 20px 0; color: #007bff; display: flex; align-items: center; gap: 10px;">
+                    <h2 style="margin: 0 0 10px 0; color: #007bff; display: flex; align-items: center; gap: 10px;">
                         <span>🏢</span> Company Onboarding Data Manager
                     </h2>
+
+                    <!-- Data Persistence Status -->
+                    <div id="persistenceStatus" style="background: #e8f5e8; border: 1px solid #4caf50; border-radius: 4px; padding: 8px 12px; margin-bottom: 15px; font-size: 12px; display: flex; align-items: center; gap: 8px;">
+                        <span id="statusIcon">💾</span>
+                        <span id="statusText">Auto-save enabled - Changes saved automatically</span>
+                        <span id="lastSaveTime" style="margin-left: auto; color: #666;"></span>
+                    </div>
                     <p style="color: #666; margin-bottom: 25px;">
                         Configure your company information for automatic personalization in all email campaigns. Data will be used for both single and bulk emails.
                     </p>
@@ -6140,6 +6158,13 @@ Best regards,
 
             // Then load existing company data (after elements exist)
             CompanyOnboardingModule.loadData();
+
+            // Enable auto-save functionality after modal is ready
+            setTimeout(() => {
+                CompanyOnboardingModule.enableAutoSave();
+                CompanyOnboardingModule.updateStatusIndicator();
+                console.log('[CompanyOnboarding] Modal initialized with auto-save enabled');
+            }, 100);
         };
 
         // Module: Load Company Onboarding Data
@@ -6192,20 +6217,29 @@ Best regards,
             }
         };
 
-        // Module: Save Company Onboarding Data
-        CompanyOnboardingModule.saveData = function() {
+        // Module: Enhanced Save Company Onboarding Data with Persistence
+        CompanyOnboardingModule.saveData = function(isAutoSave = false) {
             try {
-                // Validate mandatory fields
-                const mandatoryFields = ['businesDevelopementManagerName', 'businesDevelopementManagerDesignation'];
-                for (const fieldId of mandatoryFields) {
-                    const element = document.getElementById(fieldId);
-                    if (!element || !element.value.trim()) {
-                        showAlert(`Please fill in the mandatory field: ${fieldId.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}`, 'error');
-                        return;
+                console.log('[CompanyOnboarding] Saving data...', isAutoSave ? '(Auto-save)' : '(Manual save)');
+
+                // Validate mandatory fields (skip for auto-save to allow drafts)
+                if (!isAutoSave) {
+                    const mandatoryFields = ['businesDevelopementManagerName', 'businesDevelopementManagerDesignation'];
+                    for (const fieldId of mandatoryFields) {
+                        const element = document.getElementById(fieldId);
+                        if (!element || !element.value.trim()) {
+                            showAlert(`Please fill in the mandatory field: ${fieldId.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}`, 'error');
+                            return false;
+                        }
                     }
                 }
 
-                this.data = {
+                // Create backup before saving
+                this.createBackup();
+
+                // Collect all data with metadata
+                const newData = {
+                    // Core company data
                     companyName: document.getElementById('companyName').value,
                     companyIndustry: document.getElementById('companyIndustry').value,
                     companyWebsite: document.getElementById('companyWebsite').value,
@@ -6215,6 +6249,8 @@ Best regards,
                     companyAddress: document.getElementById('companyAddress').value,
                     companyDescription: document.getElementById('companyDescription').value,
                     companyLogo: document.getElementById('companyLogo').value,
+
+                    // Enhanced data fields
                     productPortfolioPoints: document.getElementById('productPortfolioPoints').value,
                     OfferingPoints: document.getElementById('OfferingPoints').value,
                     companyShortName: document.getElementById('companyShortName').value,
@@ -6225,15 +6261,410 @@ Best regards,
                     Link3: document.getElementById('Link3').value,
                     Image1: document.getElementById('Image1').value,
                     Image2: document.getElementById('Image2').value,
-                    emailTemplate: document.getElementById('companyEmailTemplate').value
+                    emailTemplate: document.getElementById('companyEmailTemplate').value,
+
+                    // Metadata for persistence tracking
+                    dataVersion: this.dataVersion,
+                    lastSaved: new Date().toISOString(),
+                    saveType: isAutoSave ? 'auto' : 'manual',
+                    fieldCount: this.availableFields.length,
+                    completedFields: this.availableFields.filter(field =>
+                        document.getElementById(field) && document.getElementById(field).value.trim()
+                    ).length
                 };
 
-                localStorage.setItem(this.storageKey, JSON.stringify(this.data));
-                showAlert('Company onboarding data saved! All emails will now automatically use your company information. 🎉', 'success');
-                this.closeManager();
+                // Validate data integrity
+                if (!this.validateDataIntegrity(newData)) {
+                    console.error('[CompanyOnboarding] Data integrity validation failed');
+                    if (!isAutoSave) {
+                        showAlert('Data validation failed. Please check your inputs.', 'error');
+                    }
+                    return false;
+                }
+
+                // Update module data
+                this.data = newData;
+                this.lastSaveTime = new Date();
+                this.unsavedChanges = false;
+
+                // Save to localStorage with error handling
+                try {
+                    localStorage.setItem(this.storageKey, JSON.stringify(this.data));
+                    console.log('[CompanyOnboarding] Data saved successfully to localStorage');
+                } catch (storageError) {
+                    console.error('[CompanyOnboarding] localStorage save failed:', storageError);
+
+                    // Try alternative storage or cleanup
+                    if (storageError.name === 'QuotaExceededError') {
+                        this.cleanupOldData();
+                        localStorage.setItem(this.storageKey, JSON.stringify(this.data));
+                    } else {
+                        throw storageError;
+                    }
+                }
+
+                // Update status indicator
+                this.updateStatusIndicator(isAutoSave ? 'Auto-saved successfully' : 'Data saved successfully');
+
+                // User feedback
+                if (!isAutoSave) {
+                    showAlert('💾 Company onboarding data saved! All emails will automatically use your company information. 🎉', 'success');
+                    this.closeManager();
+                } else {
+                    console.log('[CompanyOnboarding] Auto-save completed');
+                }
+
+                // Log save statistics
+                this.logSaveStatistics(newData);
+
+                return true;
+
             } catch (error) {
                 console.error('[CompanyOnboarding] Error saving data:', error);
-                showAlert('Failed to save company information', 'error');
+
+                // Attempt data recovery
+                this.attemptDataRecovery();
+
+                if (!isAutoSave) {
+                    showAlert('❌ Failed to save company information. Attempting data recovery...', 'error');
+                }
+                return false;
+            }
+        };
+
+        // Module: Create Data Backup
+        CompanyOnboardingModule.createBackup = function() {
+            try {
+                if (this.data && Object.keys(this.data).length > 0) {
+                    const backupData = {
+                        ...this.data,
+                        backupCreated: new Date().toISOString(),
+                        originalSaveTime: this.data.lastSaved
+                    };
+                    localStorage.setItem(this.backupKey, JSON.stringify(backupData));
+                    console.log('[CompanyOnboarding] Backup created successfully');
+                }
+            } catch (error) {
+                console.error('[CompanyOnboarding] Failed to create backup:', error);
+            }
+        };
+
+        // Module: Data Integrity Validation
+        CompanyOnboardingModule.validateDataIntegrity = function(data) {
+            try {
+                // Basic structure validation
+                if (!data || typeof data !== 'object') return false;
+
+                // Check for critical fields
+                const criticalFields = ['companyName', 'companyEmail'];
+                for (const field of criticalFields) {
+                    if (data[field] && typeof data[field] !== 'string') return false;
+                }
+
+                // Validate email format if provided
+                if (data.companyEmail && data.companyEmail.trim()) {
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (!emailRegex.test(data.companyEmail)) {
+                        console.warn('[CompanyOnboarding] Invalid email format:', data.companyEmail);
+                        return false;
+                    }
+                }
+
+                // Validate URL format if provided
+                if (data.companyWebsite && data.companyWebsite.trim()) {
+                    try {
+                        new URL(data.companyWebsite.startsWith('http') ? data.companyWebsite : 'https://' + data.companyWebsite);
+                    } catch {
+                        console.warn('[CompanyOnboarding] Invalid website URL:', data.companyWebsite);
+                        // Don't fail validation for URL, just warn
+                    }
+                }
+
+                return true;
+            } catch (error) {
+                console.error('[CompanyOnboarding] Data validation error:', error);
+                return false;
+            }
+        };
+
+        // Module: Attempt Data Recovery
+        CompanyOnboardingModule.attemptDataRecovery = function() {
+            try {
+                console.log('[CompanyOnboarding] Attempting data recovery...');
+
+                // Try to restore from backup
+                const backupData = localStorage.getItem(this.backupKey);
+                if (backupData) {
+                    const parsedBackup = JSON.parse(backupData);
+                    delete parsedBackup.backupCreated;
+                    delete parsedBackup.originalSaveTime;
+
+                    this.data = parsedBackup;
+                    localStorage.setItem(this.storageKey, JSON.stringify(this.data));
+                    console.log('[CompanyOnboarding] Data recovered from backup');
+                    showAlert('🔄 Data recovered from backup successfully!', 'success');
+                    return true;
+                }
+
+                console.log('[CompanyOnboarding] No backup available for recovery');
+                return false;
+            } catch (error) {
+                console.error('[CompanyOnboarding] Data recovery failed:', error);
+                return false;
+            }
+        };
+
+        // Module: Cleanup Old Data
+        CompanyOnboardingModule.cleanupOldData = function() {
+            try {
+                console.log('[CompanyOnboarding] Cleaning up old data...');
+
+                // Remove old backup if exists
+                const oldBackup = localStorage.getItem(this.backupKey);
+                if (oldBackup) {
+                    localStorage.removeItem(this.backupKey);
+                    console.log('[CompanyOnboarding] Old backup removed');
+                }
+
+                // Clean up other old storage keys if any
+                const keysToCheck = [
+                    'bulkEmail_companyData_old',
+                    'bulkEmail_companyTemplate_old',
+                    'bulkEmail_tempData'
+                ];
+
+                keysToCheck.forEach(key => {
+                    if (localStorage.getItem(key)) {
+                        localStorage.removeItem(key);
+                        console.log('[CompanyOnboarding] Removed old key:', key);
+                    }
+                });
+
+            } catch (error) {
+                console.error('[CompanyOnboarding] Cleanup failed:', error);
+            }
+        };
+
+        // Module: Log Save Statistics
+        CompanyOnboardingModule.logSaveStatistics = function(data) {
+            try {
+                const stats = {
+                    saveTime: new Date().toISOString(),
+                    dataSize: JSON.stringify(data).length,
+                    completionPercentage: Math.round((data.completedFields / data.fieldCount) * 100),
+                    mandatoryFieldsComplete: this.mandatoryFields.every(field =>
+                        data[field] && data[field].trim()
+                    ),
+                    hasTemplate: !!(data.emailTemplate && data.emailTemplate.trim())
+                };
+
+                console.log('[CompanyOnboarding] Save Statistics:', stats);
+
+                // Store recent save stats for monitoring
+                const recentStats = JSON.parse(localStorage.getItem('bulkEmail_saveStats') || '[]');
+                recentStats.push(stats);
+
+                // Keep only last 10 saves
+                if (recentStats.length > 10) {
+                    recentStats.splice(0, recentStats.length - 10);
+                }
+
+                localStorage.setItem('bulkEmail_saveStats', JSON.stringify(recentStats));
+
+            } catch (error) {
+                console.error('[CompanyOnboarding] Failed to log statistics:', error);
+            }
+        };
+
+        // Module: Auto-save Functionality
+        CompanyOnboardingModule.enableAutoSave = function() {
+            if (!this.autoSaveEnabled) return;
+
+            console.log('[CompanyOnboarding] Auto-save enabled');
+
+            // Add event listeners to all form fields
+            this.availableFields.forEach(fieldId => {
+                const element = document.getElementById(fieldId);
+                if (element) {
+                    element.addEventListener('input', () => this.scheduleAutoSave());
+                    element.addEventListener('change', () => this.scheduleAutoSave());
+                }
+            });
+
+            // Also monitor template field
+            const templateField = document.getElementById('companyEmailTemplate');
+            if (templateField) {
+                templateField.addEventListener('input', () => this.scheduleAutoSave());
+                templateField.addEventListener('change', () => this.scheduleAutoSave());
+            }
+        };
+
+        // Module: Schedule Auto-save
+        CompanyOnboardingModule.scheduleAutoSave = function() {
+            // Mark as having unsaved changes
+            this.unsavedChanges = true;
+
+            // Update status to show pending changes
+            this.updateStatusIndicator('Changes detected - Auto-saving in 3 seconds...');
+
+            // Clear existing timeout
+            if (this.autoSaveTimeout) {
+                clearTimeout(this.autoSaveTimeout);
+            }
+
+            // Schedule auto-save after 3 seconds of inactivity
+            this.autoSaveTimeout = setTimeout(() => {
+                if (this.unsavedChanges) {
+                    console.log('[CompanyOnboarding] Triggering auto-save...');
+                    this.updateStatusIndicator('Auto-saving changes...');
+                    this.saveData(true); // isAutoSave = true
+                }
+            }, 3000);
+        };
+
+        // Module: Update Persistence Status Indicator
+        CompanyOnboardingModule.updateStatusIndicator = function(message = null) {
+            try {
+                const statusDiv = document.getElementById('persistenceStatus');
+                const statusIcon = document.getElementById('statusIcon');
+                const statusText = document.getElementById('statusText');
+                const lastSaveTime = document.getElementById('lastSaveTime');
+
+                if (!statusDiv || !statusIcon || !statusText || !lastSaveTime) return;
+
+                const status = this.checkPersistenceStatus();
+
+                if (this.unsavedChanges) {
+                    // Unsaved changes
+                    statusDiv.style.background = '#fff3cd';
+                    statusDiv.style.borderColor = '#ffc107';
+                    statusIcon.textContent = '⏳';
+                    statusText.textContent = message || 'Auto-saving changes...';
+                } else if (status && status.hasData) {
+                    // Data saved successfully
+                    statusDiv.style.background = '#e8f5e8';
+                    statusDiv.style.borderColor = '#4caf50';
+                    statusIcon.textContent = '✅';
+                    statusText.textContent = message || 'Data saved successfully';
+
+                    // Show last save time
+                    if (this.lastSaveTime) {
+                        const timeAgo = this.getTimeAgo(this.lastSaveTime);
+                        lastSaveTime.textContent = `Saved ${timeAgo}`;
+                    }
+                } else {
+                    // No data or error
+                    statusDiv.style.background = '#f8d7da';
+                    statusDiv.style.borderColor = '#dc3545';
+                    statusIcon.textContent = '⚠️';
+                    statusText.textContent = 'No data saved yet';
+                    lastSaveTime.textContent = '';
+                }
+
+            } catch (error) {
+                console.error('[CompanyOnboarding] Failed to update status indicator:', error);
+            }
+        };
+
+        // Module: Get Human-Readable Time Ago
+        CompanyOnboardingModule.getTimeAgo = function(date) {
+            const now = new Date();
+            const diffMs = now - date;
+            const diffSecs = Math.floor(diffMs / 1000);
+            const diffMins = Math.floor(diffSecs / 60);
+            const diffHours = Math.floor(diffMins / 60);
+
+            if (diffSecs < 10) return 'just now';
+            if (diffSecs < 60) return `${diffSecs} seconds ago`;
+            if (diffMins < 60) return `${diffMins} minute${diffMins !== 1 ? 's' : ''} ago`;
+            if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+            return date.toLocaleDateString();
+        };
+
+        // Module: Check Data Persistence Status
+        CompanyOnboardingModule.checkPersistenceStatus = function() {
+            try {
+                const data = localStorage.getItem(this.storageKey);
+                const backup = localStorage.getItem(this.backupKey);
+
+                return {
+                    hasData: !!data,
+                    hasBackup: !!backup,
+                    dataSize: data ? data.length : 0,
+                    lastSaved: this.data?.lastSaved || null,
+                    unsavedChanges: this.unsavedChanges,
+                    isAutoSaveEnabled: this.autoSaveEnabled
+                };
+            } catch (error) {
+                console.error('[CompanyOnboarding] Failed to check persistence status:', error);
+                return null;
+            }
+        };
+
+        // Module: Data Persistence Monitoring
+        CompanyOnboardingModule.startPersistenceMonitoring = function() {
+            console.log('[CompanyOnboarding] Starting persistence monitoring...');
+
+            // Check data integrity every 30 seconds
+            setInterval(() => {
+                try {
+                    const status = this.checkPersistenceStatus();
+
+                    if (status && status.hasData) {
+                        // Verify data can be parsed
+                        const data = JSON.parse(localStorage.getItem(this.storageKey));
+
+                        if (!this.validateDataIntegrity(data)) {
+                            console.warn('[CompanyOnboarding] Data integrity check failed');
+                            this.attemptDataRecovery();
+                        }
+                    }
+                } catch (error) {
+                    console.error('[CompanyOnboarding] Persistence monitoring error:', error);
+                }
+            }, 30000); // Check every 30 seconds
+
+            // Periodic backup every 5 minutes
+            setInterval(() => {
+                if (this.data && Object.keys(this.data).length > 0) {
+                    this.createBackup();
+                    console.log('[CompanyOnboarding] Periodic backup created');
+                }
+            }, 300000); // Backup every 5 minutes
+        };
+
+        // Module: Initialize Data Persistence System
+        CompanyOnboardingModule.initializePersistence = function() {
+            try {
+                console.log('[CompanyOnboarding] Initializing persistence system...');
+
+                // Load existing data
+                this.getData();
+
+                // Start monitoring
+                this.startPersistenceMonitoring();
+
+                // Handle browser close/refresh with unsaved changes
+                window.addEventListener('beforeunload', (event) => {
+                    if (this.unsavedChanges) {
+                        event.preventDefault();
+                        event.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+                        return event.returnValue;
+                    }
+                });
+
+                // Handle page visibility changes (when user switches tabs)
+                document.addEventListener('visibilitychange', () => {
+                    if (document.visibilityState === 'hidden' && this.unsavedChanges) {
+                        // Save immediately when user switches away
+                        this.saveData(true);
+                    }
+                });
+
+                console.log('[CompanyOnboarding] Persistence system initialized successfully');
+
+            } catch (error) {
+                console.error('[CompanyOnboarding] Failed to initialize persistence system:', error);
             }
         };
 
