@@ -352,7 +352,6 @@
                     <a href="#" onclick="loadDraftEmail()" style="color: #333; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px; border-bottom: 1px solid #eee;">Load Draft</a>
                     <a href="#" onclick="exportAllData()" style="color: #333; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px; border-bottom: 1px solid #eee;">Export All</a>
                     <a href="#" onclick="importAllData()" style="color: #333; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px; border-bottom: 1px solid #eee;">Import Data</a>
-                    <a href="#" onclick="showEmailConfig()" style="color: #6c757d; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px; border-bottom: 1px solid #eee;">Email Setup</a>
                     <a href="#" onclick="CompanyOnboardingModule.showManager()" style="color: #007bff; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px; border-bottom: 1px solid #eee;">🏢 Company Management</a>
                     <div id="currentCompanyDisplay" style="padding: 8px 12px; font-size: 11px; color: #666; border-bottom: 1px solid #eee; background: #f8f9fa;">
                         <div>📋 <span id="activeCompanyName">No company selected</span></div>
@@ -361,7 +360,6 @@
                 </div>
             </div>
             <button class="button button-secondary" onclick="startTutorial()" title="Interactive Tutorial">Help</button>
-            <button class="button" onclick="switchToPersonalizedEmail()" id="personalizedSwitchBtn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;" title="Auto-apply personalized template with smart content">✨ Switch to Personalized Email</button>
             <button class="button button-primary" onclick="sendEmail()" id="sendBtn" disabled aria-label="Send Email to Selected Contact">Send Email</button>
             <button class="button button-primary" id="bulkSendBtn" onclick="showBulkEmailConfirmation()" disabled aria-label="Send Bulk Emails to All Contacts" title="Review and send emails to all uploaded contacts">Bulk Email</button>
         </div>
@@ -722,6 +720,13 @@
 
     <!-- Bottom-right Response Email Management -->
     <div id="responseEmailManager" style="position: fixed; bottom: 20px; right: 20px; z-index: 1000;">
+        <!-- Personalized Email Switch Button -->
+        <div style="margin-bottom: 10px; text-align: center;">
+            <button onclick="switchToPersonalizedEmail()" id="personalizedSwitchBtn" style="width: 50px; height: 50px; border-radius: 50%; border: none; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-size: 11px; padding: 0; cursor: pointer; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3); display: flex; align-items: center; justify-content: center; text-align: center; line-height: 1;" title="Auto-apply personalized template with smart content">
+                ✨
+            </button>
+        </div>
+
         <button onclick="toggleResponseManager()" id="responseBtn" class="button button-primary" style="width: 50px; height: 50px; border-radius: 50%; font-size: 12px; padding: 0; position: relative;" title="Response Email Manager">
             Replies
             <span id="responseCounter" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; display: flex; align-items: center; justify-content: center; font-weight: bold; display: none;">0</span>
@@ -784,11 +789,96 @@
             CONTACTS: 'bulkEmail_contacts',
             EMAIL_HISTORY: 'bulkEmail_emailHistory',
             DRAFTS: 'bulkEmail_drafts',
-            SETTINGS: 'bulkEmail_settings'
+            SETTINGS: 'bulkEmail_settings',
+            EMAIL_FORM_DATA: 'bulkEmail_emailFormData'
         };
 
         let autoSaveEnabled = true;
         let lastAutoSave = Date.now();
+
+        // Email Form Data Persistence Functions
+        function saveEmailFormData() {
+            try {
+                const formData = {
+                    fromEmail: document.getElementById('fromEmail')?.value || '',
+                    toEmail: document.getElementById('toEmail')?.value || '',
+                    subject: document.getElementById('subject')?.value || '',
+                    messageBody: document.getElementById('messageBody')?.innerHTML || '',
+                    timestamp: Date.now()
+                };
+
+                localStorage.setItem(STORAGE_KEYS.EMAIL_FORM_DATA, JSON.stringify(formData));
+                console.log('[EmailForm] Form data saved');
+            } catch (error) {
+                console.error('[EmailForm] Error saving form data:', error);
+            }
+        }
+
+        function loadEmailFormData() {
+            try {
+                const savedData = localStorage.getItem(STORAGE_KEYS.EMAIL_FORM_DATA);
+                if (savedData) {
+                    const formData = JSON.parse(savedData);
+
+                    // Only restore if data is less than 7 days old
+                    if (Date.now() - formData.timestamp < 7 * 24 * 60 * 60 * 1000) {
+                        const fromEmailField = document.getElementById('fromEmail');
+                        const toEmailField = document.getElementById('toEmail');
+                        const subjectField = document.getElementById('subject');
+                        const messageBodyField = document.getElementById('messageBody');
+
+                        if (fromEmailField && formData.fromEmail) fromEmailField.value = formData.fromEmail;
+                        if (toEmailField && formData.toEmail) toEmailField.value = formData.toEmail;
+                        if (subjectField && formData.subject) subjectField.value = formData.subject;
+                        if (messageBodyField && formData.messageBody) messageBodyField.innerHTML = formData.messageBody;
+
+                        console.log('[EmailForm] Form data restored');
+                        return true;
+                    }
+                }
+            } catch (error) {
+                console.error('[EmailForm] Error loading form data:', error);
+            }
+            return false;
+        }
+
+        function clearEmailFormData() {
+            localStorage.removeItem(STORAGE_KEYS.EMAIL_FORM_DATA);
+            console.log('[EmailForm] Form data cleared');
+        }
+
+        // Auto-save email form data when user types
+        function setupEmailFormAutoSave() {
+            const formFields = ['fromEmail', 'toEmail', 'subject'];
+
+            formFields.forEach(fieldId => {
+                const field = document.getElementById(fieldId);
+                if (field) {
+                    field.addEventListener('input', debounce(saveEmailFormData, 1000));
+                    field.addEventListener('blur', saveEmailFormData);
+                }
+            });
+
+            // Handle message body separately due to contenteditable
+            const messageBody = document.getElementById('messageBody');
+            if (messageBody) {
+                messageBody.addEventListener('input', debounce(saveEmailFormData, 1000));
+                messageBody.addEventListener('blur', saveEmailFormData);
+            }
+        }
+
+        // Debounce function to limit save frequency
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
 
         // Email Service Configuration
         const EMAIL_CONFIG = {
@@ -2033,6 +2123,79 @@ Market Advantages:
             const text = (event.clipboardData || window.clipboardData).getData('text');
             document.execCommand('insertText', false, text);
             updateHiddenTextarea();
+        }
+
+        // Template Editor Functions
+        function showTemplateToolbar() {
+            const toolbar = document.getElementById('templateFormattingToolbar');
+            if (toolbar) {
+                toolbar.style.display = 'block';
+            }
+        }
+
+        function hideTemplateToolbar() {
+            const toolbar = document.getElementById('templateFormattingToolbar');
+            if (toolbar) {
+                toolbar.style.display = 'none';
+            }
+        }
+
+        function formatTemplateText(type) {
+            const template = document.getElementById('companyEmailTemplate');
+            if (!template) return;
+
+            template.focus();
+            document.execCommand(type, false, null);
+            updateTemplateContent();
+        }
+
+        function showTemplateColorPicker() {
+            const picker = document.getElementById('templateColorPicker');
+            if (picker) {
+                picker.style.display = picker.style.display === 'none' ? 'block' : 'none';
+            }
+        }
+
+        function applyTemplateColor(color) {
+            const template = document.getElementById('companyEmailTemplate');
+            if (!template) return;
+
+            template.focus();
+            document.execCommand('foreColor', false, color);
+            hideTemplateColorPicker();
+            updateTemplateContent();
+        }
+
+        function hideTemplateColorPicker() {
+            const picker = document.getElementById('templateColorPicker');
+            if (picker) {
+                picker.style.display = 'none';
+            }
+        }
+
+        function clearTemplateFormatting() {
+            const template = document.getElementById('companyEmailTemplate');
+            if (!template) return;
+
+            template.focus();
+            document.execCommand('removeFormat', false, null);
+            updateTemplateContent();
+        }
+
+        function updateTemplateContent() {
+            // Auto-save template content changes
+            setTimeout(() => {
+                if (typeof CompanyOnboardingModule !== 'undefined' && CompanyOnboardingModule.saveData) {
+                    CompanyOnboardingModule.saveData(true); // Auto-save
+                }
+            }, 1000);
+        }
+
+        function handleTemplatePaste(event) {
+            event.preventDefault();
+            const text = (event.clipboardData || window.clipboardData).getData('text');
+            document.execCommand('insertText', false, text);
+            updateTemplateContent();
         }
 
         // Contact Personalization Auto-Population - Make sure it's globally accessible
@@ -5813,8 +5976,15 @@ Phone: +91-XXXXXXXXXX`;
             // Load email service configuration
             await loadEmailServiceConfig();
 
-            // Check if this is the user's first visit
-            checkFirstVisit();
+            // Initialize email form data persistence
+            setTimeout(() => {
+                loadEmailFormData();
+                setupEmailFormAutoSave();
+                console.log('[EmailForm] Form persistence initialized');
+            }, 500);
+
+            // Auto-tutorial disabled - users can access tutorial via Help menu
+            // checkFirstVisit();
         });
 
         async function loadEmailServiceConfig() {
@@ -6101,7 +6271,9 @@ Phone: +91-XXXXXXXXXX`;
                 'companyEmail', 'companyPhone', 'companyAddress', 'companyDescription', 'companyLogo',
                 'productPortfolioPoints', 'OfferingPoints', 'companyShortName',
                 'businesDevelopementManagerName', 'businesDevelopementManagerDesignation',
-                'Link1', 'Link2', 'Link3', 'Image1', 'Image2'
+                'Link1', 'Link2', 'Link3', 'Image1', 'Image2',
+                'companyZohoEmail', 'companyZohoPassword', 'companySenderName', 'companyEmailEnabled',
+                'companyEmailJSService', 'companyEmailJSTemplate'
             ],
 
             // Field validation configuration
@@ -6437,7 +6609,75 @@ Best regards,
                         </h4>
                         <div style="margin-bottom: 15px;">
                             <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">Custom Email Template</label>
-                            <textarea id="companyEmailTemplate" placeholder="Create your custom email template with variables..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; height: 200px; resize: vertical; font-size: 12px;">From: {companyEmail}
+
+                            <!-- Template Formatting Toolbar -->
+                            <div id="templateFormattingToolbar" style="display: none; padding: 8px; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border: 1px solid #dee2e6; border-bottom: none; border-radius: 6px 6px 0 0; margin-bottom: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                <div style="display: flex; flex-wrap: wrap; gap: 4px; align-items: center;">
+                                    <!-- Text Formatting -->
+                                    <button onclick="formatTemplateText('bold')" class="format-btn" style="padding: 4px 8px; font-size: 11px; background: white; border: 1px solid #d1d5db; border-radius: 4px; cursor: pointer; font-weight: 600;" title="Bold">
+                                        <strong>B</strong>
+                                    </button>
+                                    <button onclick="formatTemplateText('italic')" class="format-btn" style="padding: 4px 8px; font-size: 11px; background: white; border: 1px solid #d1d5db; border-radius: 4px; cursor: pointer;" title="Italic">
+                                        <em>I</em>
+                                    </button>
+                                    <button onclick="formatTemplateText('underline')" class="format-btn" style="padding: 4px 8px; font-size: 11px; background: white; border: 1px solid #d1d5db; border-radius: 4px; cursor: pointer;" title="Underline">
+                                        <u>U</u>
+                                    </button>
+
+                                    <div style="width: 1px; height: 16px; background: #d1d5db; margin: 0 4px;"></div>
+
+                                    <!-- Lists -->
+                                    <button onclick="formatTemplateText('insertUnorderedList')" class="format-btn" style="padding: 4px 8px; font-size: 11px; background: white; border: 1px solid #d1d5db; border-radius: 4px; cursor: pointer;" title="Bullet List">
+                                        • List
+                                    </button>
+                                    <button onclick="formatTemplateText('insertOrderedList')" class="format-btn" style="padding: 4px 8px; font-size: 11px; background: white; border: 1px solid #d1d5db; border-radius: 4px; cursor: pointer;" title="Numbered List">
+                                        1. List
+                                    </button>
+
+                                    <div style="width: 1px; height: 16px; background: #d1d5db; margin: 0 4px;"></div>
+
+                                    <!-- Alignment -->
+                                    <button onclick="formatTemplateText('justifyLeft')" class="format-btn" style="padding: 4px 8px; font-size: 11px; background: white; border: 1px solid #d1d5db; border-radius: 4px; cursor: pointer;" title="Align Left">
+                                        ←
+                                    </button>
+                                    <button onclick="formatTemplateText('justifyCenter')" class="format-btn" style="padding: 4px 8px; font-size: 11px; background: white; border: 1px solid #d1d5db; border-radius: 4px; cursor: pointer;" title="Center">
+                                        ↔
+                                    </button>
+                                    <button onclick="formatTemplateText('justifyRight')" class="format-btn" style="padding: 4px 8px; font-size: 11px; background: white; border: 1px solid #d1d5db; border-radius: 4px; cursor: pointer;" title="Align Right">
+                                        →
+                                    </button>
+
+                                    <div style="width: 1px; height: 16px; background: #d1d5db; margin: 0 4px;"></div>
+
+                                    <!-- Color -->
+                                    <button onclick="showTemplateColorPicker()" class="format-btn" style="padding: 4px 8px; font-size: 11px; background: white; border: 1px solid #d1d5db; border-radius: 4px; cursor: pointer; position: relative;" title="Text Color">
+                                        Color
+                                    </button>
+                                    <div id="templateColorPicker" style="display: none; position: absolute; z-index: 1000; background: white; border: 1px solid #d1d5db; border-radius: 6px; padding: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-top: 5px;">
+                                        <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px;">
+                                            <div onclick="applyTemplateColor('#000000')" style="width: 16px; height: 16px; background: #000000; border-radius: 3px; cursor: pointer;" title="Black"></div>
+                                            <div onclick="applyTemplateColor('#dc2626')" style="width: 16px; height: 16px; background: #dc2626; border-radius: 3px; cursor: pointer;" title="Red"></div>
+                                            <div onclick="applyTemplateColor('#ea580c')" style="width: 16px; height: 16px; background: #ea580c; border-radius: 3px; cursor: pointer;" title="Orange"></div>
+                                            <div onclick="applyTemplateColor('#ca8a04')" style="width: 16px; height: 16px; background: #ca8a04; border-radius: 3px; cursor: pointer;" title="Yellow"></div>
+                                            <div onclick="applyTemplateColor('#16a34a')" style="width: 16px; height: 16px; background: #16a34a; border-radius: 3px; cursor: pointer;" title="Green"></div>
+                                            <div onclick="applyTemplateColor('#2563eb')" style="width: 16px; height: 16px; background: #2563eb; border-radius: 3px; cursor: pointer;" title="Blue"></div>
+                                            <div onclick="applyTemplateColor('#7c3aed')" style="width: 16px; height: 16px; background: #7c3aed; border-radius: 3px; cursor: pointer;" title="Purple"></div>
+                                            <div onclick="applyTemplateColor('#be185d')" style="width: 16px; height: 16px; background: #be185d; border-radius: 3px; cursor: pointer;" title="Pink"></div>
+                                        </div>
+                                    </div>
+
+                                    <div style="width: 1px; height: 16px; background: #d1d5db; margin: 0 4px;"></div>
+
+                                    <!-- Clear Formatting -->
+                                    <button onclick="clearTemplateFormatting()" class="format-btn" style="padding: 4px 8px; font-size: 11px; background: white; border: 1px solid #d1d5db; border-radius: 4px; cursor: pointer;" title="Clear Formatting">
+                                        Clear
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="companyEmailTemplate" contenteditable="true" placeholder="Create your custom email template with variables..." style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 0 0 4px 4px; height: 200px; overflow-y: auto; font-size: 12px; line-height: 1.6; background: white; outline: none;"
+                                 onfocus="showTemplateToolbar()" onblur="setTimeout(() => hideTemplateToolbar(), 200)"
+                                 oninput="updateTemplateContent()" onpaste="handleTemplatePaste(event)">From: {companyEmail}
 From-Name: {companyName}
 To: {email}
 Subject: Partnership Opportunity - {companyName} & {firm} in {country}
@@ -6514,6 +6754,61 @@ Best regards,
                         </div>
                     </div>
 
+                    <!-- Email Configuration Section -->
+                    <div style="background: #f0f7ff; border: 1px solid #b3d9ff; border-radius: 6px; padding: 15px; margin-bottom: 25px;">
+                        <h4 style="margin: 0 0 15px 0; color: #0066cc; display: flex; align-items: center; gap: 8px;">
+                            <span>⚙️</span> Email Configuration for this Company
+                        </h4>
+                        <div style="margin-bottom: 15px; padding: 10px; background: #dcfce7; border-radius: 4px; font-size: 12px; color: #166534;">
+                            <strong>🚀 Zoho Mail Integration Ready!</strong> Configure your company-specific email credentials below for professional email sending.
+                        </div>
+
+                        <!-- Zoho Mail Configuration -->
+                        <div style="margin-bottom: 15px; padding: 12px; border: 1px solid #dc2626; border-radius: 6px; background: #fef2f2;">
+                            <h5 style="margin: 0 0 10px 0; color: #dc2626; font-size: 14px;">📧 Primary Email Account (Zoho Mail)</h5>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                                <div>
+                                    <label style="display: block; margin-bottom: 3px; font-weight: 500; font-size: 12px;">Sending Email Address:</label>
+                                    <input type="email" id="companyZohoEmail" placeholder="your-email@yourdomain.com" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+                                </div>
+                                <div>
+                                    <label style="display: block; margin-bottom: 3px; font-weight: 500; font-size: 12px;">App Password:</label>
+                                    <input type="password" id="companyZohoPassword" placeholder="App-specific password" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+                                </div>
+                            </div>
+                            <div style="margin-bottom: 10px;">
+                                <label style="display: block; margin-bottom: 3px; font-weight: 500; font-size: 12px;">Sender Display Name:</label>
+                                <input type="text" id="companySenderName" placeholder="e.g., Your Company Name" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+                                <small style="color: #6b7280; display: block; margin-top: 2px; font-size: 11px;">This will appear as the sender name in emails</small>
+                            </div>
+                            <div>
+                                <label style="display: flex; align-items: center; cursor: pointer; font-size: 12px;">
+                                    <input type="checkbox" id="companyEmailEnabled" style="margin-right: 6px;">
+                                    <span style="font-weight: 500;">Enable email sending for this company</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Alternative Email Services -->
+                        <div style="margin-bottom: 15px; padding: 12px; border: 1px solid #ddd; border-radius: 6px; background: #f8f9fa;">
+                            <h5 style="margin: 0 0 10px 0; color: #28a745; font-size: 14px;">📧 Alternative Services (Optional)</h5>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                <div>
+                                    <label style="display: block; margin-bottom: 3px; font-weight: 500; font-size: 12px;">EmailJS Service ID:</label>
+                                    <input type="text" id="companyEmailJSService" placeholder="service_xxxxxxx" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+                                </div>
+                                <div>
+                                    <label style="display: block; margin-bottom: 3px; font-weight: 500; font-size: 12px;">EmailJS Template ID:</label>
+                                    <input type="text" id="companyEmailJSTemplate" placeholder="template_xxxxxxx" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 8px; font-size: 11px; color: #856404;">
+                            <strong>💡 Tip:</strong> Email configuration is stored per company. Each company profile can have its own email settings for better organization and security.
+                        </div>
+                    </div>
+
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
                             <button onclick="CompanyOnboardingModule.loadProfessionalTemplate()" style="background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin-right: 10px;">📧 Load Professional Template</button>
@@ -6577,17 +6872,34 @@ Best regards,
                     { id: 'Link3', value: this.data.Link3 || '' },
                     { id: 'Image1', value: this.data.Image1 || '' },
                     { id: 'Image2', value: this.data.Image2 || '' },
-                    { id: 'companyEmailTemplate', value: this.data.emailTemplate || this.defaultTemplate }
+                    { id: 'companyEmailTemplate', value: this.data.emailTemplate || this.defaultTemplate, isContentEditable: true },
+
+                    // Email configuration fields
+                    { id: 'companyZohoEmail', value: this.data.companyZohoEmail || '' },
+                    { id: 'companyZohoPassword', value: this.data.companyZohoPassword || '' },
+                    { id: 'companySenderName', value: this.data.companySenderName || '' },
+                    { id: 'companyEmailJSService', value: this.data.companyEmailJSService || '' },
+                    { id: 'companyEmailJSTemplate', value: this.data.companyEmailJSTemplate || '' }
                 ];
 
                 fields.forEach(field => {
                     const element = document.getElementById(field.id);
                     if (element) {
-                        element.value = field.value;
+                        if (field.isContentEditable) {
+                            element.innerHTML = field.value;
+                        } else {
+                            element.value = field.value;
+                        }
                     } else {
                         console.warn(`[CompanyOnboarding] Element ${field.id} not found`);
                     }
                 });
+
+                // Handle checkbox fields separately
+                const emailEnabledCheckbox = document.getElementById('companyEmailEnabled');
+                if (emailEnabledCheckbox) {
+                    emailEnabledCheckbox.checked = this.data.companyEmailEnabled || false;
+                }
 
                 // Update the current company display after loading
                 this.updateCurrentCompanyDisplay();
@@ -6643,7 +6955,15 @@ Best regards,
                     Link3: document.getElementById('Link3').value,
                     Image1: document.getElementById('Image1').value,
                     Image2: document.getElementById('Image2').value,
-                    emailTemplate: document.getElementById('companyEmailTemplate').value,
+                    emailTemplate: document.getElementById('companyEmailTemplate').innerHTML,
+
+                    // Email configuration fields
+                    companyZohoEmail: document.getElementById('companyZohoEmail').value,
+                    companyZohoPassword: document.getElementById('companyZohoPassword').value,
+                    companySenderName: document.getElementById('companySenderName').value,
+                    companyEmailEnabled: document.getElementById('companyEmailEnabled').checked,
+                    companyEmailJSService: document.getElementById('companyEmailJSService').value,
+                    companyEmailJSTemplate: document.getElementById('companyEmailJSTemplate').value,
 
                     // Metadata for persistence tracking
                     dataVersion: this.dataVersion,
@@ -7599,7 +7919,7 @@ Best regards,
 
         // Module: Apply Template to Message Composer
         CompanyOnboardingModule.applyTemplateToMessage = function() {
-            const template = document.getElementById('companyEmailTemplate').value;
+            const template = document.getElementById('companyEmailTemplate').innerHTML;
             if (!template) {
                 showAlert('Template is empty. Please enter template content first.', 'warning');
                 return;
@@ -7657,7 +7977,7 @@ Best regards,
                 }
 
                 // Update only the template
-                this.data.emailTemplate = document.getElementById('companyEmailTemplate').value;
+                this.data.emailTemplate = document.getElementById('companyEmailTemplate').innerHTML;
 
                 localStorage.setItem(this.storageKey, JSON.stringify(this.data));
                 showAlert('Email template saved successfully! 📧', 'success');
@@ -7670,7 +7990,7 @@ Best regards,
         // Module: Reset Template to Default
         CompanyOnboardingModule.resetTemplate = function() {
             if (confirm('Are you sure you want to reset the template to default? This will overwrite your current template.')) {
-                document.getElementById('companyEmailTemplate').value = this.defaultTemplate;
+                document.getElementById('companyEmailTemplate').innerHTML = this.defaultTemplate;
                 showAlert('Template reset to default! 🔄', 'success');
             }
         };
