@@ -6577,8 +6577,25 @@ Phone: +91-XXXXXXXXXX`;
                 }, 2000);
             }, 3000);
 
+            // DEBUG: Clear any existing authentication to force auth gate display
+            console.log('[DEBUG] Clearing authentication for testing');
+            localStorage.removeItem('bulkEmail_userSession');
+            localStorage.removeItem('bulkEmail_currentUser');
+
             // Initialize User Management System
             UserManager.init();
+
+            // FORCE auth gate to be visible for debugging
+            setTimeout(() => {
+                console.log('[DEBUG] Force showing auth gate');
+                const authGate = document.getElementById('authGate');
+                if (authGate) {
+                    authGate.style.display = 'flex';
+                    authGate.style.visibility = 'visible';
+                    authGate.style.opacity = '1';
+                    console.log('[DEBUG] Auth gate forced visible');
+                }
+            }, 1000);
 
             // Add event listeners for authentication gate buttons
             const loginBtn = document.getElementById('loginBtn');
