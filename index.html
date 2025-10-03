@@ -3744,6 +3744,12 @@ Phone: +91-XXXXXXXXXX`;
                 z-index: 15000; padding: 20px;
             `;
 
+            // Check if using personalized templates
+            const isUsingPersonalizedTemplate = companyData && companyData.emailTemplate;
+            const companyFieldCount = CompanyOnboardingModule.availableFields.filter(field =>
+                companyData[field] && companyData[field].trim()
+            ).length;
+
             // Generate email previews for ALL contacts - store contact info only, personalize at send time like individual emails
             const emailPreviews = contacts.map(contact => {
                 // Get current templates from form (same as individual emails do)
@@ -3777,7 +3783,22 @@ Phone: +91-XXXXXXXXXX`;
                     <div style="padding: 16px 24px; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; background: #f8f9fa;">
                         <div>
                             <h2 style="margin: 0; color: #202124; font-size: 18px; font-weight: 500;">📧 Bulk Email Review</h2>
-                            <p style="margin: 4px 0 0 0; color: #5f6368; font-size: 12px;">Review personalized emails for ${contacts.length} contacts</p>
+                            <p style="margin: 4px 0 8px 0; color: #5f6368; font-size: 12px;">Review personalized emails for ${contacts.length} contacts</p>
+
+                            <!-- Personalization Status Indicator -->
+                            ${isUsingPersonalizedTemplate ? `
+                                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 6px 12px; border-radius: 6px; font-size: 11px; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);">
+                                    <span>✨</span>
+                                    <span><strong>Personalized Templates Active</strong></span>
+                                    <span style="opacity: 0.8;">• ${companyFieldCount}/${CompanyOnboardingModule.availableFields.length} company fields • Smart content & grammar</span>
+                                </div>
+                            ` : `
+                                <div style="background: #f8f9fa; border: 1px solid #dee2e6; color: #6c757d; padding: 6px 12px; border-radius: 6px; font-size: 11px; display: inline-flex; align-items: center; gap: 6px;">
+                                    <span>📝</span>
+                                    <span>Default Templates</span>
+                                    <span style="opacity: 0.7;">• <a href="#" onclick="CompanyOnboardingModule.showManager(); closeBulkEmailConfirmation();" style="color: #007bff; text-decoration: none;">Set up company data</a> for personalization</span>
+                                </div>
+                            `}
                         </div>
                         <div style="display: flex; align-items: center; gap: 12px;">
                             <button id="toggleSelectAll" onclick="toggleAllContacts()" style="background: #1a73e8; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: 500;">
@@ -3861,7 +3882,13 @@ Phone: +91-XXXXXXXXXX`;
                                                     <input type="checkbox" id="contact-checkbox-${index}" checked style="margin-right: 8px;">
                                                     ${escapeHTML(preview.contact.contactName || 'N/A')} (${escapeHTML(preview.contact.email)})
                                                 </div>
-                                                <div style="font-size: 12px; color: #5f6368;">${escapeHTML(preview.contact.firm || 'N/A')} • ${escapeHTML(preview.contact.country || 'N/A')}</div>
+                                                <div style="font-size: 12px; color: #5f6368; display: flex; align-items: center; gap: 8px;">
+                                                    <span>${escapeHTML(preview.contact.firm || 'N/A')} • ${escapeHTML(preview.contact.country || 'N/A')}</span>
+                                                    ${isUsingPersonalizedTemplate ?
+                                                        '<span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: 500;">✨ PERSONALIZED</span>' :
+                                                        '<span style="background: #e9ecef; color: #6c757d; padding: 2px 6px; border-radius: 3px; font-size: 10px;">📝 DEFAULT</span>'
+                                                    }
+                                                </div>
                                             </div>
                                             <button onclick="sendIndividualEmail(${index})" style="background: #1a73e8; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer;">Send Now</button>
                                         </div>
