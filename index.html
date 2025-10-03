@@ -409,12 +409,13 @@
         position: fixed; top: 0; left: 0; right: 0; bottom: 0;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         display: flex; align-items: center; justify-content: center;
-        z-index: 999999; padding: 20px;
+        z-index: 999999; padding: 20px; min-height: 100vh; min-width: 100vw;
         ">
         <div style="
             background: white; padding: 40px; border-radius: 16px;
             max-width: 500px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            text-align: center;
+            text-align: center; position: relative; z-index: 1000000;
+            opacity: 1; visibility: visible; display: block;
             ">
             <div style="font-size: 64px; margin-bottom: 20px;">📧</div>
             <h1 style="margin: 0 0 15px 0; color: #333; font-size: 28px;">Bulk Email Sender</h1>
@@ -436,13 +437,15 @@
                 <button id="loginBtn" onclick="showLoginModal()" style="
                     width: 100%; padding: 15px; background: #007bff; color: white;
                     border: none; border-radius: 8px; font-size: 16px; font-weight: 600;
-                    cursor: pointer; transition: all 0.2s ease;
+                    cursor: pointer; transition: all 0.2s ease; position: relative; z-index: 1000001;
+                    opacity: 1; visibility: visible; display: block; margin: 8px 0;
                     ">🔐 Login to Your Account</button>
 
                 <button id="registerBtn" onclick="showRegisterModal()" style="
                     width: 100%; padding: 15px; background: #28a745; color: white;
                     border: none; border-radius: 8px; font-size: 16px; font-weight: 600;
-                    cursor: pointer; transition: all 0.2s ease;
+                    cursor: pointer; transition: all 0.2s ease; position: relative; z-index: 1000001;
+                    opacity: 1; visibility: visible; display: block; margin: 8px 0;
                     ">🆕 Create New Account</button>
             </div>
 
