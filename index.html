@@ -4849,7 +4849,10 @@ Phone: +91-XXXXXXXXXX`;
                 <div id="bulkProgressContainer" style="background: white; padding: 30px; border-radius: 8px; max-width: 500px; width: 90%;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                         <h3 style="margin: 0; color: #007bff;">📧 Bulk Email Progress</h3>
-                        <button id="minimizeProgressBtn" onclick="minimizeBulkProgress()" style="background: #6c757d; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">Minimize</button>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <button id="minimizeProgressBtn" onclick="minimizeBulkProgress()" style="background: #6c757d; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">Minimize</button>
+                            <button onclick="cancelBulkEmail()" style="background: #dc3545; color: white; border: none; width: 28px; height: 28px; border-radius: 50%; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1;" title="Close">×</button>
+                        </div>
                     </div>
                     <div id="bulkProgressText" style="margin-bottom: 15px; font-size: 14px;">Preparing to send...</div>
                     <div style="background: #f0f0f0; border-radius: 4px; height: 20px; margin-bottom: 15px; overflow: hidden;">
@@ -5022,8 +5025,11 @@ Phone: +91-XXXXXXXXXX`;
                 <div style="background: white; padding: 20px; border-radius: 8px; max-width: 90%; max-height: 90%; width: 800px; overflow: hidden; display: flex; flex-direction: column;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                         <h3 style="margin: 0; color: #dc3545;">❌ Failed Uploads Report</h3>
-                        <button onclick="exportFailedUploads()" class="button button-success" style="margin-right: 10px;">Export CSV</button>
-                        <button onclick="closeFailedUploadsModal()" class="button">Close</button>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <button onclick="exportFailedUploads()" class="button button-success">Export CSV</button>
+                            <button onclick="closeFailedUploadsModal()" class="button">Close</button>
+                            <button onclick="closeFailedUploadsModal()" style="background: #dc3545; color: white; border: none; width: 28px; height: 28px; border-radius: 50%; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1;" title="Close">×</button>
+                        </div>
                     </div>
                     <div style="font-size: 14px; margin-bottom: 10px; color: #666;">
                         Total Failed Records: <strong>${failedRecords.length}</strong>
@@ -5838,7 +5844,10 @@ Phone: +91-XXXXXXXXXX`;
 
             modal.innerHTML = `
                 <div style="background: white; padding: 30px; border-radius: 8px; max-width: 600px; width: 90%; max-height: 80%; overflow-y: auto;">
-                    <h3 style="margin: 0 0 20px 0; color: #007bff;">⚙️ Email Service Configuration</h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h3 style="margin: 0; color: #007bff;">⚙️ Email Service Configuration</h3>
+                        <button onclick="closeEmailConfig()" style="background: #dc3545; color: white; border: none; width: 28px; height: 28px; border-radius: 50%; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1;" title="Close">×</button>
+                    </div>
 
                     <div style="margin-bottom: 20px; padding: 15px; background: #dcfce7; border-radius: 4px; border-left: 4px solid #16a34a;">
                         <strong>🚀 Zoho Mail Production Ready!</strong>
@@ -6295,9 +6304,10 @@ Best regards,
                         <h2 style="margin: 0; color: #007bff; display: flex; align-items: center; gap: 10px;">
                             <span>🏢</span> Company Management
                         </h2>
-                        <div style="display: flex; gap: 8px;">
+                        <div style="display: flex; gap: 8px; align-items: center;">
                             <button onclick="CompanyOnboardingModule.showCompanySelector()" style="background: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer;">📋 All Companies</button>
                             <button onclick="CompanyOnboardingModule.showNewCompanyForm()" style="background: #007bff; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer;">➕ New Company</button>
+                            <button onclick="CompanyOnboardingModule.closeManager()" style="background: #dc3545; color: white; border: none; width: 28px; height: 28px; border-radius: 50%; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1;" title="Close">×</button>
                         </div>
                     </div>
 
@@ -6531,16 +6541,20 @@ Best regards,
             }, 100);
         };
 
+        // Module: Close Company Onboarding Data Manager
+        CompanyOnboardingModule.closeManager = function() {
+            const modal = document.getElementById('companyDataModal');
+            if (modal) {
+                modal.remove();
+                console.log('[CompanyOnboarding] Modal closed');
+            }
+        };
+
         // Module: Load Company Onboarding Data
         CompanyOnboardingModule.loadData = function() {
             try {
-                const savedData = localStorage.getItem(this.storageKey);
-                if (savedData) {
-                    this.data = JSON.parse(savedData);
-                } else {
-                    // Initialize with empty data if no saved data exists
-                    this.data = {};
-                }
+                // Use the multi-company getData function instead of direct localStorage access
+                this.data = this.getData();
 
                 // Populate form fields with safe element access
                 const fields = [
@@ -6574,6 +6588,10 @@ Best regards,
                         console.warn(`[CompanyOnboarding] Element ${field.id} not found`);
                     }
                 });
+
+                // Update the current company display after loading
+                this.updateCurrentCompanyDisplay();
+                console.log('[CompanyOnboarding] Data loaded and form populated');
             } catch (error) {
                 console.error('[CompanyOnboarding] Error loading data:', error);
                 // Initialize with empty data on error
@@ -7253,18 +7271,32 @@ Best regards,
 
         // Module: Get Company Data for Personalization
         CompanyOnboardingModule.getData = function() {
-            // Load data if not already loaded
+            // Ensure companies are loaded
+            if (Object.keys(this.companies).length === 0) {
+                this.loadAllCompanies();
+            }
+
+            // If we have a current company, return its data
+            if (this.currentCompanyId && this.companies[this.currentCompanyId]) {
+                this.data = this.companies[this.currentCompanyId];
+                console.log('[CompanyOnboarding] Loaded data for company:', this.currentCompanyId, this.data.companyName);
+                return this.data;
+            }
+
+            // Fallback to legacy single company data if no multi-company data exists
             if (!this.data || Object.keys(this.data).length === 0) {
                 const savedData = localStorage.getItem(this.storageKey);
                 if (savedData) {
                     try {
                         this.data = JSON.parse(savedData);
+                        console.log('[CompanyOnboarding] Loaded legacy data as fallback');
                     } catch (error) {
-                        console.error('[CompanyOnboarding] Error loading data:', error);
+                        console.error('[CompanyOnboarding] Error loading legacy data:', error);
                         this.data = {};
                     }
                 }
             }
+
             return this.data;
         };
 
@@ -8256,8 +8288,9 @@ Best regards,
             modal.innerHTML = `
                 <div style="background: white; border-radius: 8px; max-width: 600px; width: 90%; max-height: 80%; overflow-y: auto; padding: 0;">
                     <!-- Header -->
-                    <div style="padding: 20px 24px 16px 24px; border-bottom: 1px solid #e0e0e0;">
+                    <div style="padding: 20px 24px 16px 24px; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center;">
                         <h3 style="margin: 0; color: #202124; font-size: 18px; font-weight: 500;">Email Response</h3>
+                        <button onclick="closeViewResponseModal()" style="background: #dc3545; color: white; border: none; width: 28px; height: 28px; border-radius: 50%; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1;" title="Close">×</button>
                     </div>
 
                     <!-- Email Details -->
