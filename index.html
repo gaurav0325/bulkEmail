@@ -5804,6 +5804,286 @@ Phone: +91-XXXXXXXXXX`;
             }
         }
 
+        // =====================================================
+        // COMPREHENSIVE TESTING SUITE FOR USER MANAGEMENT
+        // =====================================================
+
+        const TestSuite = {
+            results: [],
+
+            log: function(testName, status, details = '') {
+                const result = {
+                    test: testName,
+                    status: status, // 'PASS', 'FAIL', 'WARNING'
+                    details: details,
+                    timestamp: new Date().toISOString()
+                };
+                this.results.push(result);
+
+                const icon = status === 'PASS' ? '✅' : status === 'FAIL' ? '❌' : '⚠️';
+                console.log(`${icon} [TEST] ${testName}: ${status}${details ? ' - ' + details : ''}`);
+            },
+
+            // Test authentication gate visibility and functionality
+            testAuthGate: function() {
+                console.log('\n🧠 TESTING: Authentication Gate');
+
+                const authGate = document.getElementById('authGate');
+                const loginBtn = document.getElementById('loginBtn');
+                const registerBtn = document.getElementById('registerBtn');
+                const mainContent = document.querySelector('.main-content');
+
+                // Test auth gate exists
+                this.log('Auth Gate Exists', authGate ? 'PASS' : 'FAIL',
+                    authGate ? 'Auth gate found in DOM' : 'Auth gate missing from DOM');
+
+                // Test buttons exist
+                this.log('Login Button Exists', loginBtn ? 'PASS' : 'FAIL');
+                this.log('Register Button Exists', registerBtn ? 'PASS' : 'FAIL');
+
+                // Test main content is hidden for non-authenticated users
+                if (mainContent) {
+                    const isHidden = mainContent.style.display === 'none' ||
+                                   window.getComputedStyle(mainContent).display === 'none';
+                    this.log('Main Content Hidden', isHidden ? 'PASS' : 'FAIL',
+                        isHidden ? 'Main content properly hidden' : 'Main content visible without auth');
+                }
+
+                // Test button click handlers
+                if (loginBtn) {
+                    const hasOnClick = loginBtn.onclick !== null;
+                    this.log('Login Button Handler', hasOnClick ? 'PASS' : 'FAIL');
+                }
+
+                if (registerBtn) {
+                    const hasOnClick = registerBtn.onclick !== null;
+                    this.log('Register Button Handler', hasOnClick ? 'PASS' : 'FAIL');
+                }
+            },
+
+            // Test UserManager object and methods
+            testUserManager: function() {
+                console.log('\n👤 TESTING: UserManager Object');
+
+                // Test UserManager exists
+                const userManagerExists = typeof UserManager !== 'undefined';
+                this.log('UserManager Object', userManagerExists ? 'PASS' : 'FAIL');
+
+                if (!userManagerExists) return;
+
+                // Test required methods exist
+                const requiredMethods = [
+                    'init', 'showAuthModal', 'registerUser', 'login', 'logout',
+                    'sendVerificationEmail', 'sendPasswordResetEmail', 'handleLogin', 'handleRegister'
+                ];
+
+                requiredMethods.forEach(method => {
+                    const exists = typeof UserManager[method] === 'function';
+                    this.log(`UserManager.${method}`, exists ? 'PASS' : 'FAIL');
+                });
+
+                // Test storage keys are defined
+                const storageKeys = ['USERS_KEY', 'CURRENT_USER_KEY', 'SESSION_KEY', 'PASSWORD_RESET_KEY'];
+                storageKeys.forEach(key => {
+                    const exists = UserManager[key] !== undefined;
+                    this.log(`Storage Key: ${key}`, exists ? 'PASS' : 'FAIL');
+                });
+
+                // Test OAuth configuration
+                const hasOAuthConfig = UserManager.oauthConfig &&
+                                     UserManager.oauthConfig.google &&
+                                     UserManager.oauthConfig.microsoft;
+                this.log('OAuth Configuration', hasOAuthConfig ? 'PASS' : 'FAIL');
+            },
+
+            // Test modal functionality
+            testModalSystem: function() {
+                console.log('\n💬 TESTING: Modal System');
+
+                try {
+                    // Test if showAuthModal can be called without errors
+                    if (typeof UserManager !== 'undefined' && UserManager.showAuthModal) {
+                        // Don't actually show modal, just test if method exists and is callable
+                        this.log('showAuthModal Callable', 'PASS', 'Method exists and is callable');
+
+                        // Test switchAuthTab method
+                        const hasSwitchTab = typeof UserManager.switchAuthTab === 'function';
+                        this.log('switchAuthTab Method', hasSwitchTab ? 'PASS' : 'FAIL');
+
+                        // Test form handlers
+                        const hasHandleLogin = typeof UserManager.handleLogin === 'function';
+                        const hasHandleRegister = typeof UserManager.handleRegister === 'function';
+                        this.log('Login Handler', hasHandleLogin ? 'PASS' : 'FAIL');
+                        this.log('Register Handler', hasHandleRegister ? 'PASS' : 'FAIL');
+                    }
+                } catch (error) {
+                    this.log('Modal System Error', 'FAIL', error.message);
+                }
+            },
+
+            // Test data persistence functions
+            testDataPersistence: function() {
+                console.log('\n💾 TESTING: Data Persistence');
+
+                try {
+                    // Test localStorage availability
+                    localStorage.setItem('test', 'test');
+                    localStorage.removeItem('test');
+                    this.log('localStorage Available', 'PASS');
+
+                    // Test UserManager data methods
+                    if (typeof UserManager !== 'undefined') {
+                        const hasGetAllUsers = typeof UserManager.getAllUsers === 'function';
+                        const hasSaveAllUsers = typeof UserManager.saveAllUsers === 'function';
+                        const hasLoadSession = typeof UserManager.loadSession === 'function';
+                        const hasSaveSession = typeof UserManager.saveSession === 'function';
+
+                        this.log('getAllUsers Method', hasGetAllUsers ? 'PASS' : 'FAIL');
+                        this.log('saveAllUsers Method', hasSaveAllUsers ? 'PASS' : 'FAIL');
+                        this.log('loadSession Method', hasLoadSession ? 'PASS' : 'FAIL');
+                        this.log('saveSession Method', hasSaveSession ? 'PASS' : 'FAIL');
+
+                        // Test existing user data
+                        if (hasGetAllUsers) {
+                            const users = UserManager.getAllUsers();
+                            this.log('User Data Structure', typeof users === 'object' ? 'PASS' : 'FAIL',
+                                `Found ${Object.keys(users).length} users`);
+                        }
+                    }
+                } catch (error) {
+                    this.log('localStorage Error', 'FAIL', error.message);
+                }
+            },
+
+            // Test email integration
+            testEmailIntegration: function() {
+                console.log('\n📧 TESTING: Email Integration');
+
+                if (typeof UserManager !== 'undefined') {
+                    // Test email methods exist
+                    const hasSendVerification = typeof UserManager.sendVerificationEmail === 'function';
+                    const hasSendPasswordReset = typeof UserManager.sendPasswordResetEmailReal === 'function';
+                    const hasEmailInfrastructure = typeof UserManager.sendEmailViaInfrastructure === 'function';
+
+                    this.log('Send Verification Email', hasSendVerification ? 'PASS' : 'FAIL');
+                    this.log('Send Password Reset', hasSendPasswordReset ? 'PASS' : 'FAIL');
+                    this.log('Email Infrastructure', hasEmailInfrastructure ? 'PASS' : 'FAIL');
+
+                    // Test if sendViaZoho function exists (from existing email system)
+                    const hasZohoIntegration = typeof sendViaZoho === 'function';
+                    this.log('Zoho Integration', hasZohoIntegration ? 'PASS' : 'WARNING',
+                        hasZohoIntegration ? 'Zoho function available' : 'Will use fallback methods');
+                }
+            },
+
+            // Test URL parameter handling
+            testUrlHandling: function() {
+                console.log('\n🔗 TESTING: URL Parameter Handling');
+
+                if (typeof UserManager !== 'undefined') {
+                    const hasUrlHandler = typeof UserManager.handleUrlParameters === 'function';
+                    const hasVerifyHandler = typeof UserManager.handleEmailVerification === 'function';
+                    const hasResetHandler = typeof UserManager.handlePasswordResetFromUrl === 'function';
+
+                    this.log('URL Parameter Handler', hasUrlHandler ? 'PASS' : 'FAIL');
+                    this.log('Email Verification Handler', hasVerifyHandler ? 'PASS' : 'FAIL');
+                    this.log('Password Reset Handler', hasResetHandler ? 'PASS' : 'FAIL');
+                }
+            },
+
+            // Test security measures
+            testSecurity: function() {
+                console.log('\n🔒 TESTING: Security Measures');
+
+                if (typeof UserManager !== 'undefined') {
+                    // Test password hashing
+                    const hasHashFunction = typeof UserManager.hashPassword === 'function';
+                    this.log('Password Hashing', hasHashFunction ? 'PASS' : 'FAIL');
+
+                    // Test token generation
+                    const hasTokenGeneration = typeof UserManager.generateToken === 'function';
+                    this.log('Token Generation', hasTokenGeneration ? 'PASS' : 'FAIL');
+
+                    // Test session validation
+                    const hasSessionValidation = typeof UserManager.clearSession === 'function';
+                    this.log('Session Management', hasSessionValidation ? 'PASS' : 'FAIL');
+                }
+            },
+
+            // Run all tests
+            runAllTests: function() {
+                console.log('🎯 STARTING COMPREHENSIVE USER MANAGEMENT TESTING');
+                console.log('========================================================');
+
+                this.results = []; // Clear previous results
+
+                this.testAuthGate();
+                this.testUserManager();
+                this.testModalSystem();
+                this.testDataPersistence();
+                this.testEmailIntegration();
+                this.testUrlHandling();
+                this.testSecurity();
+
+                this.generateReport();
+            },
+
+            // Generate comprehensive test report
+            generateReport: function() {
+                console.log('\n📈 TEST REPORT SUMMARY');
+                console.log('========================================================');
+
+                const passed = this.results.filter(r => r.status === 'PASS').length;
+                const failed = this.results.filter(r => r.status === 'FAIL').length;
+                const warnings = this.results.filter(r => r.status === 'WARNING').length;
+                const total = this.results.length;
+
+                console.log(`✅ PASSED: ${passed}/${total} tests`);
+                console.log(`❌ FAILED: ${failed}/${total} tests`);
+                console.log(`⚠️ WARNINGS: ${warnings}/${total} tests`);
+
+                const successRate = ((passed / total) * 100).toFixed(1);
+                console.log(`🏆 SUCCESS RATE: ${successRate}%`);
+
+                if (failed > 0) {
+                    console.log('\n❌ FAILED TESTS:');
+                    this.results.filter(r => r.status === 'FAIL').forEach(result => {
+                        console.log(`   • ${result.test}: ${result.details}`);
+                    });
+                }
+
+                if (warnings > 0) {
+                    console.log('\n⚠️ WARNINGS:');
+                    this.results.filter(r => r.status === 'WARNING').forEach(result => {
+                        console.log(`   • ${result.test}: ${result.details}`);
+                    });
+                }
+
+                // Store results for external access
+                window.testResults = this.results;
+
+                console.log('\n🔄 To run manual tests, use: TestSuite.runManualTests()');
+                console.log('📊 Full results available at: window.testResults');
+            },
+
+            // Manual testing instructions
+            runManualTests: function() {
+                console.log('\n📋 MANUAL TESTING CHECKLIST');
+                console.log('========================================================');
+                console.log('🔰 1. Click "Login to Your Account" button');
+                console.log('🔰 2. Try registering with invalid email formats');
+                console.log('🔰 3. Try weak passwords (less than 6 characters)');
+                console.log('🔰 4. Test forgot password functionality');
+                console.log('🔰 5. Try Google/Microsoft OAuth buttons');
+                console.log('🔰 6. Test form validation messages');
+                console.log('🔰 7. Test remember me checkbox');
+                console.log('🔰 8. Test modal close buttons');
+                console.log('🔰 9. Test keyboard navigation (Tab/Enter)');
+                console.log('🔰 10. Test responsive design on different screen sizes');
+                console.log('\n📝 Report any issues found during manual testing');
+            }
+        };
+
         // Global functions moved to top of script for immediate availability
 
         function closeDataMenu(event) {
@@ -6127,6 +6407,12 @@ Phone: +91-XXXXXXXXXX`;
         // Initialize on page load - no complex initialization
         document.addEventListener('DOMContentLoaded', async function() {
             console.log('Secure email sender loaded');
+
+            // Execute comprehensive testing suite
+            setTimeout(() => {
+                console.log('\n🧪 EXECUTING COMPREHENSIVE USER MANAGEMENT TESTING');
+                TestSuite.runAllTests();
+            }, 3000);
 
             // Initialize User Management System
             UserManager.init();

@@ -10,7 +10,8 @@
       "Bash(node:*)",
       "Bash(grep:*)",
       "Bash(cat:*)",
-      "Bash(npm install)"
+      "Bash(npm install)",
+      "Bash(python:*)"
     ],
     "deny": [],
     "ask": []
