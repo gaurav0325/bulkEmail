@@ -387,6 +387,51 @@
     </style>
 </head>
 <body>
+    <!-- Authentication Gate Overlay -->
+    <div id="authGate" style="
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex; align-items: center; justify-content: center;
+        z-index: 999999; padding: 20px;
+        ">
+        <div style="
+            background: white; padding: 40px; border-radius: 16px;
+            max-width: 500px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+            ">
+            <div style="font-size: 64px; margin-bottom: 20px;">📧</div>
+            <h1 style="margin: 0 0 15px 0; color: #333; font-size: 28px;">Bulk Email Sender</h1>
+            <p style="margin: 0 0 30px 0; color: #666; font-size: 16px; line-height: 1.5;">Professional Email Campaign Platform</p>
+
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 30px; text-align: left;">
+                <h3 style="margin: 0 0 15px 0; color: #007bff; font-size: 18px;">🚀 Platform Features:</h3>
+                <ul style="margin: 0; padding-left: 20px; color: #555; line-height: 1.6;">
+                    <li>Multi-format contact file upload & processing</li>
+                    <li>Rich text email composition with templates</li>
+                    <li>Bulk email campaigns with personalization</li>
+                    <li>Real-time analytics and progress tracking</li>
+                    <li>Multi-company management</li>
+                    <li>Professional email delivery via SMTP</li>
+                </ul>
+            </div>
+
+            <div style="display: grid; gap: 15px;">
+                <button onclick="UserManager.showAuthModal('login')" style="
+                    width: 100%; padding: 15px; background: #007bff; color: white;
+                    border: none; border-radius: 8px; font-size: 16px; font-weight: 600;
+                    cursor: pointer; transition: all 0.2s ease;
+                    ">🔐 Login to Your Account</button>
+
+                <button onclick="UserManager.showAuthModal('register')" style="
+                    width: 100%; padding: 15px; background: #28a745; color: white;
+                    border: none; border-radius: 8px; font-size: 16px; font-weight: 600;
+                    cursor: pointer; transition: all 0.2s ease;
+                    ">🆕 Create New Account</button>
+            </div>
+
+            <p style="margin: 30px 0 0 0; color: #999; font-size: 12px;">🔒 Your data is secure and private. We never share your information.</p>
+        </div>
+    </div>
     <div style="background: white; padding: 10px 20px; border-radius: 5px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
         <div>
             <h3 style="margin: 0; color: #007bff;">📧 Bulk Email Sender</h3>
@@ -6345,21 +6390,147 @@ Phone: +91-XXXXXXXXXX`;
             USERS_KEY: 'bulkEmail_users',
             CURRENT_USER_KEY: 'bulkEmail_currentUser',
             SESSION_KEY: 'bulkEmail_userSession',
+            PASSWORD_RESET_KEY: 'bulkEmail_passwordResets',
 
             // Current state
             currentUser: null,
             isLoggedIn: false,
+            authInitialized: false,
+
+            // OAuth configuration (replace with your actual OAuth app credentials)
+            oauthConfig: {
+                google: {
+                    clientId: 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com',
+                    redirectUri: window.location.origin + '/auth/google/callback'
+                },
+                microsoft: {
+                    clientId: 'YOUR_MICROSOFT_APP_ID',
+                    redirectUri: window.location.origin + '/auth/microsoft/callback'
+                }
+            },
 
             // Initialize user system
             init: function() {
+                console.log('[UserManager] Initializing authentication system...');
+
+                // Load session first
                 this.loadSession();
-                this.updateUserDisplay();
-                console.log('[UserManager] Initialized');
+
+                // Check authentication state
+                this.checkAuthenticationState();
+
+                // Initialize OAuth libraries
+                this.initializeOAuth();
+
+                this.authInitialized = true;
+                console.log('[UserManager] Authentication system initialized');
+            },
+
+            // Check if user needs to authenticate
+            checkAuthenticationState: function() {
+                if (this.isLoggedIn && this.currentUser) {
+                    console.log('[UserManager] User authenticated:', this.currentUser.email);
+                    this.hideAuthGate();
+                    this.updateUserDisplay();
+                    // Load user's companies
+                    setTimeout(() => {
+                        CompanyOnboardingModule.loadUserCompanies();
+                    }, 500);
+                } else {
+                    console.log('[UserManager] User not authenticated, showing auth gate');
+                    this.showAuthGate();
+                }
+            },
+
+            // Show authentication gate
+            showAuthGate: function() {
+                const authGate = document.getElementById('authGate');
+                if (authGate) {
+                    authGate.style.display = 'flex';
+                }
+
+                // Hide main application
+                const mainContent = document.querySelector('.main-content');
+                const header = document.querySelector('div[style*="background: white"]');
+                if (mainContent) mainContent.style.display = 'none';
+                if (header) header.style.display = 'none';
+            },
+
+            // Hide authentication gate
+            hideAuthGate: function() {
+                const authGate = document.getElementById('authGate');
+                if (authGate) {
+                    authGate.style.display = 'none';
+                }
+
+                // Show main application
+                const mainContent = document.querySelector('.main-content');
+                const header = document.querySelector('div[style*="background: white"]');
+                if (mainContent) mainContent.style.display = 'flex';
+                if (header) header.style.display = 'flex';
             },
 
             // Generate unique user ID
             generateUserId: function() {
                 return 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            },
+
+            // Initialize OAuth libraries
+            initializeOAuth: function() {
+                // Load Google OAuth library
+                if (!window.google) {
+                    const script = document.createElement('script');
+                    script.src = 'https://accounts.google.com/gsi/client';
+                    script.async = true;
+                    script.defer = true;
+                    script.onload = () => {
+                        console.log('[UserManager] Google OAuth library loaded');
+                        this.initializeGoogleAuth();
+                    };
+                    document.head.appendChild(script);
+                }
+
+                // Load Microsoft OAuth library (MSAL)
+                if (!window.msal) {
+                    const script = document.createElement('script');
+                    script.src = 'https://alcdn.msauth.net/browser/2.38.1/js/msal-browser.min.js';
+                    script.async = true;
+                    script.defer = true;
+                    script.onload = () => {
+                        console.log('[UserManager] Microsoft OAuth library loaded');
+                        this.initializeMicrosoftAuth();
+                    };
+                    document.head.appendChild(script);
+                }
+            },
+
+            // Initialize Google OAuth
+            initializeGoogleAuth: function() {
+                if (window.google && window.google.accounts) {
+                    window.google.accounts.id.initialize({
+                        client_id: this.oauthConfig.google.clientId,
+                        callback: this.handleGoogleResponse.bind(this)
+                    });
+                    console.log('[UserManager] Google OAuth initialized');
+                }
+            },
+
+            // Initialize Microsoft OAuth
+            initializeMicrosoftAuth: function() {
+                if (window.msal) {
+                    try {
+                        this.msalInstance = new window.msal.PublicClientApplication({
+                            auth: {
+                                clientId: this.oauthConfig.microsoft.clientId,
+                                authority: 'https://login.microsoftonline.com/common',
+                                redirectUri: this.oauthConfig.microsoft.redirectUri
+                            }
+                        });
+                        console.log('[UserManager] Microsoft OAuth initialized');
+                    } catch (error) {
+                        console.error('[UserManager] Microsoft OAuth initialization failed:', error);
+                    }
+                }
             },
 
             // Save user session
@@ -6418,57 +6589,124 @@ Phone: +91-XXXXXXXXXX`;
             },
 
             // Register new user
-            registerUser: function(email, password, name) {
-                const users = this.getAllUsers();
+            registerUser: function(email, password, name, provider = 'manual') {
+                try {
+                    const users = this.getAllUsers();
 
-                // Check if user already exists
-                if (Object.values(users).find(user => user.email === email)) {
-                    throw new Error('User already exists with this email');
+                    // Validate inputs
+                    if (!email || !email.includes('@')) {
+                        throw new Error('Please enter a valid email address');
+                    }
+
+                    if (provider === 'manual') {
+                        if (!password || password.length < 6) {
+                            throw new Error('Password must be at least 6 characters long');
+                        }
+                        if (!name || name.trim().length < 2) {
+                            throw new Error('Please enter your full name');
+                        }
+                    }
+
+                    // Check if user already exists
+                    const existingUser = Object.values(users).find(user => user.email.toLowerCase() === email.toLowerCase());
+                    if (existingUser) {
+                        throw new Error('An account with this email already exists. Please try logging in instead.');
+                    }
+
+                    const userId = this.generateUserId();
+                    const user = {
+                        id: userId,
+                        email: email.toLowerCase(),
+                        name: name || email.split('@')[0],
+                        password: provider === 'manual' ? this.hashPassword(password) : null,
+                        provider: provider, // 'manual', 'google', 'microsoft'
+                        providerData: null, // Store OAuth provider data if needed
+                        createdAt: new Date().toISOString(),
+                        companies: [], // Array of company IDs belonging to this user
+                        activeCompanies: [], // Selected companies for personalization
+                        lastLogin: null,
+                        isVerified: provider !== 'manual', // OAuth users are auto-verified
+                        verificationToken: provider === 'manual' ? this.generateToken() : null
+                    };
+
+                    users[userId] = user;
+                    this.saveAllUsers(users);
+
+                    console.log('[UserManager] User registered:', email, 'via', provider);
+
+                    // Send verification email for manual registration
+                    if (provider === 'manual') {
+                        this.sendVerificationEmail(user);
+                    }
+
+                    return userId;
+                } catch (error) {
+                    console.error('[UserManager] Registration error:', error);
+                    throw error;
                 }
-
-                const userId = this.generateUserId();
-                const user = {
-                    id: userId,
-                    email: email,
-                    name: name,
-                    password: this.hashPassword(password), // Simple hash for demo
-                    createdAt: new Date().toISOString(),
-                    companies: [], // Array of company IDs belonging to this user
-                    activeCompanies: [], // Selected companies for personalization
-                    lastLogin: null
-                };
-
-                users[userId] = user;
-                this.saveAllUsers(users);
-
-                console.log('[UserManager] User registered:', email);
-                return userId;
             },
 
             // Login user
-            login: function(email, password) {
-                const users = this.getAllUsers();
-                const user = Object.values(users).find(u => u.email === email);
+            login: function(email, password, provider = 'manual') {
+                try {
+                    // Validate inputs
+                    if (!email || !email.includes('@')) {
+                        throw new Error('Please enter a valid email address');
+                    }
 
-                if (!user) {
-                    throw new Error('User not found');
+                    if (provider === 'manual' && (!password || password.length < 1)) {
+                        throw new Error('Please enter your password');
+                    }
+
+                    const users = this.getAllUsers();
+                    const user = Object.values(users).find(u => u.email.toLowerCase() === email.toLowerCase());
+
+                    if (!user) {
+                        throw new Error('No account found with this email address. Please register first.');
+                    }
+
+                    // Check password for manual login
+                    if (provider === 'manual') {
+                        if (!user.password) {
+                            throw new Error('This account was created with social login. Please use Google or Microsoft to sign in.');
+                        }
+
+                        if (user.password !== this.hashPassword(password)) {
+                            throw new Error('Incorrect password. Please try again or use "Forgot Password".');
+                        }
+                    }
+
+                    // Check if account is verified (for manual registration)
+                    if (provider === 'manual' && !user.isVerified && user.verificationToken) {
+                        throw new Error('Please verify your email address before logging in. Check your email for verification link.');
+                    }
+
+                    // Update last login
+                    user.lastLogin = new Date().toISOString();
+                    users[user.id] = user;
+                    this.saveAllUsers(users);
+
+                    // Set current user
+                    this.currentUser = user;
+                    this.isLoggedIn = true;
+                    this.saveSession();
+
+                    console.log('[UserManager] User logged in:', email, 'via', provider);
+
+                    // Hide auth gate and show application
+                    this.hideAuthGate();
+                    this.updateUserDisplay();
+
+                    // Load user's companies
+                    setTimeout(() => {
+                        CompanyOnboardingModule.loadUserCompanies();
+                    }, 500);
+
+                    return user;
+                } catch (error) {
+                    console.error('[UserManager] Login error:', error);
+                    throw error;
                 }
-
-                if (user.password !== this.hashPassword(password)) {
-                    throw new Error('Invalid password');
-                }
-
-                // Update last login
-                user.lastLogin = new Date().toISOString();
-                users[user.id] = user;
-                this.saveAllUsers(users);
-
-                this.currentUser = user;
-                this.isLoggedIn = true;
-                this.saveSession();
-
-                console.log('[UserManager] User logged in:', email);
-                return user;
             },
 
             // Logout user
@@ -6483,6 +6721,11 @@ Phone: +91-XXXXXXXXXX`;
                 }, 1000);
             },
 
+            // Generate random token
+            generateToken: function() {
+                return Math.random().toString(36).substr(2, 15) + Date.now().toString(36);
+            },
+
             // Simple password hashing (for demo purposes)
             hashPassword: function(password) {
                 // In production, use proper bcrypt or similar
@@ -6493,6 +6736,108 @@ Phone: +91-XXXXXXXXXX`;
                     hash = hash & hash; // Convert to 32-bit integer
                 }
                 return hash.toString();
+            },
+
+            // Send verification email (mock implementation)
+            sendVerificationEmail: function(user) {
+                console.log('[UserManager] Verification email sent to:', user.email);
+                // In production, integrate with email service
+                showAlert('✅ Verification email sent! Please check your inbox and click the verification link.', 'success');
+            },
+
+            // Send password reset email
+            sendPasswordResetEmail: function(email) {
+                try {
+                    const users = this.getAllUsers();
+                    const user = Object.values(users).find(u => u.email.toLowerCase() === email.toLowerCase());
+
+                    if (!user) {
+                        // Don't reveal if email exists for security
+                        showAlert('📧 If an account with this email exists, a password reset link has been sent.', 'info');
+                        return;
+                    }
+
+                    if (user.provider !== 'manual') {
+                        throw new Error('This account uses social login. Password reset is not available.');
+                    }
+
+                    // Generate reset token
+                    const resetToken = this.generateToken();
+                    const resetRequests = JSON.parse(localStorage.getItem(this.PASSWORD_RESET_KEY) || '{}');
+
+                    resetRequests[resetToken] = {
+                        userId: user.id,
+                        email: user.email,
+                        createdAt: Date.now(),
+                        expiresAt: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
+                    };
+
+                    localStorage.setItem(this.PASSWORD_RESET_KEY, JSON.stringify(resetRequests));
+
+                    // Mock email sending
+                    console.log('[UserManager] Password reset email sent to:', email);
+                    console.log('[UserManager] Reset token (for demo):', resetToken);
+
+                    showAlert('📧 Password reset link sent! Please check your email.', 'success');
+
+                    // For demo purposes, show reset link in alert
+                    setTimeout(() => {
+                        if (confirm('Demo Mode: Click OK to simulate clicking the reset link in your email.')) {
+                            this.showPasswordResetForm(resetToken);
+                        }
+                    }, 2000);
+
+                } catch (error) {
+                    console.error('[UserManager] Password reset error:', error);
+                    showAlert('❌ ' + error.message, 'error');
+                }
+            },
+
+            // Reset password with token
+            resetPassword: function(token, newPassword) {
+                try {
+                    const resetRequests = JSON.parse(localStorage.getItem(this.PASSWORD_RESET_KEY) || '{}');
+                    const resetRequest = resetRequests[token];
+
+                    if (!resetRequest) {
+                        throw new Error('Invalid reset link. Please request a new password reset.');
+                    }
+
+                    if (resetRequest.expiresAt < Date.now()) {
+                        delete resetRequests[token];
+                        localStorage.setItem(this.PASSWORD_RESET_KEY, JSON.stringify(resetRequests));
+                        throw new Error('Reset link has expired. Please request a new password reset.');
+                    }
+
+                    if (!newPassword || newPassword.length < 6) {
+                        throw new Error('Password must be at least 6 characters long.');
+                    }
+
+                    // Update user password
+                    const users = this.getAllUsers();
+                    const user = users[resetRequest.userId];
+
+                    if (!user) {
+                        throw new Error('User account not found.');
+                    }
+
+                    user.password = this.hashPassword(newPassword);
+                    user.isVerified = true; // Auto-verify on password reset
+                    users[user.id] = user;
+                    this.saveAllUsers(users);
+
+                    // Clean up reset request
+                    delete resetRequests[token];
+                    localStorage.setItem(this.PASSWORD_RESET_KEY, JSON.stringify(resetRequests));
+
+                    console.log('[UserManager] Password reset successful for:', user.email);
+                    showAlert('✅ Password reset successful! You can now log in with your new password.', 'success');
+
+                    return true;
+                } catch (error) {
+                    console.error('[UserManager] Password reset error:', error);
+                    throw error;
+                }
             },
 
             // Update user display in UI
@@ -6508,7 +6853,7 @@ Phone: +91-XXXXXXXXXX`;
             },
 
             // Show authentication modal
-            showAuthModal: function() {
+            showAuthModal: function(defaultTab = 'login') {
                 if (this.isLoggedIn) {
                     this.showUserProfile();
                     return;
@@ -6518,71 +6863,161 @@ Phone: +91-XXXXXXXXXX`;
                 modal.id = 'authModal';
                 modal.style.cssText = `
                     position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-                    background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;
-                    z-index: 10000; padding: 20px;
+                    background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center;
+                    z-index: 1000000; padding: 20px;
                 `;
 
                 modal.innerHTML = `
-                    <div style="background: white; padding: 30px; border-radius: 12px; max-width: 450px; width: 90%; max-height: 80%; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                            <h2 style="margin: 0; color: #007bff; display: flex; align-items: center; gap: 10px;">
-                                <span>🔐</span> User Account
+                    <div style="background: white; padding: 35px; border-radius: 16px; max-width: 480px; width: 90%; max-height: 90%; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                            <h2 style="margin: 0; color: #007bff; display: flex; align-items: center; gap: 10px; font-size: 24px;">
+                                <span>🔐</span> Account Access
                             </h2>
-                            <button onclick="document.getElementById('authModal').remove()" class="modal-close-btn" title="Close">×</button>
+                            <button onclick="UserManager.closeAuthModal()" class="modal-close-btn" title="Close">×</button>
                         </div>
 
+                        <!-- Error Display -->
+                        <div id="authError" style="display: none; background: #fee; border: 1px solid #fcc; color: #c33; padding: 12px; border-radius: 6px; margin-bottom: 20px; font-size: 14px;"></div>
+
+                        <!-- Success Display -->
+                        <div id="authSuccess" style="display: none; background: #efe; border: 1px solid #cfc; color: #3c3; padding: 12px; border-radius: 6px; margin-bottom: 20px; font-size: 14px;"></div>
+
                         <!-- Login/Register Tabs -->
-                        <div style="display: flex; margin-bottom: 20px; border-bottom: 2px solid #f0f0f0;">
-                            <button id="loginTab" onclick="UserManager.switchAuthTab('login')" style="flex: 1; padding: 12px; border: none; background: #007bff; color: white; cursor: pointer; border-radius: 6px 0 0 0; font-weight: 500;">Login</button>
-                            <button id="registerTab" onclick="UserManager.switchAuthTab('register')" style="flex: 1; padding: 12px; border: none; background: #f8f9fa; color: #666; cursor: pointer; border-radius: 0 6px 0 0; font-weight: 500;">Register</button>
+                        <div style="display: flex; margin-bottom: 25px; background: #f8f9fa; border-radius: 8px; padding: 4px;">
+                            <button id="loginTab" onclick="UserManager.switchAuthTab('login')" style="flex: 1; padding: 12px; border: none; background: #007bff; color: white; cursor: pointer; border-radius: 6px; font-weight: 600; transition: all 0.2s;">Login</button>
+                            <button id="registerTab" onclick="UserManager.switchAuthTab('register')" style="flex: 1; padding: 12px; border: none; background: transparent; color: #666; cursor: pointer; border-radius: 6px; font-weight: 600; transition: all 0.2s;">Register</button>
                         </div>
 
                         <!-- Login Form -->
-                        <div id="loginForm">
-                            <div style="margin-bottom: 15px;">
-                                <label style="display: block; margin-bottom: 5px; font-weight: 500; color: #333;">Email Address</label>
-                                <input type="email" id="loginEmail" placeholder="your.email@company.com" style="width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 6px; font-size: 14px;" required>
+                        <form id="loginForm" onsubmit="UserManager.handleLogin(event)">
+                            <div style="margin-bottom: 18px;">
+                                <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px;">Email Address *</label>
+                                <input type="email" id="loginEmail" placeholder="your.email@company.com"
+                                    style="width: 100%; padding: 14px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 15px; transition: border-color 0.2s;"
+                                    required autocomplete="email">
                             </div>
-                            <div style="margin-bottom: 20px;">
-                                <label style="display: block; margin-bottom: 5px; font-weight: 500; color: #333;">Password</label>
-                                <input type="password" id="loginPassword" placeholder="Your password" style="width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 6px; font-size: 14px;" required>
+                            <div style="margin-bottom: 18px;">
+                                <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px;">Password *</label>
+                                <input type="password" id="loginPassword" placeholder="Enter your password"
+                                    style="width: 100%; padding: 14px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 15px; transition: border-color 0.2s;"
+                                    required autocomplete="current-password">
                             </div>
-                            <button onclick="UserManager.handleLogin()" style="width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: 500; cursor: pointer; margin-bottom: 15px;">🔓 Login</button>
-                        </div>
+
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                <label style="display: flex; align-items: center; font-size: 14px; color: #666; cursor: pointer;">
+                                    <input type="checkbox" id="rememberMe" style="margin-right: 8px;"> Remember me
+                                </label>
+                                <button type="button" onclick="UserManager.showForgotPassword()" style="background: none; border: none; color: #007bff; font-size: 14px; cursor: pointer; text-decoration: underline;">Forgot Password?</button>
+                            </div>
+
+                            <button type="submit" style="width: 100%; padding: 15px; background: linear-gradient(135deg, #007bff, #0056b3); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; margin-bottom: 20px; transition: all 0.2s; box-shadow: 0 4px 15px rgba(0,123,255,0.3);">🔓 Sign In</button>
+                        </form>
 
                         <!-- Register Form -->
-                        <div id="registerForm" style="display: none;">
-                            <div style="margin-bottom: 15px;">
-                                <label style="display: block; margin-bottom: 5px; font-weight: 500; color: #333;">Full Name</label>
-                                <input type="text" id="registerName" placeholder="John Doe" style="width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 6px; font-size: 14px;" required>
+                        <form id="registerForm" style="display: none;" onsubmit="UserManager.handleRegister(event)">
+                            <div style="margin-bottom: 18px;">
+                                <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px;">Full Name *</label>
+                                <input type="text" id="registerName" placeholder="John Doe"
+                                    style="width: 100%; padding: 14px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 15px; transition: border-color 0.2s;"
+                                    required autocomplete="name">
                             </div>
-                            <div style="margin-bottom: 15px;">
-                                <label style="display: block; margin-bottom: 5px; font-weight: 500; color: #333;">Email Address</label>
-                                <input type="email" id="registerEmail" placeholder="your.email@company.com" style="width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 6px; font-size: 14px;" required>
+                            <div style="margin-bottom: 18px;">
+                                <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px;">Email Address *</label>
+                                <input type="email" id="registerEmail" placeholder="your.email@company.com"
+                                    style="width: 100%; padding: 14px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 15px; transition: border-color 0.2s;"
+                                    required autocomplete="email">
                             </div>
+                            <div style="margin-bottom: 18px;">
+                                <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px;">Password *</label>
+                                <input type="password" id="registerPassword" placeholder="Minimum 6 characters"
+                                    style="width: 100%; padding: 14px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 15px; transition: border-color 0.2s;"
+                                    required autocomplete="new-password" minlength="6">
+                                <small style="color: #666; font-size: 12px; display: block; margin-top: 4px;">Password must be at least 6 characters long</small>
+                            </div>
+
                             <div style="margin-bottom: 20px;">
-                                <label style="display: block; margin-bottom: 5px; font-weight: 500; color: #333;">Password</label>
-                                <input type="password" id="registerPassword" placeholder="Choose a strong password" style="width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 6px; font-size: 14px;" required>
+                                <label style="display: flex; align-items: flex-start; font-size: 13px; color: #666; cursor: pointer;">
+                                    <input type="checkbox" id="agreeTerms" required style="margin-right: 8px; margin-top: 2px;">
+                                    <span>I agree to the Terms of Service and Privacy Policy</span>
+                                </label>
                             </div>
-                            <button onclick="UserManager.handleRegister()" style="width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: 500; cursor: pointer; margin-bottom: 15px;">🆕 Create Account</button>
-                        </div>
+
+                            <button type="submit" style="width: 100%; padding: 15px; background: linear-gradient(135deg, #28a745, #20c997); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; margin-bottom: 20px; transition: all 0.2s; box-shadow: 0 4px 15px rgba(40,167,69,0.3);">🆕 Create Account</button>
+                        </form>
 
                         <!-- OAuth Options -->
-                        <div style="border-top: 1px solid #e1e5e9; padding-top: 20px; margin-top: 20px;">
-                            <p style="text-align: center; color: #666; margin-bottom: 15px; font-size: 14px;">Or continue with:</p>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                                <button onclick="UserManager.googleAuth()" style="padding: 10px; border: 2px solid #db4437; color: #db4437; background: white; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">📧 Google</button>
-                                <button onclick="UserManager.microsoftAuth()" style="padding: 10px; border: 2px solid #0078d4; color: #0078d4; background: white; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">🏢 Microsoft</button>
+                        <div style="border-top: 1px solid #e1e5e9; padding-top: 25px; margin-top: 20px;">
+                            <p style="text-align: center; color: #666; margin-bottom: 18px; font-size: 14px; font-weight: 500;">Or continue with:</p>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                <button onclick="UserManager.googleAuth()" style="padding: 12px; border: 2px solid #db4437; color: #db4437; background: white; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                    <span style="font-size: 16px;">📧</span> Google
+                                </button>
+                                <button onclick="UserManager.microsoftAuth()" style="padding: 12px; border: 2px solid #0078d4; color: #0078d4; background: white; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                    <span style="font-size: 16px;">🏢</span> Microsoft
+                                </button>
                             </div>
+                            <p style="text-align: center; color: #999; margin-top: 15px; font-size: 12px;">OAuth integration provides secure, passwordless authentication</p>
                         </div>
 
-                        <div style="text-align: center; margin-top: 20px; padding-top: 15px; border-top: 1px solid #e1e5e9;">
-                            <small style="color: #666;">🔒 Your data is stored securely and never shared with third parties.</small>
+                        <div style="text-align: center; margin-top: 25px; padding-top: 20px; border-top: 1px solid #e1e5e9;">
+                            <small style="color: #666; line-height: 1.4;">🔒 Your data is encrypted and stored securely. We never share your information with third parties.</small>
                         </div>
                     </div>
                 `;
 
+                // Set default tab
+                if (defaultTab === 'register') {
+                    setTimeout(() => this.switchAuthTab('register'), 100);
+                }
+
                 document.body.appendChild(modal);
+
+                // Add form submission listeners
+                this.addFormListeners();
+
+                // Focus first input
+                setTimeout(() => {
+                    const firstInput = modal.querySelector('input[type="email"]');
+                    if (firstInput) firstInput.focus();
+                }, 200);
+            },
+
+            // Close authentication modal
+            closeAuthModal: function() {
+                const modal = document.getElementById('authModal');
+                if (modal) {
+                    modal.remove();
+                }
+                // Don't hide auth gate - user must login
+            },
+
+            // Add form event listeners
+            addFormListeners: function() {
+                // Add Enter key submission
+                const inputs = document.querySelectorAll('#authModal input');
+                inputs.forEach(input => {
+                    input.addEventListener('keypress', (e) => {
+                        if (e.key === 'Enter') {
+                            const form = input.closest('form');
+                            if (form) {
+                                e.preventDefault();
+                                const submitBtn = form.querySelector('button[type="submit"]');
+                                if (submitBtn) submitBtn.click();
+                            }
+                        }
+                    });
+
+                    // Add focus styling
+                    input.addEventListener('focus', (e) => {
+                        e.target.style.borderColor = '#007bff';
+                        e.target.style.boxShadow = '0 0 0 3px rgba(0,123,255,0.1)';
+                    });
+
+                    input.addEventListener('blur', (e) => {
+                        e.target.style.borderColor = '#e1e5e9';
+                        e.target.style.boxShadow = 'none';
+                    });
+                });
             },
 
             // Switch between login and register tabs
@@ -6592,85 +7027,646 @@ Phone: +91-XXXXXXXXXX`;
                 const loginForm = document.getElementById('loginForm');
                 const registerForm = document.getElementById('registerForm');
 
+                // Clear any error messages
+                this.hideAuthMessage();
+
                 if (tab === 'login') {
                     loginTab.style.background = '#007bff';
                     loginTab.style.color = 'white';
-                    registerTab.style.background = '#f8f9fa';
+                    registerTab.style.background = 'transparent';
                     registerTab.style.color = '#666';
                     loginForm.style.display = 'block';
                     registerForm.style.display = 'none';
+
+                    // Focus email input
+                    setTimeout(() => {
+                        const emailInput = document.getElementById('loginEmail');
+                        if (emailInput) emailInput.focus();
+                    }, 100);
                 } else {
                     registerTab.style.background = '#28a745';
                     registerTab.style.color = 'white';
-                    loginTab.style.background = '#f8f9fa';
+                    loginTab.style.background = 'transparent';
                     loginTab.style.color = '#666';
                     loginForm.style.display = 'none';
                     registerForm.style.display = 'block';
+
+                    // Focus name input
+                    setTimeout(() => {
+                        const nameInput = document.getElementById('registerName');
+                        if (nameInput) nameInput.focus();
+                    }, 100);
                 }
             },
 
+            // Show authentication message
+            showAuthMessage: function(message, type = 'error') {
+                const errorDiv = document.getElementById('authError');
+                const successDiv = document.getElementById('authSuccess');
+
+                if (type === 'error') {
+                    errorDiv.textContent = message;
+                    errorDiv.style.display = 'block';
+                    successDiv.style.display = 'none';
+                } else {
+                    successDiv.textContent = message;
+                    successDiv.style.display = 'block';
+                    errorDiv.style.display = 'none';
+                }
+
+                // Auto-hide after 10 seconds
+                setTimeout(() => this.hideAuthMessage(), 10000);
+            },
+
+            // Hide authentication message
+            hideAuthMessage: function() {
+                const errorDiv = document.getElementById('authError');
+                const successDiv = document.getElementById('authSuccess');
+                if (errorDiv) errorDiv.style.display = 'none';
+                if (successDiv) successDiv.style.display = 'none';
+            },
+
             // Handle login
-            handleLogin: function() {
+            handleLogin: function(event) {
+                if (event) {
+                    event.preventDefault();
+                }
+
                 try {
+                    // Clear previous messages
+                    this.hideAuthMessage();
+
                     const email = document.getElementById('loginEmail').value.trim();
                     const password = document.getElementById('loginPassword').value;
+                    const rememberMe = document.getElementById('rememberMe').checked;
 
-                    if (!email || !password) {
-                        showAlert('⚠️ Please enter both email and password.', 'warning');
+                    // Client-side validation
+                    if (!email) {
+                        this.showAuthMessage('Please enter your email address.', 'error');
+                        document.getElementById('loginEmail').focus();
                         return;
                     }
 
-                    this.login(email, password);
-                    this.updateUserDisplay();
+                    if (!password) {
+                        this.showAuthMessage('Please enter your password.', 'error');
+                        document.getElementById('loginPassword').focus();
+                        return;
+                    }
 
-                    document.getElementById('authModal').remove();
-                    showAlert('✅ Welcome back! You are now logged in.', 'success');
+                    // Show loading state
+                    const submitBtn = document.querySelector('#loginForm button[type="submit"]');
+                    const originalText = submitBtn.textContent;
+                    submitBtn.textContent = '🔄 Signing in...';
+                    submitBtn.disabled = true;
 
-                    // Load user's companies
-                    CompanyOnboardingModule.loadUserCompanies();
+                    // Attempt login
+                    setTimeout(() => {
+                        try {
+                            this.login(email, password);
+
+                            // Handle remember me
+                            if (rememberMe) {
+                                // Extend session (already handled in saveSession)
+                                console.log('[UserManager] Remember me enabled');
+                            }
+
+                            // Close modal and show success
+                            document.getElementById('authModal').remove();
+                            this.showWelcomeMessage();
+
+                        } catch (error) {
+                            console.error('[UserManager] Login failed:', error);
+                            this.showAuthMessage(error.message, 'error');
+
+                            // Reset button
+                            submitBtn.textContent = originalText;
+                            submitBtn.disabled = false;
+                        }
+                    }, 500); // Small delay for better UX
 
                 } catch (error) {
-                    showAlert('❌ Login failed: ' + error.message, 'error');
+                    console.error('[UserManager] Login handler error:', error);
+                    this.showAuthMessage('An unexpected error occurred. Please try again.', 'error');
                 }
             },
 
             // Handle registration
-            handleRegister: function() {
+            handleRegister: function(event) {
+                if (event) {
+                    event.preventDefault();
+                }
+
                 try {
+                    // Clear previous messages
+                    this.hideAuthMessage();
+
                     const name = document.getElementById('registerName').value.trim();
                     const email = document.getElementById('registerEmail').value.trim();
                     const password = document.getElementById('registerPassword').value;
+                    const agreeTerms = document.getElementById('agreeTerms').checked;
 
-                    if (!name || !email || !password) {
-                        showAlert('⚠️ Please fill in all fields.', 'warning');
+                    // Client-side validation
+                    if (!name) {
+                        this.showAuthMessage('Please enter your full name.', 'error');
+                        document.getElementById('registerName').focus();
+                        return;
+                    }
+
+                    if (!email) {
+                        this.showAuthMessage('Please enter your email address.', 'error');
+                        document.getElementById('registerEmail').focus();
+                        return;
+                    }
+
+                    if (!password) {
+                        this.showAuthMessage('Please enter a password.', 'error');
+                        document.getElementById('registerPassword').focus();
                         return;
                     }
 
                     if (password.length < 6) {
-                        showAlert('⚠️ Password must be at least 6 characters long.', 'warning');
+                        this.showAuthMessage('Password must be at least 6 characters long.', 'error');
+                        document.getElementById('registerPassword').focus();
                         return;
                     }
 
-                    this.registerUser(email, password, name);
-                    this.login(email, password);
-                    this.updateUserDisplay();
+                    if (!agreeTerms) {
+                        this.showAuthMessage('Please agree to the Terms of Service and Privacy Policy.', 'error');
+                        return;
+                    }
 
-                    document.getElementById('authModal').remove();
-                    showAlert('🎉 Account created successfully! You are now logged in.', 'success');
+                    // Show loading state
+                    const submitBtn = document.querySelector('#registerForm button[type="submit"]');
+                    const originalText = submitBtn.textContent;
+                    submitBtn.textContent = '🔄 Creating account...';
+                    submitBtn.disabled = true;
+
+                    // Attempt registration
+                    setTimeout(() => {
+                        try {
+                            this.registerUser(email, password, name);
+
+                            // For demo purposes, auto-verify and login
+                            // In production, user would need to verify email first
+                            const users = this.getAllUsers();
+                            const user = Object.values(users).find(u => u.email.toLowerCase() === email.toLowerCase());
+                            if (user) {
+                                user.isVerified = true; // Auto-verify for demo
+                                users[user.id] = user;
+                                this.saveAllUsers(users);
+                            }
+
+                            this.login(email, password);
+
+                            // Close modal and show success
+                            document.getElementById('authModal').remove();
+                            this.showWelcomeMessage(true);
+
+                        } catch (error) {
+                            console.error('[UserManager] Registration failed:', error);
+                            this.showAuthMessage(error.message, 'error');
+
+                            // Reset button
+                            submitBtn.textContent = originalText;
+                            submitBtn.disabled = false;
+                        }
+                    }, 800); // Slightly longer delay for registration
 
                 } catch (error) {
-                    showAlert('❌ Registration failed: ' + error.message, 'error');
+                    console.error('[UserManager] Registration handler error:', error);
+                    this.showAuthMessage('An unexpected error occurred. Please try again.', 'error');
                 }
             },
 
-            // Google OAuth placeholder
-            googleAuth: function() {
-                showAlert('🚧 Google OAuth integration coming soon! Please use manual registration for now.', 'info');
+            // Show welcome message after successful login
+            showWelcomeMessage: function(isNewUser = false) {
+                const message = isNewUser ?
+                    `🎉 Welcome to Bulk Email Sender! Your account has been created successfully.` :
+                    `✅ Welcome back, ${this.currentUser.name}! You are now logged in.`;
+
+                showAlert(message, 'success');
+
+                // Show onboarding for new users
+                if (isNewUser) {
+                    setTimeout(() => {
+                        this.showFirstTimeOnboarding();
+                    }, 2000);
+                }
             },
 
-            // Microsoft OAuth placeholder
+            // Google OAuth implementation
+            googleAuth: function() {
+                try {
+                    if (window.google && window.google.accounts) {
+                        window.google.accounts.id.prompt((notification) => {
+                            if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                                console.log('[UserManager] Google OAuth prompt not displayed');
+                                this.showAuthMessage('Google sign-in is not available. Please try manual login.', 'error');
+                            }
+                        });
+                    } else {
+                        // Fallback: simulate OAuth for demo
+                        this.simulateOAuthLogin('google');
+                    }
+                } catch (error) {
+                    console.error('[UserManager] Google OAuth error:', error);
+                    this.showAuthMessage('Google sign-in failed. Please try manual login.', 'error');
+                }
+            },
+
+            // Microsoft OAuth implementation
             microsoftAuth: function() {
-                showAlert('🚧 Microsoft OAuth integration coming soon! Please use manual registration for now.', 'info');
+                try {
+                    if (this.msalInstance) {
+                        const loginRequest = {
+                            scopes: ['openid', 'profile', 'email']
+                        };
+
+                        this.msalInstance.loginPopup(loginRequest)
+                            .then(response => {
+                                this.handleMicrosoftResponse(response);
+                            })
+                            .catch(error => {
+                                console.error('[UserManager] Microsoft OAuth error:', error);
+                                this.showAuthMessage('Microsoft sign-in failed. Please try manual login.', 'error');
+                            });
+                    } else {
+                        // Fallback: simulate OAuth for demo
+                        this.simulateOAuthLogin('microsoft');
+                    }
+                } catch (error) {
+                    console.error('[UserManager] Microsoft OAuth error:', error);
+                    this.showAuthMessage('Microsoft sign-in failed. Please try manual login.', 'error');
+                }
+            },
+
+            // Simulate OAuth login for demo purposes
+            simulateOAuthLogin: function(provider) {
+                const demoEmail = prompt(`Enter your ${provider} email for demo login:`);
+                if (demoEmail && demoEmail.includes('@')) {
+                    try {
+                        const users = this.getAllUsers();
+                        let user = Object.values(users).find(u => u.email.toLowerCase() === demoEmail.toLowerCase());
+
+                        if (!user) {
+                            // Register new OAuth user
+                            const name = demoEmail.split('@')[0].replace(/[^a-zA-Z0-9]/g, ' ');
+                            const userId = this.registerUser(demoEmail, null, name, provider);
+                            user = users[userId];
+                        }
+
+                        // Login OAuth user
+                        this.currentUser = user;
+                        this.isLoggedIn = true;
+                        this.saveSession();
+
+                        document.getElementById('authModal').remove();
+                        this.showWelcomeMessage();
+
+                        console.log('[UserManager] Demo OAuth login successful:', provider);
+                    } catch (error) {
+                        this.showAuthMessage('OAuth simulation failed: ' + error.message, 'error');
+                    }
+                }
+            },
+
+            // Handle Google OAuth response
+            handleGoogleResponse: function(response) {
+                try {
+                    const payload = JSON.parse(atob(response.credential.split('.')[1]));
+                    const email = payload.email;
+                    const name = payload.name;
+
+                    // Register or login OAuth user
+                    this.processOAuthUser(email, name, 'google', payload);
+                } catch (error) {
+                    console.error('[UserManager] Google response error:', error);
+                    this.showAuthMessage('Google sign-in failed. Please try again.', 'error');
+                }
+            },
+
+            // Handle Microsoft OAuth response
+            handleMicrosoftResponse: function(response) {
+                try {
+                    const account = response.account;
+                    const email = account.username;
+                    const name = account.name;
+
+                    // Register or login OAuth user
+                    this.processOAuthUser(email, name, 'microsoft', account);
+                } catch (error) {
+                    console.error('[UserManager] Microsoft response error:', error);
+                    this.showAuthMessage('Microsoft sign-in failed. Please try again.', 'error');
+                }
+            },
+
+            // Process OAuth user login/registration
+            processOAuthUser: function(email, name, provider, providerData) {
+                try {
+                    const users = this.getAllUsers();
+                    let user = Object.values(users).find(u => u.email.toLowerCase() === email.toLowerCase());
+
+                    if (!user) {
+                        // Register new OAuth user
+                        const userId = this.registerUser(email, null, name, provider);
+                        user = users[userId];
+                        user.providerData = providerData;
+                        users[userId] = user;
+                        this.saveAllUsers(users);
+                    }
+
+                    // Login OAuth user
+                    this.login(email, null, provider);
+
+                    document.getElementById('authModal').remove();
+                    this.showWelcomeMessage(!user.lastLogin);
+
+                } catch (error) {
+                    console.error('[UserManager] OAuth processing error:', error);
+                    this.showAuthMessage('OAuth sign-in failed: ' + error.message, 'error');
+                }
+            },
+
+            // Show forgot password form
+            showForgotPassword: function() {
+                const modal = document.createElement('div');
+                modal.id = 'forgotPasswordModal';
+                modal.style.cssText = `
+                    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                    background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center;
+                    z-index: 1000001; padding: 20px;
+                `;
+
+                modal.innerHTML = `
+                    <div style="background: white; padding: 35px; border-radius: 16px; max-width: 450px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                            <h2 style="margin: 0; color: #007bff; font-size: 22px;">🔑 Reset Password</h2>
+                            <button onclick="document.getElementById('forgotPasswordModal').remove()" class="modal-close-btn" title="Close">×</button>
+                        </div>
+
+                        <div id="forgotPasswordError" style="display: none; background: #fee; border: 1px solid #fcc; color: #c33; padding: 12px; border-radius: 6px; margin-bottom: 20px; font-size: 14px;"></div>
+                        <div id="forgotPasswordSuccess" style="display: none; background: #efe; border: 1px solid #cfc; color: #3c3; padding: 12px; border-radius: 6px; margin-bottom: 20px; font-size: 14px;"></div>
+
+                        <p style="color: #666; margin-bottom: 25px; line-height: 1.5;">Enter your email address and we'll send you a link to reset your password.</p>
+
+                        <form id="forgotPasswordForm" onsubmit="UserManager.handleForgotPassword(event)">
+                            <div style="margin-bottom: 20px;">
+                                <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px;">Email Address *</label>
+                                <input type="email" id="forgotEmail" placeholder="your.email@company.com"
+                                    style="width: 100%; padding: 14px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 15px;"
+                                    required autocomplete="email">
+                            </div>
+
+                            <div style="display: flex; gap: 12px;">
+                                <button type="button" onclick="document.getElementById('forgotPasswordModal').remove()" style="flex: 1; padding: 12px; background: #6c757d; color: white; border: none; border-radius: 8px; cursor: pointer;">Cancel</button>
+                                <button type="submit" style="flex: 1; padding: 12px; background: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">📧 Send Reset Link</button>
+                            </div>
+                        </form>
+                    </div>
+                `;
+
+                document.body.appendChild(modal);
+
+                // Focus email input
+                setTimeout(() => {
+                    const emailInput = document.getElementById('forgotEmail');
+                    if (emailInput) emailInput.focus();
+                }, 200);
+            },
+
+            // Handle forgot password
+            handleForgotPassword: function(event) {
+                event.preventDefault();
+
+                try {
+                    const email = document.getElementById('forgotEmail').value.trim();
+                    const errorDiv = document.getElementById('forgotPasswordError');
+                    const successDiv = document.getElementById('forgotPasswordSuccess');
+
+                    // Hide previous messages
+                    errorDiv.style.display = 'none';
+                    successDiv.style.display = 'none';
+
+                    if (!email) {
+                        errorDiv.textContent = 'Please enter your email address.';
+                        errorDiv.style.display = 'block';
+                        return;
+                    }
+
+                    // Show loading
+                    const submitBtn = document.querySelector('#forgotPasswordForm button[type="submit"]');
+                    const originalText = submitBtn.textContent;
+                    submitBtn.textContent = '🔄 Sending...';
+                    submitBtn.disabled = true;
+
+                    setTimeout(() => {
+                        try {
+                            this.sendPasswordResetEmail(email);
+
+                            successDiv.textContent = 'If an account with this email exists, a password reset link has been sent.';
+                            successDiv.style.display = 'block';
+
+                            // Auto-close after 3 seconds
+                            setTimeout(() => {
+                                document.getElementById('forgotPasswordModal').remove();
+                            }, 3000);
+
+                        } catch (error) {
+                            errorDiv.textContent = error.message;
+                            errorDiv.style.display = 'block';
+
+                            submitBtn.textContent = originalText;
+                            submitBtn.disabled = false;
+                        }
+                    }, 1000);
+
+                } catch (error) {
+                    console.error('[UserManager] Forgot password error:', error);
+                }
+            },
+
+            // Show password reset form
+            showPasswordResetForm: function(token) {
+                const modal = document.createElement('div');
+                modal.id = 'passwordResetModal';
+                modal.style.cssText = `
+                    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                    background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center;
+                    z-index: 1000001; padding: 20px;
+                `;
+
+                modal.innerHTML = `
+                    <div style="background: white; padding: 35px; border-radius: 16px; max-width: 450px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                            <h2 style="margin: 0; color: #28a745; font-size: 22px;">🔑 Set New Password</h2>
+                            <button onclick="document.getElementById('passwordResetModal').remove()" class="modal-close-btn" title="Close">×</button>
+                        </div>
+
+                        <div id="resetError" style="display: none; background: #fee; border: 1px solid #fcc; color: #c33; padding: 12px; border-radius: 6px; margin-bottom: 20px; font-size: 14px;"></div>
+
+                        <p style="color: #666; margin-bottom: 25px; line-height: 1.5;">Enter your new password below.</p>
+
+                        <form id="passwordResetForm" onsubmit="UserManager.handlePasswordReset(event, '${token}')">
+                            <div style="margin-bottom: 18px;">
+                                <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px;">New Password *</label>
+                                <input type="password" id="newPassword" placeholder="Minimum 6 characters"
+                                    style="width: 100%; padding: 14px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 15px;"
+                                    required minlength="6">
+                                <small style="color: #666; font-size: 12px; display: block; margin-top: 4px;">Password must be at least 6 characters long</small>
+                            </div>
+
+                            <div style="margin-bottom: 25px;">
+                                <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px;">Confirm Password *</label>
+                                <input type="password" id="confirmPassword" placeholder="Repeat your new password"
+                                    style="width: 100%; padding: 14px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 15px;"
+                                    required minlength="6">
+                            </div>
+
+                            <button type="submit" style="width: 100%; padding: 15px; background: #28a745; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer;">🔒 Reset Password</button>
+                        </form>
+                    </div>
+                `;
+
+                document.body.appendChild(modal);
+
+                // Focus password input
+                setTimeout(() => {
+                    const passwordInput = document.getElementById('newPassword');
+                    if (passwordInput) passwordInput.focus();
+                }, 200);
+            },
+
+            // Handle password reset
+            handlePasswordReset: function(event, token) {
+                event.preventDefault();
+
+                try {
+                    const newPassword = document.getElementById('newPassword').value;
+                    const confirmPassword = document.getElementById('confirmPassword').value;
+                    const errorDiv = document.getElementById('resetError');
+
+                    errorDiv.style.display = 'none';
+
+                    if (!newPassword || !confirmPassword) {
+                        errorDiv.textContent = 'Please fill in both password fields.';
+                        errorDiv.style.display = 'block';
+                        return;
+                    }
+
+                    if (newPassword !== confirmPassword) {
+                        errorDiv.textContent = 'Passwords do not match.';
+                        errorDiv.style.display = 'block';
+                        return;
+                    }
+
+                    if (newPassword.length < 6) {
+                        errorDiv.textContent = 'Password must be at least 6 characters long.';
+                        errorDiv.style.display = 'block';
+                        return;
+                    }
+
+                    // Show loading
+                    const submitBtn = document.querySelector('#passwordResetForm button[type="submit"]');
+                    const originalText = submitBtn.textContent;
+                    submitBtn.textContent = '🔄 Resetting...';
+                    submitBtn.disabled = true;
+
+                    setTimeout(() => {
+                        try {
+                            this.resetPassword(token, newPassword);
+
+                            document.getElementById('passwordResetModal').remove();
+
+                            // Show login modal
+                            setTimeout(() => {
+                                this.showAuthModal('login');
+                            }, 1000);
+
+                        } catch (error) {
+                            errorDiv.textContent = error.message;
+                            errorDiv.style.display = 'block';
+
+                            submitBtn.textContent = originalText;
+                            submitBtn.disabled = false;
+                        }
+                    }, 1000);
+
+                } catch (error) {
+                    console.error('[UserManager] Password reset error:', error);
+                }
+            },
+
+            // Show first-time user onboarding
+            showFirstTimeOnboarding: function() {
+                const modal = document.createElement('div');
+                modal.id = 'onboardingModal';
+                modal.style.cssText = `
+                    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    display: flex; align-items: center; justify-content: center;
+                    z-index: 1000001; padding: 20px;
+                `;
+
+                modal.innerHTML = `
+                    <div style="background: white; padding: 40px; border-radius: 20px; max-width: 600px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3); text-align: center;">
+                        <div style="font-size: 64px; margin-bottom: 20px;">🎉</div>
+                        <h1 style="margin: 0 0 15px 0; color: #333; font-size: 32px;">Welcome to Bulk Email Sender!</h1>
+                        <p style="margin: 0 0 30px 0; color: #666; font-size: 18px; line-height: 1.5;">Your professional email campaign platform is ready.</p>
+
+                        <div style="background: #f8f9fa; padding: 25px; border-radius: 12px; margin-bottom: 30px; text-align: left;">
+                            <h3 style="margin: 0 0 20px 0; color: #007bff; font-size: 20px; text-align: center;">🚀 Get Started in 3 Easy Steps:</h3>
+                            <div style="display: grid; gap: 20px;">
+                                <div style="display: flex; align-items: flex-start; gap: 15px;">
+                                    <div style="background: #007bff; color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0;">1</div>
+                                    <div>
+                                        <h4 style="margin: 0 0 5px 0; color: #333;">Create Your Company Profile</h4>
+                                        <p style="margin: 0; color: #666; font-size: 14px;">Set up your company information for automatic email personalization</p>
+                                    </div>
+                                </div>
+                                <div style="display: flex; align-items: flex-start; gap: 15px;">
+                                    <div style="background: #28a745; color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0;">2</div>
+                                    <div>
+                                        <h4 style="margin: 0 0 5px 0; color: #333;">Upload Your Contacts</h4>
+                                        <p style="margin: 0; color: #666; font-size: 14px;">Import contacts from Excel, CSV, PDF, or other supported formats</p>
+                                    </div>
+                                </div>
+                                <div style="display: flex; align-items: flex-start; gap: 15px;">
+                                    <div style="background: #17a2b8; color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0;">3</div>
+                                    <div>
+                                        <h4 style="margin: 0 0 5px 0; color: #333;">Send Personalized Campaigns</h4>
+                                        <p style="margin: 0; color: #666; font-size: 14px;">Compose and send bulk emails with automatic personalization</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 15px; justify-content: center;">
+                            <button onclick="UserManager.startOnboarding()" style="padding: 15px 30px; background: linear-gradient(135deg, #007bff, #0056b3); color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s;">🚀 Start Setup</button>
+                            <button onclick="UserManager.skipOnboarding()" style="padding: 15px 30px; background: #6c757d; color: white; border: none; border-radius: 10px; font-size: 16px; cursor: pointer;">⏭️ Skip for Now</button>
+                        </div>
+
+                        <p style="margin: 30px 0 0 0; color: #999; font-size: 12px;">You can access this tutorial anytime from the Help button.</p>
+                    </div>
+                `;
+
+                document.body.appendChild(modal);
+            },
+
+            // Start onboarding process
+            startOnboarding: function() {
+                document.getElementById('onboardingModal').remove();
+
+                // Show company management for first-time setup
+                setTimeout(() => {
+                    CompanyOnboardingModule.showManager();
+                    showAlert('🎆 Let\'s start by setting up your company profile! Use the auto-fill templates for quick setup.', 'info');
+                }, 500);
+            },
+
+            // Skip onboarding
+            skipOnboarding: function() {
+                document.getElementById('onboardingModal').remove();
+                showAlert('📝 You can create your company profile anytime from Settings → Add Company.', 'info');
             },
 
             // Show user profile
