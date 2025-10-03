@@ -966,6 +966,23 @@
             }
         }
 
+        // Toggle password visibility function
+        function togglePasswordVisibility(passwordFieldId) {
+            console.log('togglePasswordVisibility called for:', passwordFieldId);
+            const passwordField = document.getElementById(passwordFieldId);
+            const toggleBtn = passwordField.nextElementSibling;
+
+            if (passwordField.type === 'password') {
+                passwordField.type = 'text';
+                toggleBtn.textContent = '🙈';
+                toggleBtn.title = 'Hide password';
+            } else {
+                passwordField.type = 'password';
+                toggleBtn.textContent = '👁️';
+                toggleBtn.title = 'Show password';
+            }
+        }
+
         // Global variables with security and performance improvements
         let contacts = [];
         let filteredContacts = []; // For search functionality
@@ -7002,14 +7019,14 @@ Phone: +91-XXXXXXXXXX`;
             isLoggedIn: false,
             authInitialized: false,
 
-            // OAuth configuration (replace with your actual OAuth app credentials)
+            // OAuth configuration - Using demo/fallback since real OAuth requires app registration
             oauthConfig: {
                 google: {
-                    clientId: 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com',
+                    clientId: 'demo-client-id.apps.googleusercontent.com', // Demo mode - will fallback to simulation
                     redirectUri: window.location.origin + '/auth/google/callback'
                 },
                 microsoft: {
-                    clientId: 'YOUR_MICROSOFT_APP_ID',
+                    clientId: 'demo-microsoft-app-id', // Demo mode - will fallback to simulation
                     redirectUri: window.location.origin + '/auth/microsoft/callback'
                 }
             },
@@ -7764,10 +7781,15 @@ Phone: +91-XXXXXXXXXX`;
 
             // Show authentication modal
             showAuthModal: function(defaultTab = 'login') {
+                console.log('[UserManager] showAuthModal called with tab:', defaultTab);
+
                 if (this.isLoggedIn) {
+                    console.log('[UserManager] User already logged in, showing profile');
                     this.showUserProfile();
                     return;
                 }
+
+                console.log('[UserManager] Creating authentication modal...');
 
                 const modal = document.createElement('div');
                 modal.id = 'authModal';
@@ -7808,9 +7830,15 @@ Phone: +91-XXXXXXXXXX`;
                             </div>
                             <div style="margin-bottom: 18px;">
                                 <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px;">Password *</label>
-                                <input type="password" id="loginPassword" placeholder="Enter your password"
-                                    style="width: 100%; padding: 14px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 15px; transition: border-color 0.2s;"
-                                    required autocomplete="current-password">
+                                <div style="position: relative;">
+                                    <input type="password" id="loginPassword" placeholder="Enter your password"
+                                        style="width: 100%; padding: 14px 45px 14px 14px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 15px; transition: border-color 0.2s;"
+                                        required autocomplete="current-password">
+                                    <button type="button" onclick="togglePasswordVisibility('loginPassword')"
+                                        style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 16px; cursor: pointer; color: #666;">
+                                        👁️
+                                    </button>
+                                </div>
                             </div>
 
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -7839,9 +7867,15 @@ Phone: +91-XXXXXXXXXX`;
                             </div>
                             <div style="margin-bottom: 18px;">
                                 <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px;">Password *</label>
-                                <input type="password" id="registerPassword" placeholder="Minimum 6 characters"
-                                    style="width: 100%; padding: 14px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 15px; transition: border-color 0.2s;"
-                                    required autocomplete="new-password" minlength="6">
+                                <div style="position: relative;">
+                                    <input type="password" id="registerPassword" placeholder="Minimum 6 characters"
+                                        style="width: 100%; padding: 14px 45px 14px 14px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 15px; transition: border-color 0.2s;"
+                                        required autocomplete="new-password" minlength="6">
+                                    <button type="button" onclick="togglePasswordVisibility('registerPassword')"
+                                        style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 16px; cursor: pointer; color: #666;">
+                                        👁️
+                                    </button>
+                                </div>
                                 <small style="color: #666; font-size: 12px; display: block; margin-top: 4px;">Password must be at least 6 characters long</small>
                             </div>
 
@@ -7880,7 +7914,14 @@ Phone: +91-XXXXXXXXXX`;
                     setTimeout(() => this.switchAuthTab('register'), 100);
                 }
 
-                document.body.appendChild(modal);
+                try {
+                    document.body.appendChild(modal);
+                    console.log('[UserManager] Modal appended to body successfully');
+                } catch (error) {
+                    console.error('[UserManager] Error appending modal:', error);
+                    alert('Error creating authentication modal. Please refresh the page.');
+                    return;
+                }
 
                 // Add form submission listeners
                 this.addFormListeners();
@@ -8166,47 +8207,27 @@ Phone: +91-XXXXXXXXXX`;
 
             // Google OAuth implementation
             googleAuth: function() {
+                console.log('[UserManager] Google OAuth button clicked');
                 try {
-                    if (window.google && window.google.accounts) {
-                        window.google.accounts.id.prompt((notification) => {
-                            if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                                console.log('[UserManager] Google OAuth prompt not displayed');
-                                this.showAuthMessage('Google sign-in is not available. Please try manual login.', 'error');
-                            }
-                        });
-                    } else {
-                        // Fallback: simulate OAuth for demo
-                        this.simulateOAuthLogin('google');
-                    }
+                    // Since this is a demo without real OAuth app registration, use simulation
+                    console.log('[UserManager] Using OAuth simulation for demo purposes');
+                    this.simulateOAuthLogin('google');
                 } catch (error) {
                     console.error('[UserManager] Google OAuth error:', error);
-                    this.showAuthMessage('Google sign-in failed. Please try manual login.', 'error');
+                    this.showAuthMessage('Google sign-in failed. Please try manual registration.', 'error');
                 }
             },
 
             // Microsoft OAuth implementation
             microsoftAuth: function() {
+                console.log('[UserManager] Microsoft OAuth button clicked');
                 try {
-                    if (this.msalInstance) {
-                        const loginRequest = {
-                            scopes: ['openid', 'profile', 'email']
-                        };
-
-                        this.msalInstance.loginPopup(loginRequest)
-                            .then(response => {
-                                this.handleMicrosoftResponse(response);
-                            })
-                            .catch(error => {
-                                console.error('[UserManager] Microsoft OAuth error:', error);
-                                this.showAuthMessage('Microsoft sign-in failed. Please try manual login.', 'error');
-                            });
-                    } else {
-                        // Fallback: simulate OAuth for demo
-                        this.simulateOAuthLogin('microsoft');
-                    }
+                    // Since this is a demo without real OAuth app registration, use simulation
+                    console.log('[UserManager] Using OAuth simulation for demo purposes');
+                    this.simulateOAuthLogin('microsoft');
                 } catch (error) {
                     console.error('[UserManager] Microsoft OAuth error:', error);
-                    this.showAuthMessage('Microsoft sign-in failed. Please try manual login.', 'error');
+                    this.showAuthMessage('Microsoft sign-in failed. Please try manual registration.', 'error');
                 }
             },
 
