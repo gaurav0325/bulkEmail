@@ -6075,6 +6075,8 @@ Phone: +91-XXXXXXXXXX`;
             backupKey: 'bulkEmail_companyOnboardingData_backup',
             autoSaveEnabled: true,
             autoSaveTimeout: null,
+            autoSaveFailureCount: 0,
+            maxAutoSaveFailures: 3, // Prevent infinite auto-save loops
             dataVersion: '2.0', // For data migration compatibility
 
             // Module configuration
@@ -6464,7 +6466,24 @@ Best regards,
                 // Validate data integrity
                 if (!this.validateDataIntegrity(newData)) {
                     console.error('[CompanyOnboarding] Data integrity validation failed');
-                    if (!isAutoSave) {
+
+                    if (isAutoSave) {
+                        // Track auto-save failures to prevent infinite loops
+                        this.autoSaveFailureCount++;
+                        console.warn('[CompanyOnboarding] Auto-save failure count:', this.autoSaveFailureCount);
+
+                        if (this.autoSaveFailureCount >= this.maxAutoSaveFailures) {
+                            console.error('[CompanyOnboarding] Max auto-save failures reached. Disabling auto-save temporarily.');
+                            this.autoSaveEnabled = false;
+
+                            // Re-enable after 30 seconds
+                            setTimeout(() => {
+                                this.autoSaveEnabled = true;
+                                this.autoSaveFailureCount = 0;
+                                console.log('[CompanyOnboarding] Auto-save re-enabled after cooldown');
+                            }, 30000);
+                        }
+                    } else {
                         showAlert('Data validation failed. Please check your inputs.', 'error');
                     }
                     return false;
@@ -6474,6 +6493,9 @@ Best regards,
                 this.data = newData;
                 this.lastSaveTime = new Date();
                 this.unsavedChanges = false;
+
+                // Reset auto-save failure count on successful save
+                this.autoSaveFailureCount = 0;
 
                 // Save to localStorage with error handling
                 try {
@@ -6551,8 +6573,20 @@ Best regards,
 
                 // Validate email format if provided
                 if (data.companyEmail && data.companyEmail.trim()) {
+                    const emailValue = data.companyEmail.trim();
+
+                    // Handle both formats: "email@domain.com" and "Display Name <email@domain.com>"
+                    let emailToValidate = emailValue;
+
+                    // If it contains angle brackets, extract the email from between them
+                    const angleMatch = emailValue.match(/<([^>]+)>/);
+                    if (angleMatch) {
+                        emailToValidate = angleMatch[1];
+                    }
+
+                    // Now validate the extracted email address
                     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                    if (!emailRegex.test(data.companyEmail)) {
+                    if (!emailRegex.test(emailToValidate)) {
                         console.warn('[CompanyOnboarding] Invalid email format:', data.companyEmail);
                         return false;
                     }
@@ -6689,6 +6723,12 @@ Best regards,
 
         // Module: Schedule Auto-save
         CompanyOnboardingModule.scheduleAutoSave = function() {
+            // Check if auto-save is enabled
+            if (!this.autoSaveEnabled) {
+                console.log('[CompanyOnboarding] Auto-save is disabled, skipping schedule');
+                return;
+            }
+
             // Mark as having unsaved changes
             this.unsavedChanges = true;
 
@@ -6702,7 +6742,7 @@ Best regards,
 
             // Schedule auto-save after 3 seconds of inactivity
             this.autoSaveTimeout = setTimeout(() => {
-                if (this.unsavedChanges) {
+                if (this.unsavedChanges && this.autoSaveEnabled) {
                     console.log('[CompanyOnboarding] Triggering auto-save...');
                     this.updateStatusIndicator('Auto-saving changes...');
                     this.saveData(true); // isAutoSave = true
@@ -6722,7 +6762,14 @@ Best regards,
 
                 const status = this.checkPersistenceStatus();
 
-                if (this.unsavedChanges) {
+                if (!this.autoSaveEnabled) {
+                    // Auto-save disabled
+                    statusDiv.style.background = '#f8d7da';
+                    statusDiv.style.borderColor = '#dc3545';
+                    statusIcon.textContent = '⚠️';
+                    statusText.textContent = 'Auto-save temporarily disabled due to validation errors';
+                    lastSaveTime.textContent = '';
+                } else if (this.unsavedChanges) {
                     // Unsaved changes
                     statusDiv.style.background = '#fff3cd';
                     statusDiv.style.borderColor = '#ffc107';
