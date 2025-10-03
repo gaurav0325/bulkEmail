@@ -7073,6 +7073,10 @@ Phone: +91-XXXXXXXXXX`;
 
             // Check if user needs to authenticate
             checkAuthenticationState: function() {
+                console.log('[UserManager] Checking authentication state...');
+                console.log('[UserManager] isLoggedIn:', this.isLoggedIn);
+                console.log('[UserManager] currentUser:', this.currentUser);
+
                 if (this.isLoggedIn && this.currentUser) {
                     console.log('[UserManager] User authenticated:', this.currentUser.email);
                     this.hideAuthGate();
@@ -7084,21 +7088,47 @@ Phone: +91-XXXXXXXXXX`;
                 } else {
                     console.log('[UserManager] User not authenticated, showing auth gate');
                     this.showAuthGate();
+
+                    // Additional debugging - check if auth gate is visible
+                    setTimeout(() => {
+                        const authGate = document.getElementById('authGate');
+                        if (authGate) {
+                            console.log('[UserManager] Auth gate display:', window.getComputedStyle(authGate).display);
+                            console.log('[UserManager] Auth gate visibility:', window.getComputedStyle(authGate).visibility);
+                            console.log('[UserManager] Auth gate element:', authGate);
+                        } else {
+                            console.error('[UserManager] Auth gate element not found!');
+                        }
+                    }, 1000);
                 }
             },
 
             // Show authentication gate
             showAuthGate: function() {
+                console.log('[UserManager] showAuthGate called');
                 const authGate = document.getElementById('authGate');
+                console.log('[UserManager] Auth gate element found:', !!authGate);
+
                 if (authGate) {
+                    console.log('[UserManager] Setting auth gate display to flex');
                     authGate.style.display = 'flex';
+                    console.log('[UserManager] Auth gate display after setting:', authGate.style.display);
                 }
 
                 // Hide main application
                 const mainContent = document.querySelector('.main-content');
                 const header = document.querySelector('div[style*="background: white"]');
-                if (mainContent) mainContent.style.display = 'none';
-                if (header) header.style.display = 'none';
+                console.log('[UserManager] Main content found:', !!mainContent);
+                console.log('[UserManager] Header found:', !!header);
+
+                if (mainContent) {
+                    mainContent.style.display = 'none';
+                    console.log('[UserManager] Main content hidden');
+                }
+                if (header) {
+                    header.style.display = 'none';
+                    console.log('[UserManager] Header hidden');
+                }
             },
 
             // Hide authentication gate
