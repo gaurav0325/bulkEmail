@@ -249,6 +249,36 @@
             box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
         }
 
+        /* Modal Close Button Styles */
+        .modal-close-btn {
+            background: #dc3545 !important;
+            color: white !important;
+            border: none !important;
+            width: 32px !important;
+            height: 32px !important;
+            border-radius: 50% !important;
+            font-size: 18px !important;
+            cursor: pointer !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            line-height: 1 !important;
+            transition: all 0.2s ease !important;
+            box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3) !important;
+            z-index: 999999 !important;
+            position: relative !important;
+        }
+
+        .modal-close-btn:hover {
+            background: #c82333 !important;
+            transform: scale(1.1) !important;
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.5) !important;
+        }
+
+        .modal-close-btn:active {
+            transform: scale(0.95) !important;
+        }
+
         /* Formatting Toolbar Styles */
         .format-btn {
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -3400,14 +3430,17 @@ Phone: +91-XXXXXXXXXX`;
 
             // Get company onboarding data for personalization
             const companyData = CompanyOnboardingModule.getData();
+            console.log('[ContactSelection] Company data retrieved:', companyData);
 
             // Check if company data exists and use personalized template
             if (companyData && companyData.emailTemplate) {
                 console.log('[ContactSelection] Using personalized template with company onboarding data');
+                console.log('[ContactSelection] Email template:', companyData.emailTemplate);
 
                 try {
                     // Extract template content
                     const templateData = CompanyOnboardingModule.extractTemplateContent(companyData.emailTemplate);
+                    console.log('[ContactSelection] Extracted template data:', templateData);
 
                     // Populate subject line with personalization
                     const subjectField = document.getElementById('subject');
@@ -5014,7 +5047,7 @@ Phone: +91-XXXXXXXXXX`;
                         <h3 style="margin: 0; color: #007bff;">📧 Bulk Email Progress</h3>
                         <div style="display: flex; gap: 8px; align-items: center;">
                             <button id="minimizeProgressBtn" onclick="minimizeBulkProgress()" style="background: #6c757d; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">Minimize</button>
-                            <button onclick="cancelBulkEmail()" style="background: #dc3545; color: white; border: none; width: 28px; height: 28px; border-radius: 50%; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1;" title="Close">×</button>
+                            <button onclick="cancelBulkEmail()" class="modal-close-btn" title="Close">×</button>
                         </div>
                     </div>
                     <div id="bulkProgressText" style="margin-bottom: 15px; font-size: 14px;">Preparing to send...</div>
@@ -5190,8 +5223,7 @@ Phone: +91-XXXXXXXXXX`;
                         <h3 style="margin: 0; color: #dc3545;">❌ Failed Uploads Report</h3>
                         <div style="display: flex; gap: 8px; align-items: center;">
                             <button onclick="exportFailedUploads()" class="button button-success">Export CSV</button>
-                            <button onclick="closeFailedUploadsModal()" class="button">Close</button>
-                            <button onclick="closeFailedUploadsModal()" style="background: #dc3545; color: white; border: none; width: 28px; height: 28px; border-radius: 50%; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1;" title="Close">×</button>
+                            <button onclick="closeFailedUploadsModal()" class="modal-close-btn" title="Close">×</button>
                         </div>
                     </div>
                     <div style="font-size: 14px; margin-bottom: 10px; color: #666;">
@@ -6016,7 +6048,7 @@ Phone: +91-XXXXXXXXXX`;
                 <div style="background: white; padding: 30px; border-radius: 8px; max-width: 600px; width: 90%; max-height: 80%; overflow-y: auto;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                         <h3 style="margin: 0; color: #007bff;">⚙️ Email Service Configuration</h3>
-                        <button onclick="closeEmailConfig()" style="background: #dc3545; color: white; border: none; width: 28px; height: 28px; border-radius: 50%; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1;" title="Close">×</button>
+                        <button onclick="closeEmailConfig()" class="modal-close-btn" title="Close">×</button>
                     </div>
 
                     <div style="margin-bottom: 20px; padding: 15px; background: #dcfce7; border-radius: 4px; border-left: 4px solid #16a34a;">
@@ -6479,7 +6511,7 @@ Best regards,
                         <div style="display: flex; gap: 8px; align-items: center;">
                             <button onclick="CompanyOnboardingModule.showCompanySelector()" style="background: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer;">📋 All Companies</button>
                             <button onclick="CompanyOnboardingModule.showNewCompanyForm()" style="background: #007bff; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer;">➕ New Company</button>
-                            <button onclick="CompanyOnboardingModule.closeManager()" style="background: #dc3545; color: white; border: none; width: 28px; height: 28px; border-radius: 50%; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1;" title="Close">×</button>
+                            <button onclick="CompanyOnboardingModule.closeManager()" class="modal-close-btn" title="Close">×</button>
                         </div>
                     </div>
 
@@ -7999,7 +8031,13 @@ Best regards,
         CompanyOnboardingModule.extractTemplateContent = function(template) {
             if (!template) return { subject: '', content: '' };
 
-            const lines = template.split('\n');
+            // Convert HTML to text for processing, but preserve the HTML structure for content
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = template;
+            const textContent = tempDiv.textContent || tempDiv.innerText || '';
+
+            // Split by both newlines and HTML line breaks
+            const lines = textContent.split(/\n|<br\s*\/?>/i);
             let subject = '';
             let content = '';
             let contentStartIndex = -1;
@@ -8017,9 +8055,20 @@ Best regards,
                 }
             }
 
-            // Extract content
-            if (contentStartIndex !== -1) {
-                content = lines.slice(contentStartIndex).join('\n').trim();
+            // If we found a subject, extract content from the HTML after the subject line
+            if (subject) {
+                // Find the subject in the original HTML and get content after it
+                const subjectIndex = template.indexOf('Subject:');
+                if (subjectIndex !== -1) {
+                    const afterSubject = template.substring(subjectIndex);
+                    const contentMatch = afterSubject.match(/Subject:[^<\n]*(?:<br\s*\/?>|\n)\s*([\s\S]*)/i);
+                    if (contentMatch) {
+                        content = contentMatch[1].trim();
+                    }
+                }
+            } else {
+                // If no subject found, treat the entire template as content
+                content = template.trim();
             }
 
             return { subject, content };
@@ -8610,7 +8659,7 @@ Best regards,
                     <!-- Header -->
                     <div style="padding: 20px 24px 16px 24px; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center;">
                         <h3 style="margin: 0; color: #202124; font-size: 18px; font-weight: 500;">Email Response</h3>
-                        <button onclick="closeViewResponseModal()" style="background: #dc3545; color: white; border: none; width: 28px; height: 28px; border-radius: 50%; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1;" title="Close">×</button>
+                        <button onclick="closeViewResponseModal()" class="modal-close-btn" title="Close">×</button>
                     </div>
 
                     <!-- Email Details -->
