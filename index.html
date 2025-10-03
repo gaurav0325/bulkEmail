@@ -891,6 +891,49 @@
     </div>
 
     <script>
+        // CRITICAL: Global functions must be defined first for authentication gate buttons
+        function showLoginModal() {
+            console.log('showLoginModal called');
+            try {
+                if (typeof UserManager !== 'undefined' && UserManager.showAuthModal) {
+                    UserManager.showAuthModal('login');
+                } else {
+                    console.error('UserManager not available, retrying in 1 second...');
+                    setTimeout(() => {
+                        if (typeof UserManager !== 'undefined' && UserManager.showAuthModal) {
+                            UserManager.showAuthModal('login');
+                        } else {
+                            alert('Authentication system not ready. Please refresh the page.');
+                        }
+                    }, 1000);
+                }
+            } catch (error) {
+                console.error('showLoginModal error:', error);
+                alert('Error opening login. Please refresh the page.');
+            }
+        }
+
+        function showRegisterModal() {
+            console.log('showRegisterModal called');
+            try {
+                if (typeof UserManager !== 'undefined' && UserManager.showAuthModal) {
+                    UserManager.showAuthModal('register');
+                } else {
+                    console.error('UserManager not available, retrying in 1 second...');
+                    setTimeout(() => {
+                        if (typeof UserManager !== 'undefined' && UserManager.showAuthModal) {
+                            UserManager.showAuthModal('register');
+                        } else {
+                            alert('Authentication system not ready. Please refresh the page.');
+                        }
+                    }, 1000);
+                }
+            } catch (error) {
+                console.error('showRegisterModal error:', error);
+                alert('Error opening registration. Please refresh the page.');
+            }
+        }
+
         // Global variables with security and performance improvements
         let contacts = [];
         let filteredContacts = []; // For search functionality
@@ -5761,38 +5804,7 @@ Phone: +91-XXXXXXXXXX`;
             }
         }
 
-        // Global functions for authentication gate buttons
-        function showLoginModal() {
-            console.log('showLoginModal called');
-            if (typeof UserManager !== 'undefined' && UserManager.showAuthModal) {
-                UserManager.showAuthModal('login');
-            } else {
-                console.error('UserManager not available, retrying in 1 second...');
-                setTimeout(() => {
-                    if (typeof UserManager !== 'undefined' && UserManager.showAuthModal) {
-                        UserManager.showAuthModal('login');
-                    } else {
-                        alert('Authentication system not ready. Please refresh the page.');
-                    }
-                }, 1000);
-            }
-        }
-
-        function showRegisterModal() {
-            console.log('showRegisterModal called');
-            if (typeof UserManager !== 'undefined' && UserManager.showAuthModal) {
-                UserManager.showAuthModal('register');
-            } else {
-                console.error('UserManager not available, retrying in 1 second...');
-                setTimeout(() => {
-                    if (typeof UserManager !== 'undefined' && UserManager.showAuthModal) {
-                        UserManager.showAuthModal('register');
-                    } else {
-                        alert('Authentication system not ready. Please refresh the page.');
-                    }
-                }, 1000);
-            }
-        }
+        // Global functions moved to top of script for immediate availability
 
         function closeDataMenu(event) {
             const menu = document.getElementById('dataMenu');
@@ -7014,7 +7026,7 @@ Phone: +91-XXXXXXXXXX`;
             },
 
             // Send password reset email
-            sendPasswordResetEmail: function(email) {
+            sendPasswordResetEmail: async function(email) {
                 try {
                     const users = this.getAllUsers();
                     const user = Object.values(users).find(u => u.email.toLowerCase() === email.toLowerCase());
