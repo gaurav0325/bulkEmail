@@ -404,54 +404,83 @@
     </style>
 </head>
 <body>
-    <!-- Authentication Gate Overlay -->
-    <div id="authGate" style="
-        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        display: flex; align-items: center; justify-content: center;
-        z-index: 999999; padding: 20px; min-height: 100vh; min-width: 100vw;
-        ">
-        <div style="
-            background: white; padding: 40px; border-radius: 16px;
-            max-width: 500px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            text-align: center; position: relative; z-index: 1000000;
-            opacity: 1; visibility: visible; display: block;
-            ">
-            <div style="font-size: 64px; margin-bottom: 20px;">📧</div>
-            <h1 style="margin: 0 0 15px 0; color: #333; font-size: 28px;">Bulk Email Sender</h1>
-            <p style="margin: 0 0 30px 0; color: #666; font-size: 16px; line-height: 1.5;">Professional Email Campaign Platform</p>
+    <!-- SIMPLE Authentication Gate -->
+    <div id="authGate">
+        <div id="authContent">
+            <h1>📧 Bulk Email Sender</h1>
+            <p>Professional Email Campaign Platform</p>
+            <p>Please login or register to continue</p>
 
-            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 30px; text-align: left;">
-                <h3 style="margin: 0 0 15px 0; color: #007bff; font-size: 18px;">🚀 Platform Features:</h3>
-                <ul style="margin: 0; padding-left: 20px; color: #555; line-height: 1.6;">
-                    <li>Multi-format contact file upload & processing</li>
-                    <li>Rich text email composition with templates</li>
-                    <li>Bulk email campaigns with personalization</li>
-                    <li>Real-time analytics and progress tracking</li>
-                    <li>Multi-company management</li>
-                    <li>Professional email delivery via SMTP</li>
-                </ul>
-            </div>
+            <button id="loginBtn" onclick="showLoginModal()">🔐 Login to Your Account</button>
+            <button id="registerBtn" onclick="showRegisterModal()">🆕 Create New Account</button>
 
-            <div style="display: grid; gap: 15px;">
-                <button id="loginBtn" onclick="showLoginModal()" style="
-                    width: 100%; padding: 15px; background: #007bff; color: white;
-                    border: none; border-radius: 8px; font-size: 16px; font-weight: 600;
-                    cursor: pointer; transition: all 0.2s ease; position: relative; z-index: 1000001;
-                    opacity: 1; visibility: visible; display: block; margin: 8px 0;
-                    ">🔐 Login to Your Account</button>
-
-                <button id="registerBtn" onclick="showRegisterModal()" style="
-                    width: 100%; padding: 15px; background: #28a745; color: white;
-                    border: none; border-radius: 8px; font-size: 16px; font-weight: 600;
-                    cursor: pointer; transition: all 0.2s ease; position: relative; z-index: 1000001;
-                    opacity: 1; visibility: visible; display: block; margin: 8px 0;
-                    ">🆕 Create New Account</button>
-            </div>
-
-            <p style="margin: 30px 0 0 0; color: #999; font-size: 12px;">🔒 Your data is secure and private. We never share your information.</p>
+            <p style="font-size: 12px; margin-top: 20px;">🔒 Your data is secure and private</p>
         </div>
     </div>
+
+    <style>
+        #authGate {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 999999;
+        }
+
+        #authContent {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+
+        #authContent h1 {
+            margin: 0 0 20px 0;
+            color: #333;
+            font-size: 24px;
+        }
+
+        #authContent p {
+            margin: 0 0 20px 0;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        #authContent button {
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        #loginBtn {
+            background: #007bff;
+            color: white;
+        }
+
+        #registerBtn {
+            background: #28a745;
+            color: white;
+        }
+
+        #authContent button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+    </style>
     <div style="background: white; padding: 10px 20px; border-radius: 5px; margin-bottom: 15px; display: none; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);" id="appHeader">
         <div>
             <h3 style="margin: 0; color: #007bff;">📧 Bulk Email Sender</h3>
@@ -6580,25 +6609,22 @@ Phone: +91-XXXXXXXXXX`;
                 }, 2000);
             }, 3000);
 
-            // DEBUG: Clear any existing authentication to force auth gate display
-            console.log('[DEBUG] Clearing authentication for testing');
+            // Clear any existing authentication to ensure fresh start
+            console.log('[AUTH] Clearing previous session for clean start');
             localStorage.removeItem('bulkEmail_userSession');
             localStorage.removeItem('bulkEmail_currentUser');
 
+            // Simple auth gate visibility
+            console.log('[AUTH] Authentication gate should be visible');
+            const authGate = document.getElementById('authGate');
+            if (authGate) {
+                console.log('[AUTH] Auth gate element found and visible');
+            } else {
+                console.error('[AUTH] Auth gate element NOT found!');
+            }
+
             // Initialize User Management System
             UserManager.init();
-
-            // FORCE auth gate to be visible for debugging
-            setTimeout(() => {
-                console.log('[DEBUG] Force showing auth gate');
-                const authGate = document.getElementById('authGate');
-                if (authGate) {
-                    authGate.style.display = 'flex';
-                    authGate.style.visibility = 'visible';
-                    authGate.style.opacity = '1';
-                    console.log('[DEBUG] Auth gate forced visible');
-                }
-            }, 1000);
 
             // Add event listeners for authentication gate buttons
             const loginBtn = document.getElementById('loginBtn');
@@ -7125,30 +7151,22 @@ Phone: +91-XXXXXXXXXX`;
 
             // Show authentication gate
             showAuthGate: function() {
-                console.log('[UserManager] showAuthGate called');
+                console.log('[UserManager] showAuthGate called - simple version');
                 const authGate = document.getElementById('authGate');
-                console.log('[UserManager] Auth gate element found:', !!authGate);
 
                 if (authGate) {
-                    console.log('[UserManager] Setting auth gate display to flex');
                     authGate.style.display = 'flex';
-                    console.log('[UserManager] Auth gate display after setting:', authGate.style.display);
+                    console.log('[UserManager] Auth gate shown');
+                } else {
+                    console.error('[UserManager] Auth gate element not found!');
                 }
 
                 // Hide main application
                 const mainContent = document.querySelector('.main-content');
-                const header = document.querySelector('div[style*="background: white"]');
-                console.log('[UserManager] Main content found:', !!mainContent);
-                console.log('[UserManager] Header found:', !!header);
+                const header = document.getElementById('appHeader');
 
-                if (mainContent) {
-                    mainContent.style.display = 'none';
-                    console.log('[UserManager] Main content hidden');
-                }
-                if (header) {
-                    header.style.display = 'none';
-                    console.log('[UserManager] Header hidden');
-                }
+                if (mainContent) mainContent.style.display = 'none';
+                if (header) header.style.display = 'none';
             },
 
             // Hide authentication gate
