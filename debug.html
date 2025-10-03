@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Auth Gate Debug Test</title>
+    <style>
+        body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
+
+        .auth-gate {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 999999;
+            padding: 20px;
+        }
+
+        .auth-content {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+
+        .auth-button {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 10px 0;
+            transition: all 0.2s ease;
+        }
+
+        .login-btn {
+            background: #007bff;
+            color: white;
+        }
+
+        .register-btn {
+            background: #28a745;
+            color: white;
+        }
+
+        .auth-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-gate" id="debugAuthGate">
+        <div class="auth-content">
+            <div style="font-size: 64px; margin-bottom: 20px;">📧</div>
+            <h1 style="margin: 0 0 15px 0; color: #333; font-size: 28px;">Debug: Auth Gate Test</h1>
+            <p style="margin: 0 0 30px 0; color: #666; font-size: 16px;">Testing authentication gate visibility</p>
+
+            <button class="auth-button login-btn" onclick="testLogin()">🔐 Test Login Button</button>
+            <button class="auth-button register-btn" onclick="testRegister()">🆕 Test Register Button</button>
+
+            <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                <p style="margin: 0; font-size: 14px; color: #666;">
+                    <strong>Debug Info:</strong><br>
+                    Viewport: <span id="viewport"></span><br>
+                    Auth Gate Display: <span id="authDisplay"></span><br>
+                    Time: <span id="currentTime"></span>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function testLogin() {
+            alert('Login button clicked successfully!');
+        }
+
+        function testRegister() {
+            alert('Register button clicked successfully!');
+        }
+
+        function updateDebugInfo() {
+            document.getElementById('viewport').textContent = window.innerWidth + 'x' + window.innerHeight;
+
+            const authGate = document.getElementById('debugAuthGate');
+            const computedStyle = window.getComputedStyle(authGate);
+            document.getElementById('authDisplay').textContent = computedStyle.display;
+
+            document.getElementById('currentTime').textContent = new Date().toLocaleTimeString();
+        }
+
+        // Update debug info every second
+        setInterval(updateDebugInfo, 1000);
+        updateDebugInfo();
+
+        console.log('Debug page loaded successfully');
+        console.log('Auth gate element:', document.getElementById('debugAuthGate'));
+    </script>
+</body>
+</html>
