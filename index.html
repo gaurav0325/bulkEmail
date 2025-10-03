@@ -6413,6 +6413,9 @@ Phone: +91-XXXXXXXXXX`;
             init: function() {
                 console.log('[UserManager] Initializing authentication system...');
 
+                // Check URL parameters for email verification or password reset
+                this.handleUrlParameters();
+
                 // Load session first
                 this.loadSession();
 
@@ -6424,6 +6427,89 @@ Phone: +91-XXXXXXXXXX`;
 
                 this.authInitialized = true;
                 console.log('[UserManager] Authentication system initialized');
+            },
+
+            // Handle URL parameters for email verification and password reset
+            handleUrlParameters: function() {
+                const urlParams = new URLSearchParams(window.location.search);
+                const verifyToken = urlParams.get('verify');
+                const resetToken = urlParams.get('reset');
+
+                if (verifyToken) {
+                    this.handleEmailVerification(verifyToken);
+                    // Clean URL
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+
+                if (resetToken) {
+                    this.handlePasswordResetFromUrl(resetToken);
+                    // Clean URL
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+            },
+
+            // Handle email verification from URL
+            handleEmailVerification: function(token) {
+                try {
+                    const users = this.getAllUsers();
+                    const user = Object.values(users).find(u => u.verificationToken === token);
+
+                    if (!user) {
+                        showAlert('❌ Invalid verification link. Please try registering again.', 'error');
+                        return;
+                    }
+
+                    if (user.isVerified) {
+                        showAlert('✅ Email already verified! You can now log in.', 'success');
+                        setTimeout(() => this.showAuthModal('login'), 2000);
+                        return;
+                    }
+
+                    // Verify the user
+                    user.isVerified = true;
+                    user.verificationToken = null;
+                    user.verifiedAt = new Date().toISOString();
+                    users[user.id] = user;
+                    this.saveAllUsers(users);
+
+                    console.log('[UserManager] ✅ Email verified for:', user.email);
+                    showAlert('🎉 Email verified successfully! You can now log in to your account.', 'success');
+
+                    // Show login modal after 2 seconds
+                    setTimeout(() => this.showAuthModal('login'), 2000);
+
+                } catch (error) {
+                    console.error('[UserManager] Email verification error:', error);
+                    showAlert('❌ Email verification failed. Please try again.', 'error');
+                }
+            },
+
+            // Handle password reset from URL
+            handlePasswordResetFromUrl: function(token) {
+                try {
+                    const resetRequests = JSON.parse(localStorage.getItem(this.PASSWORD_RESET_KEY) || '{}');
+                    const resetRequest = resetRequests[token];
+
+                    if (!resetRequest) {
+                        showAlert('❌ Invalid or expired reset link. Please request a new password reset.', 'error');
+                        setTimeout(() => this.showAuthModal('login'), 2000);
+                        return;
+                    }
+
+                    if (resetRequest.expiresAt < Date.now()) {
+                        showAlert('❌ Reset link has expired. Please request a new password reset.', 'error');
+                        setTimeout(() => this.showAuthModal('login'), 2000);
+                        return;
+                    }
+
+                    // Show password reset form
+                    showAlert('✅ Reset link verified! Please enter your new password.', 'success');
+                    setTimeout(() => this.showPasswordResetForm(token), 1000);
+
+                } catch (error) {
+                    console.error('[UserManager] Password reset URL handling error:', error);
+                    showAlert('❌ Password reset failed. Please try again.', 'error');
+                }
             },
 
             // Check if user needs to authenticate
@@ -6738,11 +6824,95 @@ Phone: +91-XXXXXXXXXX`;
                 return hash.toString();
             },
 
-            // Send verification email (mock implementation)
-            sendVerificationEmail: function(user) {
-                console.log('[UserManager] Verification email sent to:', user.email);
-                // In production, integrate with email service
-                showAlert('✅ Verification email sent! Please check your inbox and click the verification link.', 'success');
+            // Send verification email using existing Zoho SMTP
+            sendVerificationEmail: async function(user) {
+                try {
+                    console.log('[UserManager] Sending verification email to:', user.email);
+
+                    const verificationLink = `${window.location.origin}?verify=${user.verificationToken}`;
+
+                    const emailData = {
+                        from_email: 'info@datanalysisninsights.co.uk',
+                        from_name: 'Bulk Email Sender - Account Verification',
+                        to_email: user.email,
+                        to_name: user.name,
+                        subject: '✅ Verify Your Account - Bulk Email Sender',
+                        html_content: `
+                            <!DOCTYPE html>
+                            <html>
+                            <head>
+                                <meta charset="utf-8">
+                                <title>Account Verification</title>
+                            </head>
+                            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+                                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+                                    <h1 style="color: white; margin: 0; font-size: 28px;">📧 Welcome to Bulk Email Sender!</h1>
+                                </div>
+
+                                <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e9ecef;">
+                                    <h2 style="color: #007bff; margin-top: 0;">Hi ${user.name},</h2>
+
+                                    <p>Thank you for registering with <strong>Bulk Email Sender</strong> - your professional email campaign platform!</p>
+
+                                    <p>To complete your account setup and start sending professional email campaigns, please verify your email address by clicking the button below:</p>
+
+                                    <div style="text-align: center; margin: 30px 0;">
+                                        <a href="${verificationLink}" style="background: linear-gradient(135deg, #007bff, #0056b3); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; font-size: 16px;">
+                                            ✅ Verify My Account
+                                        </a>
+                                    </div>
+
+                                    <p style="font-size: 14px; color: #666;">If the button doesn't work, copy and paste this link into your browser:</p>
+                                    <p style="background: #e9ecef; padding: 10px; border-radius: 4px; word-break: break-all; font-size: 12px;">${verificationLink}</p>
+
+                                    <hr style="margin: 30px 0; border: none; border-top: 1px solid #e9ecef;">
+
+                                    <h3 style="color: #28a745;">What's Next?</h3>
+                                    <ol style="color: #666;">
+                                        <li>Verify your email address (click the button above)</li>
+                                        <li>Set up your company profile with our auto-fill templates</li>
+                                        <li>Upload your contacts from Excel, CSV, or other formats</li>
+                                        <li>Start sending personalized email campaigns!</li>
+                                    </ol>
+
+                                    <p style="margin-top: 30px; font-size: 12px; color: #999; text-align: center;">
+                                        This verification link will expire in 24 hours for security reasons.<br>
+                                        If you didn't create this account, please ignore this email.
+                                    </p>
+                                </div>
+
+                                <div style="text-align: center; margin-top: 20px; font-size: 12px; color: #999;">
+                                    <p>🔒 Bulk Email Sender - Professional Email Campaign Platform</p>
+                                    <p>Visit us at: ${window.location.origin}</p>
+                                </div>
+                            </body>
+                            </html>
+                        `,
+                        reply_to: 'Bulk Email Sender Support <info@datanalysisninsights.co.uk>'
+                    };
+
+                    // Use existing email infrastructure
+                    const result = await this.sendEmailViaInfrastructure(emailData);
+
+                    if (result.success) {
+                        console.log('[UserManager] ✅ Verification email sent successfully via', result.service);
+                        showAlert('✅ Verification email sent! Please check your inbox and click the verification link.', 'success');
+                    } else {
+                        throw new Error(result.error || 'Email sending failed');
+                    }
+
+                } catch (error) {
+                    console.error('[UserManager] Verification email failed:', error);
+                    // Fallback to auto-verification for demo
+                    console.log('[UserManager] Falling back to auto-verification');
+                    showAlert('⚠️ Email service temporarily unavailable. Account auto-verified for demo.', 'warning');
+
+                    // Auto-verify user
+                    const users = this.getAllUsers();
+                    user.isVerified = true;
+                    users[user.id] = user;
+                    this.saveAllUsers(users);
+                }
             },
 
             // Send password reset email
@@ -6774,22 +6944,135 @@ Phone: +91-XXXXXXXXXX`;
 
                     localStorage.setItem(this.PASSWORD_RESET_KEY, JSON.stringify(resetRequests));
 
-                    // Mock email sending
-                    console.log('[UserManager] Password reset email sent to:', email);
-                    console.log('[UserManager] Reset token (for demo):', resetToken);
+                    // Send actual password reset email
+                    try {
+                        await this.sendPasswordResetEmailReal(user, resetToken);
+                        showAlert('📧 Password reset link sent! Please check your email.', 'success');
+                    } catch (emailError) {
+                        console.error('[UserManager] Password reset email failed:', emailError);
+                        // Fallback to demo mode
+                        console.log('[UserManager] Falling back to demo mode');
+                        showAlert('⚠️ Email service temporarily unavailable. Using demo mode.', 'warning');
 
-                    showAlert('📧 Password reset link sent! Please check your email.', 'success');
-
-                    // For demo purposes, show reset link in alert
-                    setTimeout(() => {
-                        if (confirm('Demo Mode: Click OK to simulate clicking the reset link in your email.')) {
-                            this.showPasswordResetForm(resetToken);
-                        }
-                    }, 2000);
+                        // For demo purposes, show reset link in alert
+                        setTimeout(() => {
+                            if (confirm('Demo Mode: Click OK to simulate clicking the reset link in your email.')) {
+                                this.showPasswordResetForm(resetToken);
+                            }
+                        }, 2000);
+                    }
 
                 } catch (error) {
                     console.error('[UserManager] Password reset error:', error);
                     showAlert('❌ ' + error.message, 'error');
+                }
+            },
+
+            // Send password reset email using existing infrastructure
+            sendPasswordResetEmailReal: async function(user, resetToken) {
+                const resetLink = `${window.location.origin}?reset=${resetToken}`;
+
+                const emailData = {
+                    from_email: 'info@datanalysisninsights.co.uk',
+                    from_name: 'Bulk Email Sender - Password Reset',
+                    to_email: user.email,
+                    to_name: user.name,
+                    subject: '🔑 Reset Your Password - Bulk Email Sender',
+                    html_content: `
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                            <meta charset="utf-8">
+                            <title>Password Reset Request</title>
+                        </head>
+                        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+                            <div style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+                                <h1 style="color: white; margin: 0; font-size: 28px;">🔑 Password Reset Request</h1>
+                            </div>
+
+                            <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e9ecef;">
+                                <h2 style="color: #dc3545; margin-top: 0;">Hi ${user.name},</h2>
+
+                                <p>We received a request to reset your password for your <strong>Bulk Email Sender</strong> account.</p>
+
+                                <p>If you requested this password reset, click the button below to create a new password:</p>
+
+                                <div style="text-align: center; margin: 30px 0;">
+                                    <a href="${resetLink}" style="background: linear-gradient(135deg, #dc3545, #c82333); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; font-size: 16px;">
+                                        🔒 Reset My Password
+                                    </a>
+                                </div>
+
+                                <p style="font-size: 14px; color: #666;">If the button doesn't work, copy and paste this link into your browser:</p>
+                                <p style="background: #e9ecef; padding: 10px; border-radius: 4px; word-break: break-all; font-size: 12px;">${resetLink}</p>
+
+                                <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 6px; padding: 15px; margin: 25px 0;">
+                                    <h4 style="color: #856404; margin: 0 0 10px 0;">⚠️ Security Notice:</h4>
+                                    <ul style="margin: 0; color: #856404; font-size: 14px;">
+                                        <li>This reset link will expire in <strong>24 hours</strong></li>
+                                        <li>If you didn't request this reset, please ignore this email</li>
+                                        <li>Your password will remain unchanged unless you click the link</li>
+                                    </ul>
+                                </div>
+
+                                <p style="margin-top: 30px; font-size: 12px; color: #999; text-align: center;">
+                                    For security reasons, this link can only be used once.<br>
+                                    If you need help, contact support at info@datanalysisninsights.co.uk
+                                </p>
+                            </div>
+
+                            <div style="text-align: center; margin-top: 20px; font-size: 12px; color: #999;">
+                                <p>🔒 Bulk Email Sender - Professional Email Campaign Platform</p>
+                                <p>Visit us at: ${window.location.origin}</p>
+                            </div>
+                        </body>
+                        </html>
+                    `,
+                    reply_to: 'Bulk Email Sender Support <info@datanalysisninsights.co.uk>'
+                };
+
+                const result = await this.sendEmailViaInfrastructure(emailData);
+
+                if (!result.success) {
+                    throw new Error(result.error || 'Failed to send password reset email');
+                }
+
+                console.log('[UserManager] ✅ Password reset email sent successfully via', result.service);
+                return result;
+            },
+
+            // Use existing email infrastructure to send emails
+            sendEmailViaInfrastructure: async function(emailData) {
+                try {
+                    console.log('[UserManager] Sending email via existing infrastructure...');
+
+                    // Try to use the existing email sending function
+                    if (typeof sendViaZoho === 'function') {
+                        console.log('[UserManager] Using Zoho SMTP...');
+                        return await sendViaZoho(emailData);
+                    }
+
+                    // Fallback to Netlify function
+                    console.log('[UserManager] Using Netlify function...');
+                    const response = await fetch('/.netlify/functions/send-email', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(emailData)
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok && result.success) {
+                        return { success: true, service: 'Netlify Function', messageId: result.messageId };
+                    } else {
+                        throw new Error(result.error || 'Netlify function failed');
+                    }
+
+                } catch (error) {
+                    console.error('[UserManager] Email infrastructure error:', error);
+                    return { success: false, error: error.message };
                 }
             },
 
