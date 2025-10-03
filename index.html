@@ -408,6 +408,20 @@
                     <a href="#" onclick="clearAllData()" style="color: #dc3545; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px;">Clear All</a>
                 </div>
             </div>
+            <!-- Settings Dropdown -->
+            <div class="dropdown" style="position: relative; display: inline-block;">
+                <button class="button" onclick="toggleSettingsMenu()" id="settingsMenuBtn">⚙️ Settings ▼</button>
+                <div id="settingsMenu" style="display: none; position: absolute; right: 0; background: white; min-width: 180px; box-shadow: 0 8px 16px rgba(0,0,0,0.2); z-index: 1000; border-radius: 4px; border: 1px solid #ddd; top: 100%; margin-top: 2px;">
+                    <div id="userInfoSection" style="padding: 8px 12px; font-size: 11px; color: #666; border-bottom: 1px solid #eee; background: #f0f8ff;">
+                        <div id="loggedInUser">👤 <span id="currentUserName">Not logged in</span></div>
+                    </div>
+                    <a href="#" onclick="UserManager.showAuthModal()" style="color: #007bff; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px; border-bottom: 1px solid #eee;">👤 User Account</a>
+                    <a href="#" onclick="UserManager.showCompanySelection()" style="color: #007bff; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px; border-bottom: 1px solid #eee;">🏢 My Companies</a>
+                    <a href="#" onclick="CompanyOnboardingModule.showManager()" style="color: #28a745; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px; border-bottom: 1px solid #eee;">➕ Add Company</a>
+                    <a href="#" onclick="showEmailConfig()" style="color: #6c757d; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px; border-bottom: 1px solid #eee;">📧 Email Config</a>
+                    <a href="#" onclick="UserManager.logout()" style="color: #dc3545; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px;">🚪 Logout</a>
+                </div>
+            </div>
             <button class="button button-secondary" onclick="startTutorial()" title="Interactive Tutorial">Help</button>
             <button class="button button-primary" onclick="sendEmail()" id="sendBtn" disabled aria-label="Send Email to Selected Contact">Send Email</button>
             <button class="button button-primary" id="bulkSendBtn" onclick="showBulkEmailConfirmation()" disabled aria-label="Send Bulk Emails to All Contacts" title="Review and send emails to all uploaded contacts">Bulk Email</button>
@@ -5663,6 +5677,28 @@ Phone: +91-XXXXXXXXXX`;
             }
         }
 
+        function toggleSettingsMenu() {
+            const menu = document.getElementById('settingsMenu');
+            if (menu.style.display === 'none' || menu.style.display === '') {
+                menu.style.display = 'block';
+                // Close menu when clicking outside
+                setTimeout(() => {
+                    document.addEventListener('click', closeSettingsMenu);
+                }, 100);
+            } else {
+                menu.style.display = 'none';
+            }
+        }
+
+        function closeSettingsMenu(event) {
+            const menu = document.getElementById('settingsMenu');
+            const button = document.getElementById('settingsMenuBtn');
+            if (menu && !menu.contains(event.target) && !button.contains(event.target)) {
+                menu.style.display = 'none';
+                document.removeEventListener('click', closeSettingsMenu);
+            }
+        }
+
         function closeDataMenu(event) {
             const menu = document.getElementById('dataMenu');
             const button = document.getElementById('dataMenuBtn');
@@ -5985,6 +6021,9 @@ Phone: +91-XXXXXXXXXX`;
         document.addEventListener('DOMContentLoaded', async function() {
             console.log('Secure email sender loaded');
 
+            // Initialize User Management System
+            UserManager.init();
+
             // Initialize Company Onboarding Data persistence system
             CompanyOnboardingModule.initializePersistence();
 
@@ -6299,6 +6338,549 @@ Phone: +91-XXXXXXXXXX`;
         }
 
         // =====================================================
+        // USER MANAGEMENT MODULE
+        // =====================================================
+        const UserManager = {
+            // Storage keys
+            USERS_KEY: 'bulkEmail_users',
+            CURRENT_USER_KEY: 'bulkEmail_currentUser',
+            SESSION_KEY: 'bulkEmail_userSession',
+
+            // Current state
+            currentUser: null,
+            isLoggedIn: false,
+
+            // Initialize user system
+            init: function() {
+                this.loadSession();
+                this.updateUserDisplay();
+                console.log('[UserManager] Initialized');
+            },
+
+            // Generate unique user ID
+            generateUserId: function() {
+                return 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            },
+
+            // Save user session
+            saveSession: function() {
+                if (this.currentUser) {
+                    const session = {
+                        userId: this.currentUser.id,
+                        loginTime: Date.now(),
+                        expiresAt: Date.now() + (30 * 24 * 60 * 60 * 1000) // 30 days
+                    };
+                    localStorage.setItem(this.SESSION_KEY, JSON.stringify(session));
+                    localStorage.setItem(this.CURRENT_USER_KEY, JSON.stringify(this.currentUser));
+                }
+            },
+
+            // Load user session
+            loadSession: function() {
+                try {
+                    const session = JSON.parse(localStorage.getItem(this.SESSION_KEY));
+                    const userData = JSON.parse(localStorage.getItem(this.CURRENT_USER_KEY));
+
+                    if (session && userData && session.expiresAt > Date.now()) {
+                        this.currentUser = userData;
+                        this.isLoggedIn = true;
+                        console.log('[UserManager] Session restored for:', userData.email);
+                    } else {
+                        this.clearSession();
+                    }
+                } catch (error) {
+                    console.error('[UserManager] Error loading session:', error);
+                    this.clearSession();
+                }
+            },
+
+            // Clear user session
+            clearSession: function() {
+                this.currentUser = null;
+                this.isLoggedIn = false;
+                localStorage.removeItem(this.SESSION_KEY);
+                localStorage.removeItem(this.CURRENT_USER_KEY);
+            },
+
+            // Get all users
+            getAllUsers: function() {
+                try {
+                    return JSON.parse(localStorage.getItem(this.USERS_KEY)) || {};
+                } catch (error) {
+                    console.error('[UserManager] Error loading users:', error);
+                    return {};
+                }
+            },
+
+            // Save all users
+            saveAllUsers: function(users) {
+                localStorage.setItem(this.USERS_KEY, JSON.stringify(users));
+            },
+
+            // Register new user
+            registerUser: function(email, password, name) {
+                const users = this.getAllUsers();
+
+                // Check if user already exists
+                if (Object.values(users).find(user => user.email === email)) {
+                    throw new Error('User already exists with this email');
+                }
+
+                const userId = this.generateUserId();
+                const user = {
+                    id: userId,
+                    email: email,
+                    name: name,
+                    password: this.hashPassword(password), // Simple hash for demo
+                    createdAt: new Date().toISOString(),
+                    companies: [], // Array of company IDs belonging to this user
+                    activeCompanies: [], // Selected companies for personalization
+                    lastLogin: null
+                };
+
+                users[userId] = user;
+                this.saveAllUsers(users);
+
+                console.log('[UserManager] User registered:', email);
+                return userId;
+            },
+
+            // Login user
+            login: function(email, password) {
+                const users = this.getAllUsers();
+                const user = Object.values(users).find(u => u.email === email);
+
+                if (!user) {
+                    throw new Error('User not found');
+                }
+
+                if (user.password !== this.hashPassword(password)) {
+                    throw new Error('Invalid password');
+                }
+
+                // Update last login
+                user.lastLogin = new Date().toISOString();
+                users[user.id] = user;
+                this.saveAllUsers(users);
+
+                this.currentUser = user;
+                this.isLoggedIn = true;
+                this.saveSession();
+
+                console.log('[UserManager] User logged in:', email);
+                return user;
+            },
+
+            // Logout user
+            logout: function() {
+                console.log('[UserManager] User logged out:', this.currentUser?.email);
+                this.clearSession();
+                this.updateUserDisplay();
+
+                // Reload page to reset application state
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            },
+
+            // Simple password hashing (for demo purposes)
+            hashPassword: function(password) {
+                // In production, use proper bcrypt or similar
+                let hash = 0;
+                for (let i = 0; i < password.length; i++) {
+                    const char = password.charCodeAt(i);
+                    hash = ((hash << 5) - hash) + char;
+                    hash = hash & hash; // Convert to 32-bit integer
+                }
+                return hash.toString();
+            },
+
+            // Update user display in UI
+            updateUserDisplay: function() {
+                const userNameElement = document.getElementById('currentUserName');
+                if (userNameElement) {
+                    if (this.isLoggedIn && this.currentUser) {
+                        userNameElement.textContent = this.currentUser.name || this.currentUser.email;
+                    } else {
+                        userNameElement.textContent = 'Not logged in';
+                    }
+                }
+            },
+
+            // Show authentication modal
+            showAuthModal: function() {
+                if (this.isLoggedIn) {
+                    this.showUserProfile();
+                    return;
+                }
+
+                const modal = document.createElement('div');
+                modal.id = 'authModal';
+                modal.style.cssText = `
+                    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                    background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;
+                    z-index: 10000; padding: 20px;
+                `;
+
+                modal.innerHTML = `
+                    <div style="background: white; padding: 30px; border-radius: 12px; max-width: 450px; width: 90%; max-height: 80%; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h2 style="margin: 0; color: #007bff; display: flex; align-items: center; gap: 10px;">
+                                <span>🔐</span> User Account
+                            </h2>
+                            <button onclick="document.getElementById('authModal').remove()" class="modal-close-btn" title="Close">×</button>
+                        </div>
+
+                        <!-- Login/Register Tabs -->
+                        <div style="display: flex; margin-bottom: 20px; border-bottom: 2px solid #f0f0f0;">
+                            <button id="loginTab" onclick="UserManager.switchAuthTab('login')" style="flex: 1; padding: 12px; border: none; background: #007bff; color: white; cursor: pointer; border-radius: 6px 0 0 0; font-weight: 500;">Login</button>
+                            <button id="registerTab" onclick="UserManager.switchAuthTab('register')" style="flex: 1; padding: 12px; border: none; background: #f8f9fa; color: #666; cursor: pointer; border-radius: 0 6px 0 0; font-weight: 500;">Register</button>
+                        </div>
+
+                        <!-- Login Form -->
+                        <div id="loginForm">
+                            <div style="margin-bottom: 15px;">
+                                <label style="display: block; margin-bottom: 5px; font-weight: 500; color: #333;">Email Address</label>
+                                <input type="email" id="loginEmail" placeholder="your.email@company.com" style="width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 6px; font-size: 14px;" required>
+                            </div>
+                            <div style="margin-bottom: 20px;">
+                                <label style="display: block; margin-bottom: 5px; font-weight: 500; color: #333;">Password</label>
+                                <input type="password" id="loginPassword" placeholder="Your password" style="width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 6px; font-size: 14px;" required>
+                            </div>
+                            <button onclick="UserManager.handleLogin()" style="width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: 500; cursor: pointer; margin-bottom: 15px;">🔓 Login</button>
+                        </div>
+
+                        <!-- Register Form -->
+                        <div id="registerForm" style="display: none;">
+                            <div style="margin-bottom: 15px;">
+                                <label style="display: block; margin-bottom: 5px; font-weight: 500; color: #333;">Full Name</label>
+                                <input type="text" id="registerName" placeholder="John Doe" style="width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 6px; font-size: 14px;" required>
+                            </div>
+                            <div style="margin-bottom: 15px;">
+                                <label style="display: block; margin-bottom: 5px; font-weight: 500; color: #333;">Email Address</label>
+                                <input type="email" id="registerEmail" placeholder="your.email@company.com" style="width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 6px; font-size: 14px;" required>
+                            </div>
+                            <div style="margin-bottom: 20px;">
+                                <label style="display: block; margin-bottom: 5px; font-weight: 500; color: #333;">Password</label>
+                                <input type="password" id="registerPassword" placeholder="Choose a strong password" style="width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 6px; font-size: 14px;" required>
+                            </div>
+                            <button onclick="UserManager.handleRegister()" style="width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: 500; cursor: pointer; margin-bottom: 15px;">🆕 Create Account</button>
+                        </div>
+
+                        <!-- OAuth Options -->
+                        <div style="border-top: 1px solid #e1e5e9; padding-top: 20px; margin-top: 20px;">
+                            <p style="text-align: center; color: #666; margin-bottom: 15px; font-size: 14px;">Or continue with:</p>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                <button onclick="UserManager.googleAuth()" style="padding: 10px; border: 2px solid #db4437; color: #db4437; background: white; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">📧 Google</button>
+                                <button onclick="UserManager.microsoftAuth()" style="padding: 10px; border: 2px solid #0078d4; color: #0078d4; background: white; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">🏢 Microsoft</button>
+                            </div>
+                        </div>
+
+                        <div style="text-align: center; margin-top: 20px; padding-top: 15px; border-top: 1px solid #e1e5e9;">
+                            <small style="color: #666;">🔒 Your data is stored securely and never shared with third parties.</small>
+                        </div>
+                    </div>
+                `;
+
+                document.body.appendChild(modal);
+            },
+
+            // Switch between login and register tabs
+            switchAuthTab: function(tab) {
+                const loginTab = document.getElementById('loginTab');
+                const registerTab = document.getElementById('registerTab');
+                const loginForm = document.getElementById('loginForm');
+                const registerForm = document.getElementById('registerForm');
+
+                if (tab === 'login') {
+                    loginTab.style.background = '#007bff';
+                    loginTab.style.color = 'white';
+                    registerTab.style.background = '#f8f9fa';
+                    registerTab.style.color = '#666';
+                    loginForm.style.display = 'block';
+                    registerForm.style.display = 'none';
+                } else {
+                    registerTab.style.background = '#28a745';
+                    registerTab.style.color = 'white';
+                    loginTab.style.background = '#f8f9fa';
+                    loginTab.style.color = '#666';
+                    loginForm.style.display = 'none';
+                    registerForm.style.display = 'block';
+                }
+            },
+
+            // Handle login
+            handleLogin: function() {
+                try {
+                    const email = document.getElementById('loginEmail').value.trim();
+                    const password = document.getElementById('loginPassword').value;
+
+                    if (!email || !password) {
+                        showAlert('⚠️ Please enter both email and password.', 'warning');
+                        return;
+                    }
+
+                    this.login(email, password);
+                    this.updateUserDisplay();
+
+                    document.getElementById('authModal').remove();
+                    showAlert('✅ Welcome back! You are now logged in.', 'success');
+
+                    // Load user's companies
+                    CompanyOnboardingModule.loadUserCompanies();
+
+                } catch (error) {
+                    showAlert('❌ Login failed: ' + error.message, 'error');
+                }
+            },
+
+            // Handle registration
+            handleRegister: function() {
+                try {
+                    const name = document.getElementById('registerName').value.trim();
+                    const email = document.getElementById('registerEmail').value.trim();
+                    const password = document.getElementById('registerPassword').value;
+
+                    if (!name || !email || !password) {
+                        showAlert('⚠️ Please fill in all fields.', 'warning');
+                        return;
+                    }
+
+                    if (password.length < 6) {
+                        showAlert('⚠️ Password must be at least 6 characters long.', 'warning');
+                        return;
+                    }
+
+                    this.registerUser(email, password, name);
+                    this.login(email, password);
+                    this.updateUserDisplay();
+
+                    document.getElementById('authModal').remove();
+                    showAlert('🎉 Account created successfully! You are now logged in.', 'success');
+
+                } catch (error) {
+                    showAlert('❌ Registration failed: ' + error.message, 'error');
+                }
+            },
+
+            // Google OAuth placeholder
+            googleAuth: function() {
+                showAlert('🚧 Google OAuth integration coming soon! Please use manual registration for now.', 'info');
+            },
+
+            // Microsoft OAuth placeholder
+            microsoftAuth: function() {
+                showAlert('🚧 Microsoft OAuth integration coming soon! Please use manual registration for now.', 'info');
+            },
+
+            // Show user profile
+            showUserProfile: function() {
+                if (!this.isLoggedIn) return;
+
+                const modal = document.createElement('div');
+                modal.id = 'userProfileModal';
+                modal.style.cssText = `
+                    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                    background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;
+                    z-index: 10000; padding: 20px;
+                `;
+
+                const companiesCount = this.currentUser.companies?.length || 0;
+                const activeCompaniesCount = this.currentUser.activeCompanies?.length || 0;
+
+                modal.innerHTML = `
+                    <div style="background: white; padding: 30px; border-radius: 12px; max-width: 500px; width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                            <h2 style="margin: 0; color: #007bff;">👤 User Profile</h2>
+                            <button onclick="document.getElementById('userProfileModal').remove()" class="modal-close-btn" title="Close">×</button>
+                        </div>
+
+                        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                            <div style="display: grid; grid-template-columns: auto 1fr; gap: 15px; align-items: center;">
+                                <div style="font-size: 48px;">👤</div>
+                                <div>
+                                    <h3 style="margin: 0 0 5px 0; color: #333;">${this.currentUser.name}</h3>
+                                    <p style="margin: 0; color: #666; font-size: 14px;">${this.currentUser.email}</p>
+                                    <small style="color: #999;">Member since ${new Date(this.currentUser.createdAt).toLocaleDateString()}</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px;">
+                            <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; text-align: center;">
+                                <div style="font-size: 24px; font-weight: bold; color: #1976d2;">${companiesCount}</div>
+                                <div style="font-size: 12px; color: #666;">Companies</div>
+                            </div>
+                            <div style="background: #e8f5e8; padding: 15px; border-radius: 8px; text-align: center;">
+                                <div style="font-size: 24px; font-weight: bold; color: #2e7d32;">${activeCompaniesCount}</div>
+                                <div style="font-size: 12px; color: #666;">Active</div>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 10px;">
+                            <button onclick="UserManager.showCompanySelection(); document.getElementById('userProfileModal').remove();" style="flex: 1; padding: 12px; background: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer;">🏢 My Companies</button>
+                            <button onclick="UserManager.logout(); document.getElementById('userProfileModal').remove();" style="flex: 1; padding: 12px; background: #dc3545; color: white; border: none; border-radius: 6px; cursor: pointer;">🚪 Logout</button>
+                        </div>
+                    </div>
+                `;
+
+                document.body.appendChild(modal);
+            },
+
+            // Show company selection for current user
+            showCompanySelection: function() {
+                if (!this.isLoggedIn) {
+                    this.showAuthModal();
+                    return;
+                }
+
+                const userCompanies = CompanyOnboardingModule.getUserCompanies(this.currentUser.id);
+
+                const modal = document.createElement('div');
+                modal.id = 'companySelectionModal';
+                modal.style.cssText = `
+                    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                    background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;
+                    z-index: 10000; padding: 20px;
+                `;
+
+                modal.innerHTML = `
+                    <div style="background: white; padding: 30px; border-radius: 12px; max-width: 700px; width: 90%; max-height: 80%; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h2 style="margin: 0; color: #007bff;">🏢 My Companies</h2>
+                            <button onclick="document.getElementById('companySelectionModal').remove()" class="modal-close-btn" title="Close">×</button>
+                        </div>
+
+                        ${userCompanies.length === 0 ? `
+                            <div style="text-align: center; padding: 40px; color: #666;">
+                                <div style="font-size: 64px; margin-bottom: 20px;">🏢</div>
+                                <h3 style="margin: 0 0 15px 0;">No Companies Yet</h3>
+                                <p style="margin: 0 0 25px 0;">Create your first company profile to get started with personalized email campaigns.</p>
+                                <button onclick="CompanyOnboardingModule.showManager(); document.getElementById('companySelectionModal').remove();" style="background: #007bff; color: white; border: none; padding: 15px 30px; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 500;">➕ Create First Company</button>
+                            </div>
+                        ` : `
+                            <div style="margin-bottom: 20px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                    <p style="margin: 0; color: #666;">Select which companies to use for email personalization:</p>
+                                    <button onclick="CompanyOnboardingModule.showManager(); document.getElementById('companySelectionModal').remove();" style="background: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 12px;">➕ Add Company</button>
+                                </div>
+
+                                <div style="display: grid; gap: 15px;">
+                                    ${userCompanies.map(company => `
+                                        <div style="border: 2px solid ${this.currentUser.activeCompanies?.includes(company.id) ? '#28a745' : '#e1e5e9'}; border-radius: 8px; padding: 15px; background: ${this.currentUser.activeCompanies?.includes(company.id) ? '#f8fff8' : 'white'};">
+                                            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                                <div style="flex: 1;">
+                                                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                                                        <input type="checkbox" id="company_${company.id}" ${this.currentUser.activeCompanies?.includes(company.id) ? 'checked' : ''} onchange="UserManager.toggleCompanySelection('${company.id}')" style="margin-right: 10px; transform: scale(1.2);">
+                                                        <h4 style="margin: 0; color: #333;">${company.companyName || 'Unnamed Company'}</h4>
+                                                    </div>
+                                                    <p style="margin: 0 0 5px 25px; color: #666; font-size: 14px;">${company.companyEmail || 'No email set'}</p>
+                                                    <p style="margin: 0 0 5px 25px; color: #999; font-size: 12px;">${company.companyIndustry || 'Industry not specified'}</p>
+                                                    <small style="margin-left: 25px; color: #999;">Created: ${new Date(company.createdAt || Date.now()).toLocaleDateString()}</small>
+                                                </div>
+                                                <div style="display: flex; gap: 8px;">
+                                                    <button onclick="CompanyOnboardingModule.editCompany('${company.id}'); document.getElementById('companySelectionModal').remove();" style="background: #007bff; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">✏️ Edit</button>
+                                                    <button onclick="UserManager.confirmDeleteCompany('${company.id}')" style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+
+                                <div style="margin-top: 20px; padding: 15px; background: #f0f8ff; border-radius: 8px; border-left: 4px solid #007bff;">
+                                    <h5 style="margin: 0 0 8px 0; color: #007bff;">💡 Personalization Tips:</h5>
+                                    <ul style="margin: 0; padding-left: 20px; color: #666; font-size: 14px;">
+                                        <li>Selected companies will be used for email personalization</li>
+                                        <li>You can select multiple companies for different campaigns</li>
+                                        <li>Company data auto-fills when composing emails</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        `}
+
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 25px; padding-top: 20px; border-top: 1px solid #e1e5e9;">
+                            <span style="color: #666; font-size: 14px;">💾 Changes saved automatically</span>
+                            <button onclick="document.getElementById('companySelectionModal').remove()" style="background: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">Close</button>
+                        </div>
+                    </div>
+                `;
+
+                document.body.appendChild(modal);
+            },
+
+            // Toggle company selection for personalization
+            toggleCompanySelection: function(companyId) {
+                if (!this.isLoggedIn) return;
+
+                if (!this.currentUser.activeCompanies) {
+                    this.currentUser.activeCompanies = [];
+                }
+
+                const index = this.currentUser.activeCompanies.indexOf(companyId);
+                if (index > -1) {
+                    this.currentUser.activeCompanies.splice(index, 1);
+                    console.log('[UserManager] Deselected company:', companyId);
+                } else {
+                    this.currentUser.activeCompanies.push(companyId);
+                    console.log('[UserManager] Selected company:', companyId);
+                }
+
+                // Update user data
+                const users = this.getAllUsers();
+                users[this.currentUser.id] = this.currentUser;
+                this.saveAllUsers(users);
+                this.saveSession();
+
+                // Update the checkbox appearance
+                const checkbox = document.getElementById(`company_${companyId}`);
+                const container = checkbox.closest('div[style*="border:"]');
+                if (this.currentUser.activeCompanies.includes(companyId)) {
+                    container.style.borderColor = '#28a745';
+                    container.style.backgroundColor = '#f8fff8';
+                } else {
+                    container.style.borderColor = '#e1e5e9';
+                    container.style.backgroundColor = 'white';
+                }
+            },
+
+            // Confirm delete company
+            confirmDeleteCompany: function(companyId) {
+                const company = CompanyOnboardingModule.companies[companyId];
+                if (company && confirm(`Are you sure you want to delete "${company.companyName}"?\n\nThis action cannot be undone.`)) {
+                    CompanyOnboardingModule.deleteCompany(companyId);
+
+                    // Remove from user's active companies
+                    if (this.currentUser.activeCompanies) {
+                        const index = this.currentUser.activeCompanies.indexOf(companyId);
+                        if (index > -1) {
+                            this.currentUser.activeCompanies.splice(index, 1);
+                        }
+                    }
+
+                    // Remove from user's companies
+                    if (this.currentUser.companies) {
+                        const index = this.currentUser.companies.indexOf(companyId);
+                        if (index > -1) {
+                            this.currentUser.companies.splice(index, 1);
+                        }
+                    }
+
+                    // Update user data
+                    const users = this.getAllUsers();
+                    users[this.currentUser.id] = this.currentUser;
+                    this.saveAllUsers(users);
+                    this.saveSession();
+
+                    showAlert('🗑️ Company deleted successfully.', 'success');
+
+                    // Refresh the company selection modal
+                    document.getElementById('companySelectionModal').remove();
+                    setTimeout(() => this.showCompanySelection(), 300);
+                }
+            }
+        };
+
+        // =====================================================
         // COMPANY ONBOARDING DATA MODULE
         // =====================================================
         const CompanyOnboardingModule = {
@@ -6339,6 +6921,77 @@ Phone: +91-XXXXXXXXXX`;
             // Multi-company management functions
             generateCompanyId: function() {
                 return 'company_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            },
+
+            // Get companies belonging to current user
+            getUserCompanies: function(userId = null) {
+                const targetUserId = userId || UserManager.currentUser?.id;
+                if (!targetUserId) return [];
+
+                return Object.values(this.companies).filter(company =>
+                    company.ownerId === targetUserId
+                );
+            },
+
+            // Load companies for current user
+            loadUserCompanies: function() {
+                if (!UserManager.isLoggedIn) {
+                    console.log('[CompanyOnboarding] No user logged in, skipping company load');
+                    return;
+                }
+
+                const userCompanies = this.getUserCompanies();
+                console.log('[CompanyOnboarding] Loaded', userCompanies.length, 'companies for user:', UserManager.currentUser.email);
+
+                // Auto-select first company if none selected
+                if (userCompanies.length > 0 && !this.currentCompanyId) {
+                    const firstCompany = userCompanies[0];
+                    this.setCurrentCompany(firstCompany.id);
+                }
+
+                this.updateCurrentCompanyDisplay();
+            },
+
+            // Create company for current user
+            createCompanyForUser: function(companyData) {
+                if (!UserManager.isLoggedIn) {
+                    throw new Error('User must be logged in to create companies');
+                }
+
+                const companyId = this.generateCompanyId();
+                const newCompany = {
+                    ...companyData,
+                    id: companyId,
+                    ownerId: UserManager.currentUser.id,
+                    createdAt: new Date().toISOString(),
+                    lastModified: new Date().toISOString()
+                };
+
+                this.companies[companyId] = newCompany;
+                this.saveAllCompanies();
+
+                // Add to user's companies list
+                if (!UserManager.currentUser.companies) {
+                    UserManager.currentUser.companies = [];
+                }
+                UserManager.currentUser.companies.push(companyId);
+
+                // Set as active if it's the first company
+                if (!UserManager.currentUser.activeCompanies) {
+                    UserManager.currentUser.activeCompanies = [];
+                }
+                if (UserManager.currentUser.activeCompanies.length === 0) {
+                    UserManager.currentUser.activeCompanies.push(companyId);
+                }
+
+                // Update user data
+                const users = UserManager.getAllUsers();
+                users[UserManager.currentUser.id] = UserManager.currentUser;
+                UserManager.saveAllUsers(users);
+                UserManager.saveSession();
+
+                console.log('[CompanyOnboarding] Created company for user:', companyId);
+                return companyId;
             },
 
             loadAllCompanies: function() {
@@ -6443,19 +7096,50 @@ Phone: +91-XXXXXXXXXX`;
             },
 
             createNewCompany: function(companyData) {
+                // Check if user is logged in for new companies
+                if (!UserManager.isLoggedIn) {
+                    // Allow legacy behavior for backward compatibility
+                    console.warn('[CompanyOnboarding] Creating company without user login (legacy mode)');
+                }
+
                 const companyId = this.generateCompanyId();
                 const newCompany = {
                     ...companyData,
-                    companyId: companyId,
+                    id: companyId,
+                    companyId: companyId, // Keep for backward compatibility
+                    ownerId: UserManager.isLoggedIn ? UserManager.currentUser.id : null,
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString(),
+                    lastModified: new Date().toISOString(),
                     dataVersion: this.dataVersion
                 };
 
                 this.companies[companyId] = newCompany;
                 this.saveAllCompanies();
 
-                console.log('[CompanyOnboarding] Created new company:', companyId);
+                // Update user's company list if logged in
+                if (UserManager.isLoggedIn) {
+                    if (!UserManager.currentUser.companies) {
+                        UserManager.currentUser.companies = [];
+                    }
+                    UserManager.currentUser.companies.push(companyId);
+
+                    // Set as active if it's the first company
+                    if (!UserManager.currentUser.activeCompanies) {
+                        UserManager.currentUser.activeCompanies = [];
+                    }
+                    if (UserManager.currentUser.activeCompanies.length === 0) {
+                        UserManager.currentUser.activeCompanies.push(companyId);
+                    }
+
+                    // Update user data
+                    const users = UserManager.getAllUsers();
+                    users[UserManager.currentUser.id] = UserManager.currentUser;
+                    UserManager.saveAllUsers(users);
+                    UserManager.saveSession();
+                }
+
+                console.log('[CompanyOnboarding] Created new company:', companyId, UserManager.isLoggedIn ? 'for user:' + UserManager.currentUser.email : '(no user)');
                 return companyId;
             },
 
@@ -6511,6 +7195,156 @@ Phone: +91-XXXXXXXXXX`;
                     createdAt: company.createdAt || '',
                     isActive: id === this.currentCompanyId
                 }));
+            },
+
+            // Auto-fill templates for different business types
+            companyTemplates: {
+                technology: {
+                    companyName: 'Tech Solutions Inc.',
+                    companyIndustry: 'Information Technology',
+                    companyWebsite: 'https://techsolutions.com',
+                    companyYears: '15',
+                    companyEmail: 'info@techsolutions.com',
+                    companyPhone: '+1 (555) 123-4567',
+                    companyAddress: '123 Innovation Drive, Tech City, CA 94102',
+                    companyDescription: 'Leading provider of cutting-edge technology solutions for businesses worldwide. Specializing in cloud computing, AI, and digital transformation.',
+                    businesDevelopementManagerName: 'John Smith',
+                    businesDevelopementManagerDesignation: 'Business Development Manager',
+                    productPortfolioPoints: 'Cloud Solutions, AI/ML Platforms, Mobile Applications, Web Development, Cybersecurity Services',
+                    OfferingPoints: 'Technical Support, Training Programs, 24/7 Maintenance, Custom Development',
+                    companyShortName: 'TechSol'
+                },
+                manufacturing: {
+                    companyName: 'Global Manufacturing Corp',
+                    companyIndustry: 'Manufacturing & Industrial',
+                    companyWebsite: 'https://globalmanufacturing.com',
+                    companyYears: '25',
+                    companyEmail: 'business@globalmanufacturing.com',
+                    companyPhone: '+1 (555) 987-6543',
+                    companyAddress: '456 Industrial Blvd, Manufacturing City, TX 75001',
+                    companyDescription: 'World-class manufacturing solutions with 25+ years of experience. Quality products, timely delivery, and competitive pricing.',
+                    businesDevelopementManagerName: 'Sarah Johnson',
+                    businesDevelopementManagerDesignation: 'Regional Sales Manager',
+                    productPortfolioPoints: 'Industrial Equipment, Custom Manufacturing, Quality Control Systems, Automation Solutions',
+                    OfferingPoints: 'Bulk Discounts, Fast Shipping, Quality Guarantee, Technical Support',
+                    companyShortName: 'GMC'
+                },
+                trading: {
+                    companyName: 'International Trading Partners',
+                    companyIndustry: 'Import/Export & Trading',
+                    companyWebsite: 'https://tradingpartners.com',
+                    companyYears: '20',
+                    companyEmail: 'partnerships@tradingpartners.com',
+                    companyPhone: '+1 (555) 456-7890',
+                    companyAddress: '789 Commerce Street, Trade Hub, NY 10001',
+                    companyDescription: 'Established trading company connecting global suppliers with international markets. Reliable partnerships and efficient logistics.',
+                    businesDevelopementManagerName: 'Michael Chen',
+                    businesDevelopementManagerDesignation: 'International Business Manager',
+                    productPortfolioPoints: 'Consumer Electronics, Home Appliances, Fashion Accessories, Sports Equipment',
+                    OfferingPoints: 'Global Shipping, Market Analysis, Regulatory Compliance, Payment Solutions',
+                    companyShortName: 'ITP'
+                },
+                services: {
+                    companyName: 'Professional Services Group',
+                    companyIndustry: 'Professional Services',
+                    companyWebsite: 'https://proservicesgroup.com',
+                    companyYears: '12',
+                    companyEmail: 'contact@proservicesgroup.com',
+                    companyPhone: '+1 (555) 321-0987',
+                    companyAddress: '321 Business Center, Service City, IL 60601',
+                    companyDescription: 'Comprehensive professional services including consulting, project management, and business optimization solutions.',
+                    businesDevelopementManagerName: 'Emily Davis',
+                    businesDevelopementManagerDesignation: 'Client Relations Manager',
+                    productPortfolioPoints: 'Business Consulting, Project Management, Process Optimization, Staff Training',
+                    OfferingPoints: 'Free Consultation, Flexible Contracts, Expert Team, Results Guarantee',
+                    companyShortName: 'PSG'
+                }
+            },
+
+            // Apply template data to form
+            applyTemplate: function(templateType) {
+                const template = this.companyTemplates[templateType];
+                if (!template) {
+                    showAlert('⚠️ Template not found!', 'warning');
+                    return;
+                }
+
+                // Fill form fields with template data
+                Object.keys(template).forEach(fieldId => {
+                    const element = document.getElementById(fieldId);
+                    if (element) {
+                        if (element.type === 'checkbox') {
+                            element.checked = template[fieldId];
+                        } else {
+                            element.value = template[fieldId];
+                        }
+
+                        // Add visual feedback for filled fields
+                        element.style.background = '#f0f8ff';
+                        element.style.borderColor = '#007bff';
+
+                        // Reset styling after animation
+                        setTimeout(() => {
+                            element.style.background = '';
+                            element.style.borderColor = '';
+                        }, 2000);
+                    }
+                });
+
+                // Apply default email template
+                const emailTemplateElement = document.getElementById('companyEmailTemplate');
+                if (emailTemplateElement) {
+                    emailTemplateElement.innerHTML = this.generateDefaultEmailTemplate(template);
+                    emailTemplateElement.style.background = '#f0f8ff';
+                    emailTemplateElement.style.borderColor = '#007bff';
+
+                    setTimeout(() => {
+                        emailTemplateElement.style.background = '';
+                        emailTemplateElement.style.borderColor = '';
+                    }, 2000);
+                }
+
+                showAlert(`✨ ${templateType.charAt(0).toUpperCase() + templateType.slice(1)} template applied! Customize the details as needed.`, 'success');
+
+                // Mark as having unsaved changes
+                this.unsavedChanges = true;
+
+                // Auto-save if enabled
+                if (this.autoSaveEnabled) {
+                    setTimeout(() => {
+                        this.saveData(true);
+                    }, 1000);
+                }
+            },
+
+            // Generate email template based on company data
+            generateDefaultEmailTemplate: function(companyData) {
+                return `From: ${companyData.companyEmail}
+From-Name: ${companyData.companyName}
+To: {email}
+Subject: Partnership Opportunity - ${companyData.companyName} & {firm} in {country}
+
+Dear {contactName},
+
+Greetings from ${companyData.companyName}!
+
+We are excited to introduce you to ${companyData.companyName}, a leading company in the ${companyData.companyIndustry} industry with ${companyData.companyYears} years of proven expertise and excellence.
+
+<strong>Our Product Portfolio:</strong>
+${companyData.productPortfolioPoints}
+
+<strong>What We Offer:</strong>
+${companyData.OfferingPoints}
+
+We believe there are excellent opportunities for collaboration between ${companyData.companyName} and {firm} in the {country} market.
+
+Best regards,
+${companyData.businesDevelopementManagerName}
+${companyData.businesDevelopementManagerDesignation}
+${companyData.companyName}
+Website: ${companyData.companyWebsite}
+Email: ${companyData.companyEmail}
+Phone: ${companyData.companyPhone}`;
             },
 
             // Default template content
@@ -6576,9 +7410,24 @@ Best regards,
                         <span id="statusText">Auto-save enabled - Changes saved automatically</span>
                         <span id="lastSaveTime" style="margin-left: auto; color: #666;"></span>
                     </div>
-                    <p style="color: #666; margin-bottom: 25px;">
+                    <p style="color: #666; margin-bottom: 20px;">
                         Configure your company information for automatic personalization in all email campaigns. Data will be used for both single and bulk emails.
                     </p>
+
+                    <!-- Auto-fill Templates -->
+                    <div style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; margin-bottom: 25px; border-radius: 6px;">
+                        <h5 style="margin: 0 0 12px 0; color: #1976d2; display: flex; align-items: center; gap: 8px;">
+                            <span>✨</span> Quick Start Templates
+                        </h5>
+                        <p style="margin: 0 0 15px 0; color: #555; font-size: 14px;">Choose a template to auto-fill common company information:</p>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+                            <button onclick="CompanyOnboardingModule.applyTemplate('technology')" style="padding: 10px; background: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500;">💻 Technology Company</button>
+                            <button onclick="CompanyOnboardingModule.applyTemplate('manufacturing')" style="padding: 10px; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500;">🏢 Manufacturing</button>
+                            <button onclick="CompanyOnboardingModule.applyTemplate('trading')" style="padding: 10px; background: #17a2b8; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500;">💼 Trading & Import</button>
+                            <button onclick="CompanyOnboardingModule.applyTemplate('services')" style="padding: 10px; background: #6f42c1; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500;">🛠️ Professional Services</button>
+                        </div>
+                        <small style="color: #666; display: block; margin-top: 10px;">Templates provide sample data - customize as needed for your business.</small>
+                    </div>
 
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px;">
                         <div>
