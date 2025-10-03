@@ -6348,6 +6348,9 @@ Phone: +91-XXXXXXXXXX`;
                         this.companies = JSON.parse(companiesData);
                     }
 
+                    // Always check for legacy data migration first
+                    this.migrateLegacyData();
+
                     // Load currently selected company
                     const currentId = localStorage.getItem(this.currentCompanyKey);
                     if (currentId && this.companies[currentId]) {
@@ -6363,8 +6366,6 @@ Phone: +91-XXXXXXXXXX`;
                             console.log('[CompanyOnboarding] Auto-selected first company:', firstCompanyId);
                         } else {
                             console.log('[CompanyOnboarding] No companies found');
-                            // Migrate legacy single company data if exists
-                            this.migrateLegacyData();
                         }
                     }
 
@@ -6383,21 +6384,36 @@ Phone: +91-XXXXXXXXXX`;
                     if (legacyData) {
                         const parsedData = JSON.parse(legacyData);
                         if (parsedData && Object.keys(parsedData).length > 0) {
-                            // Create first company from legacy data
-                            const companyId = this.generateCompanyId();
-                            parsedData.companyId = companyId;
-                            parsedData.createdAt = new Date().toISOString();
-                            parsedData.isLegacyMigration = true;
+                            // Check if this data has already been migrated
+                            const existingMigration = Object.values(this.companies).find(company =>
+                                company.isLegacyMigration &&
+                                company.companyName === parsedData.companyName
+                            );
 
-                            this.companies[companyId] = parsedData;
-                            this.currentCompanyId = companyId;
-                            this.data = parsedData;
+                            if (!existingMigration) {
+                                // Create first company from legacy data
+                                const companyId = this.generateCompanyId();
+                                parsedData.companyId = companyId;
+                                parsedData.createdAt = new Date().toISOString();
+                                parsedData.isLegacyMigration = true;
+                                parsedData.migratedAt = new Date().toISOString();
 
-                            // Save migrated data
-                            this.saveAllCompanies();
-                            this.setCurrentCompany(companyId);
+                                this.companies[companyId] = parsedData;
+                                this.currentCompanyId = companyId;
+                                this.data = parsedData;
 
-                            console.log('[CompanyOnboarding] Migrated legacy data to company:', companyId);
+                                // Save migrated data
+                                this.saveAllCompanies();
+                                localStorage.setItem(this.currentCompanyKey, companyId);
+
+                                console.log('[CompanyOnboarding] ✅ Migrated legacy company:', parsedData.companyName || 'Unnamed Company');
+                                console.log('[CompanyOnboarding] Legacy data migrated to company ID:', companyId);
+
+                                // Remove legacy data to prevent future migrations
+                                localStorage.removeItem(this.storageKey);
+                            } else {
+                                console.log('[CompanyOnboarding] Legacy data already migrated, skipping');
+                            }
                         }
                     }
                 } catch (error) {
