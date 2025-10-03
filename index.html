@@ -279,6 +279,25 @@
             transform: scale(0.95) !important;
         }
 
+        /* Template Editor Color Formatting - Preserve inline styles */
+        #companyEmailTemplate {
+            font-family: inherit;
+            white-space: pre-wrap;
+        }
+
+        /* Allow inline styles to work properly */
+        #companyEmailTemplate span,
+        #companyEmailTemplate div,
+        #companyEmailTemplate p {
+            display: inline;
+        }
+
+        /* Ensure color and background styles are preserved */
+        #companyEmailTemplate [style*="color:"],
+        #companyEmailTemplate [style*="background-color:"] {
+            /* Let inline styles take precedence */
+        }
+
         /* Formatting Toolbar Styles */
         .format-btn {
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -6334,6 +6353,19 @@ Phone: +91-XXXXXXXXXX`;
                     if (currentId && this.companies[currentId]) {
                         this.currentCompanyId = currentId;
                         this.data = this.companies[currentId];
+                        console.log('[CompanyOnboarding] Loaded existing company:', currentId);
+                    } else {
+                        // If no current company but companies exist, select the first one
+                        const companyIds = Object.keys(this.companies);
+                        if (companyIds.length > 0) {
+                            const firstCompanyId = companyIds[0];
+                            this.setCurrentCompany(firstCompanyId);
+                            console.log('[CompanyOnboarding] Auto-selected first company:', firstCompanyId);
+                        } else {
+                            console.log('[CompanyOnboarding] No companies found');
+                        }
+                    }
+                        this.data = this.companies[currentId];
                     } else {
                         // Migrate legacy single company data if exists
                         this.migrateLegacyData();
@@ -6564,7 +6596,7 @@ Best regards,
 
                     <div style="margin-bottom: 25px;">
                         <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">Company Address</label>
-                        <textarea id="companyAddress" placeholder="123 Business Street, City, Country" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; height: 60px; resize: vertical;"></textarea>
+                        <textarea id="companyAddress" placeholder="123 Business Street, City, Country" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; height: 40px; resize: vertical; font-size: 14px; line-height: 1.4;"></textarea>
                     </div>
 
                     <div style="margin-bottom: 25px;">
@@ -6707,7 +6739,7 @@ Best regards,
                                 </div>
                             </div>
 
-                            <div id="companyEmailTemplate" contenteditable="true" placeholder="Create your custom email template with variables..." style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 0 0 4px 4px; height: 200px; overflow-y: auto; font-size: 12px; line-height: 1.6; background: white; outline: none;"
+                            <div id="companyEmailTemplate" contenteditable="true" placeholder="Create your custom email template with variables..." style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 0 0 4px 4px; height: 200px; overflow-y: auto; font-size: 12px; line-height: 1.6; background: white; outline: none; font-family: inherit; word-wrap: break-word; white-space: pre-wrap;"
                                  onfocus="showTemplateToolbar()" onblur="setTimeout(() => hideTemplateToolbar(), 200)"
                                  oninput="updateTemplateContent()" onpaste="handleTemplatePaste(event)">From: {companyEmail}
 From-Name: {companyName}
