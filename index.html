@@ -353,7 +353,10 @@
                     <a href="#" onclick="exportAllData()" style="color: #333; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px; border-bottom: 1px solid #eee;">Export All</a>
                     <a href="#" onclick="importAllData()" style="color: #333; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px; border-bottom: 1px solid #eee;">Import Data</a>
                     <a href="#" onclick="showEmailConfig()" style="color: #6c757d; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px; border-bottom: 1px solid #eee;">Email Setup</a>
-                    <a href="#" onclick="CompanyOnboardingModule.showManager()" style="color: #007bff; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px; border-bottom: 1px solid #eee;">🏢 Company Onboarding Data</a>
+                    <a href="#" onclick="CompanyOnboardingModule.showManager()" style="color: #007bff; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px; border-bottom: 1px solid #eee;">🏢 Company Management</a>
+                    <div id="currentCompanyDisplay" style="padding: 8px 12px; font-size: 11px; color: #666; border-bottom: 1px solid #eee; background: #f8f9fa;">
+                        <div>📋 <span id="activeCompanyName">No company selected</span></div>
+                    </div>
                     <a href="#" onclick="clearAllData()" style="color: #dc3545; padding: 8px 12px; text-decoration: none; display: block; font-size: 12px;">Clear All</a>
                 </div>
             </div>
@@ -6071,13 +6074,17 @@ Phone: +91-XXXXXXXXXX`;
         const CompanyOnboardingModule = {
             // Module state
             data: {},
-            storageKey: 'bulkEmail_companyOnboardingData',
+            companies: {}, // Multi-company storage: { companyId: companyData }
+            currentCompanyId: null, // Currently selected company
+            storageKey: 'bulkEmail_companyOnboardingData', // Legacy single company
+            companiesStorageKey: 'bulkEmail_companies', // Multi-company storage
+            currentCompanyKey: 'bulkEmail_currentCompany', // Selected company ID
             backupKey: 'bulkEmail_companyOnboardingData_backup',
             autoSaveEnabled: true,
             autoSaveTimeout: null,
             autoSaveFailureCount: 0,
             maxAutoSaveFailures: 3, // Prevent infinite auto-save loops
-            dataVersion: '2.0', // For data migration compatibility
+            dataVersion: '3.0', // Updated for multi-company support
 
             // Module configuration
             availableFields: [
@@ -6096,6 +6103,157 @@ Phone: +91-XXXXXXXXXX`;
             // Data persistence tracking
             lastSaveTime: null,
             unsavedChanges: false,
+
+            // Multi-company management functions
+            generateCompanyId: function() {
+                return 'company_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            },
+
+            loadAllCompanies: function() {
+                try {
+                    const companiesData = localStorage.getItem(this.companiesStorageKey);
+                    if (companiesData) {
+                        this.companies = JSON.parse(companiesData);
+                    }
+
+                    // Load currently selected company
+                    const currentId = localStorage.getItem(this.currentCompanyKey);
+                    if (currentId && this.companies[currentId]) {
+                        this.currentCompanyId = currentId;
+                        this.data = this.companies[currentId];
+                    } else {
+                        // Migrate legacy single company data if exists
+                        this.migrateLegacyData();
+                    }
+
+                    console.log('[CompanyOnboarding] Loaded companies:', Object.keys(this.companies).length);
+                    return this.companies;
+                } catch (error) {
+                    console.error('[CompanyOnboarding] Error loading companies:', error);
+                    this.companies = {};
+                    return {};
+                }
+            },
+
+            migrateLegacyData: function() {
+                try {
+                    const legacyData = localStorage.getItem(this.storageKey);
+                    if (legacyData) {
+                        const parsedData = JSON.parse(legacyData);
+                        if (parsedData && Object.keys(parsedData).length > 0) {
+                            // Create first company from legacy data
+                            const companyId = this.generateCompanyId();
+                            parsedData.companyId = companyId;
+                            parsedData.createdAt = new Date().toISOString();
+                            parsedData.isLegacyMigration = true;
+
+                            this.companies[companyId] = parsedData;
+                            this.currentCompanyId = companyId;
+                            this.data = parsedData;
+
+                            // Save migrated data
+                            this.saveAllCompanies();
+                            this.setCurrentCompany(companyId);
+
+                            console.log('[CompanyOnboarding] Migrated legacy data to company:', companyId);
+                        }
+                    }
+                } catch (error) {
+                    console.error('[CompanyOnboarding] Error migrating legacy data:', error);
+                }
+            },
+
+            saveAllCompanies: function() {
+                try {
+                    localStorage.setItem(this.companiesStorageKey, JSON.stringify(this.companies));
+                    console.log('[CompanyOnboarding] Saved all companies to storage');
+                } catch (error) {
+                    console.error('[CompanyOnboarding] Error saving companies:', error);
+                }
+            },
+
+            setCurrentCompany: function(companyId) {
+                if (this.companies[companyId]) {
+                    this.currentCompanyId = companyId;
+                    this.data = this.companies[companyId];
+                    localStorage.setItem(this.currentCompanyKey, companyId);
+                    this.updateCurrentCompanyDisplay();
+                    console.log('[CompanyOnboarding] Switched to company:', companyId);
+                    return true;
+                }
+                return false;
+            },
+
+            createNewCompany: function(companyData) {
+                const companyId = this.generateCompanyId();
+                const newCompany = {
+                    ...companyData,
+                    companyId: companyId,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    dataVersion: this.dataVersion
+                };
+
+                this.companies[companyId] = newCompany;
+                this.saveAllCompanies();
+
+                console.log('[CompanyOnboarding] Created new company:', companyId);
+                return companyId;
+            },
+
+            updateCompany: function(companyId, companyData) {
+                if (this.companies[companyId]) {
+                    this.companies[companyId] = {
+                        ...this.companies[companyId],
+                        ...companyData,
+                        companyId: companyId, // Preserve ID
+                        updatedAt: new Date().toISOString()
+                    };
+                    this.saveAllCompanies();
+
+                    // Update current data if this is the active company
+                    if (this.currentCompanyId === companyId) {
+                        this.data = this.companies[companyId];
+                    }
+
+                    console.log('[CompanyOnboarding] Updated company:', companyId);
+                    return true;
+                }
+                return false;
+            },
+
+            deleteCompany: function(companyId) {
+                if (this.companies[companyId]) {
+                    delete this.companies[companyId];
+                    this.saveAllCompanies();
+
+                    // If deleting current company, switch to another or clear
+                    if (this.currentCompanyId === companyId) {
+                        const remainingCompanies = Object.keys(this.companies);
+                        if (remainingCompanies.length > 0) {
+                            this.setCurrentCompany(remainingCompanies[0]);
+                        } else {
+                            this.currentCompanyId = null;
+                            this.data = {};
+                            localStorage.removeItem(this.currentCompanyKey);
+                        }
+                    }
+
+                    console.log('[CompanyOnboarding] Deleted company:', companyId);
+                    return true;
+                }
+                return false;
+            },
+
+            getCompanyList: function() {
+                return Object.entries(this.companies).map(([id, company]) => ({
+                    id: id,
+                    name: company.companyName || 'Unnamed Company',
+                    email: company.companyEmail || '',
+                    createdAt: company.createdAt || '',
+                    isActive: id === this.currentCompanyId
+                }));
+            },
 
             // Default template content
             defaultTemplate: `From: {companyEmail}
@@ -6133,9 +6291,25 @@ Best regards,
 
             modal.innerHTML = `
                 <div style="background: white; padding: 30px; border-radius: 8px; max-width: 800px; width: 90%; max-height: 80%; overflow-y: auto;">
-                    <h2 style="margin: 0 0 10px 0; color: #007bff; display: flex; align-items: center; gap: 10px;">
-                        <span>🏢</span> Company Onboarding Data Manager
-                    </h2>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                        <h2 style="margin: 0; color: #007bff; display: flex; align-items: center; gap: 10px;">
+                            <span>🏢</span> Company Management
+                        </h2>
+                        <div style="display: flex; gap: 8px;">
+                            <button onclick="CompanyOnboardingModule.showCompanySelector()" style="background: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer;">📋 All Companies</button>
+                            <button onclick="CompanyOnboardingModule.showNewCompanyForm()" style="background: #007bff; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer;">➕ New Company</button>
+                        </div>
+                    </div>
+
+                    <!-- Current Company Indicator -->
+                    <div id="currentCompanyIndicator" style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 12px; margin-bottom: 15px; border-radius: 4px;">
+                        <div style="font-size: 13px; font-weight: 500; color: #1976d2;">
+                            ${this.currentCompanyId ? `✏️ Editing: ${this.data.companyName || 'Unnamed Company'}` : '➕ Creating New Company'}
+                        </div>
+                        <div style="font-size: 11px; color: #666; margin-top: 4px;">
+                            ${this.currentCompanyId ? `Company ID: ${this.currentCompanyId}` : 'Fill in details below to create your first company profile'}
+                        </div>
+                    </div>
 
                     <!-- Data Persistence Status -->
                     <div id="persistenceStatus" style="background: #e8f5e8; border: 1px solid #4caf50; border-radius: 4px; padding: 8px 12px; margin-bottom: 15px; font-size: 12px; display: flex; align-items: center; gap: 8px;">
@@ -6497,7 +6671,17 @@ Best regards,
                 // Reset auto-save failure count on successful save
                 this.autoSaveFailureCount = 0;
 
-                // Save to localStorage with error handling
+                // Handle multi-company save logic
+                if (this.currentCompanyId) {
+                    // Update existing company
+                    this.updateCompany(this.currentCompanyId, newData);
+                } else {
+                    // Create new company
+                    const newCompanyId = this.createNewCompany(newData);
+                    this.setCurrentCompany(newCompanyId);
+                }
+
+                // Also save to legacy storage for backward compatibility
                 try {
                     localStorage.setItem(this.storageKey, JSON.stringify(this.data));
                     console.log('[CompanyOnboarding] Data saved successfully to localStorage');
@@ -6539,6 +6723,136 @@ Best regards,
                     showAlert('❌ Failed to save company information. Attempting data recovery...', 'error');
                 }
                 return false;
+            }
+        };
+
+        // Module: Update Current Company Display
+        CompanyOnboardingModule.updateCurrentCompanyDisplay = function() {
+            const displayElement = document.getElementById('activeCompanyName');
+            if (displayElement) {
+                if (this.currentCompanyId && this.data.companyName) {
+                    displayElement.textContent = this.data.companyName;
+                    displayElement.parentElement.style.color = '#007bff';
+                } else {
+                    displayElement.textContent = 'No company selected';
+                    displayElement.parentElement.style.color = '#666';
+                }
+            }
+        };
+
+        // Module: Show Company Selector
+        CompanyOnboardingModule.showCompanySelector = function() {
+            const companies = this.getCompanyList();
+
+            const modal = document.createElement('div');
+            modal.id = 'companySelectorModal';
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;
+                z-index: 12000; padding: 20px;
+            `;
+
+            modal.innerHTML = `
+                <div style="background: white; padding: 25px; border-radius: 8px; max-width: 700px; width: 90%; max-height: 80%; overflow-y: auto;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h3 style="margin: 0; color: #007bff;">🏢 Company Manager</h3>
+                        <button onclick="document.getElementById('companySelectorModal').remove()" style="background: none; border: none; font-size: 20px; cursor: pointer;">✕</button>
+                    </div>
+
+                    ${companies.length === 0 ? `
+                        <div style="text-align: center; padding: 40px; color: #666;">
+                            <div style="font-size: 48px; margin-bottom: 16px;">🏢</div>
+                            <h4 style="margin: 0 0 12px 0;">No Companies Yet</h4>
+                            <p style="margin: 0 0 20px 0;">Create your first company profile to get started with personalized emails.</p>
+                            <button onclick="CompanyOnboardingModule.showNewCompanyForm(); document.getElementById('companySelectorModal').remove();" style="background: #007bff; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 14px;">
+                                ➕ Create First Company
+                            </button>
+                        </div>
+                    ` : `
+                        <div style="margin-bottom: 20px;">
+                            <button onclick="CompanyOnboardingModule.showNewCompanyForm(); document.getElementById('companySelectorModal').remove();" style="background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-size: 12px; cursor: pointer; width: 100%;">
+                                ➕ Create New Company
+                            </button>
+                        </div>
+
+                        <div style="space-y: 8px;">
+                            ${companies.map(company => `
+                                <div style="border: 1px solid ${company.isActive ? '#007bff' : '#ddd'}; border-radius: 6px; padding: 16px; background: ${company.isActive ? '#f0f8ff' : 'white'}; cursor: pointer;" onclick="CompanyOnboardingModule.switchToCompany('${company.id}')">
+                                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                        <div style="flex: 1;">
+                                            <div style="font-weight: 500; font-size: 14px; color: #333; margin-bottom: 4px;">
+                                                ${company.isActive ? '🟢 ' : ''}${escapeHTML(company.name)}
+                                                ${company.isActive ? '<span style="background: #007bff; color: white; padding: 2px 8px; border-radius: 12px; font-size: 10px; margin-left: 8px;">ACTIVE</span>' : ''}
+                                            </div>
+                                            <div style="font-size: 12px; color: #666;">${escapeHTML(company.email)}</div>
+                                            <div style="font-size: 11px; color: #999; margin-top: 4px;">Created: ${new Date(company.createdAt).toLocaleDateString()}</div>
+                                        </div>
+                                        <div style="display: flex; gap: 4px;">
+                                            <button onclick="event.stopPropagation(); CompanyOnboardingModule.editCompany('${company.id}')" style="background: #ffc107; color: #333; border: none; padding: 4px 8px; border-radius: 3px; font-size: 10px; cursor: pointer;">Edit</button>
+                                            ${!company.isActive ? `<button onclick="event.stopPropagation(); CompanyOnboardingModule.confirmDeleteCompany('${company.id}')" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 3px; font-size: 10px; cursor: pointer;">Delete</button>` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `}
+
+                    <div style="text-align: center; margin-top: 20px;">
+                        <button onclick="document.getElementById('companySelectorModal').remove()" style="background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Close</button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+        };
+
+        // Module: Switch to Company
+        CompanyOnboardingModule.switchToCompany = function(companyId) {
+            if (this.setCurrentCompany(companyId)) {
+                document.getElementById('companySelectorModal').remove();
+                this.closeManager();
+                showAlert(`✅ Switched to: ${this.data.companyName}`, 'success');
+
+                // Refresh the manager if it's open
+                setTimeout(() => {
+                    this.showManager();
+                }, 500);
+            }
+        };
+
+        // Module: Edit Company
+        CompanyOnboardingModule.editCompany = function(companyId) {
+            this.setCurrentCompany(companyId);
+            document.getElementById('companySelectorModal').remove();
+            this.showManager();
+        };
+
+        // Module: Show New Company Form
+        CompanyOnboardingModule.showNewCompanyForm = function() {
+            // Clear current selection to create new company
+            this.currentCompanyId = null;
+            this.data = {};
+
+            // Close company selector if open
+            const existingModal = document.getElementById('companySelectorModal');
+            if (existingModal) existingModal.remove();
+
+            this.showManager();
+        };
+
+        // Module: Confirm Delete Company
+        CompanyOnboardingModule.confirmDeleteCompany = function(companyId) {
+            const company = this.companies[companyId];
+            if (company) {
+                const confirmDelete = confirm(`Are you sure you want to delete "${company.companyName}"?\n\nThis action cannot be undone.`);
+                if (confirmDelete) {
+                    this.deleteCompany(companyId);
+                    showAlert(`🗑️ Deleted: ${company.companyName}`, 'success');
+
+                    // Refresh the selector
+                    document.getElementById('companySelectorModal').remove();
+                    this.showCompanySelector();
+                }
             }
         };
 
@@ -6873,8 +7187,14 @@ Best regards,
             try {
                 console.log('[CompanyOnboarding] Initializing persistence system...');
 
-                // Load existing data
+                // Load all companies and set current company
+                this.loadAllCompanies();
+
+                // Load existing data (legacy support)
                 this.getData();
+
+                // Update company display
+                this.updateCurrentCompanyDisplay();
 
                 // Start monitoring
                 this.startPersistenceMonitoring();
