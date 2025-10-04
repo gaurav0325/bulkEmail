@@ -7,6 +7,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.5/dist/purify.min.js"></script>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <script src="js/database-manager.js"></script>
     <meta name="cache-control" content="no-cache">
     <meta name="version" content="2.1-contact-enhancements-fixed">
     <style>
@@ -6815,56 +6816,65 @@ Phone: +91-XXXXXXXXXX`;
             // Initialize User Management System
             UserManager.init();
 
-            // IMMEDIATE AUTHENTICATION CHECK
-            UserManager._performImmediateAuthCheck();
+            // SYNCHRONOUS SESSION RESTORATION - No delays, immediate check
+            console.log('[AUTH] 🔧 IMMEDIATE SESSION VALIDATION STARTING...');
+            try {
+                const sessionRaw = localStorage.getItem('bulkEmail_userSession');
+                const userRaw = localStorage.getItem('bulkEmail_currentUser');
 
-            // AGGRESSIVE SESSION RESTORATION FIX
-            // Force check session data and hide auth gate if valid session exists
-            setTimeout(() => {
-                console.log('[AUTH] 🔧 AGGRESSIVE SESSION CHECK - Starting forced session validation');
-                try {
-                    const sessionRaw = localStorage.getItem('bulkEmail_userSession');
-                    const userRaw = localStorage.getItem('bulkEmail_currentUser');
+                console.log('[AUTH] 🔧 Raw session data exists:', !!sessionRaw);
+                console.log('[AUTH] 🔧 Raw user data exists:', !!userRaw);
 
-                    if (sessionRaw && userRaw) {
-                        const session = JSON.parse(sessionRaw);
-                        const user = JSON.parse(userRaw);
+                if (sessionRaw && userRaw) {
+                    const session = JSON.parse(sessionRaw);
+                    const user = JSON.parse(userRaw);
 
-                        console.log('[AUTH] 🔧 Session data found - Expires:', new Date(session.expiresAt));
-                        console.log('[AUTH] 🔧 Current time:', new Date());
-                        console.log('[AUTH] 🔧 Session valid?', session.expiresAt > Date.now());
+                    console.log('[AUTH] 🔧 Session expires at:', new Date(session.expiresAt));
+                    console.log('[AUTH] 🔧 Current time:', new Date());
+                    console.log('[AUTH] 🔧 Session is valid:', session.expiresAt > Date.now());
 
-                        if (session.expiresAt > Date.now()) {
-                            console.log('[AUTH] 🔧 VALID SESSION FOUND - FORCING AUTH GATE HIDDEN');
+                    if (session && session.expiresAt > Date.now() && user) {
+                        console.log('[AUTH] 🔧 ✅ VALID SESSION FOUND - IMMEDIATE RESTORATION');
 
-                            // Force UserManager state
-                            UserManager.currentUser = user;
-                            UserManager.isLoggedIn = true;
-                            UserManager.sessionRestored = true;
+                        // IMMEDIATELY set UserManager state before any other operations
+                        UserManager.currentUser = user;
+                        UserManager.isLoggedIn = true;
+                        UserManager.sessionRestored = true;
 
-                            // Aggressively hide auth gate
-                            const authGate = document.getElementById('authGate');
-                            if (authGate) {
-                                authGate.style.display = 'none !important';
-                                authGate.style.visibility = 'hidden';
-                                authGate.style.opacity = '0';
-                                authGate.style.zIndex = '-1';
-                                authGate.remove(); // Completely remove from DOM
-                                console.log('[AUTH] 🔧 ✅ Auth gate REMOVED from DOM');
-                            }
+                        console.log('[AUTH] 🔧 UserManager state updated:', {
+                            isLoggedIn: UserManager.isLoggedIn,
+                            currentUser: !!UserManager.currentUser,
+                            email: UserManager.currentUser?.email
+                        });
 
-                            // Update UI
-                            UserManager.updateUserDisplay();
-
-                            // Load application state
-                            console.log('[AUTH] 🔧 Loading application state for restored session');
-                            UserManager.loadUserApplicationState(true);
+                        // IMMEDIATELY hide auth gate before any async operations
+                        const authGate = document.getElementById('authGate');
+                        if (authGate) {
+                            authGate.style.display = 'none';
+                            authGate.style.visibility = 'hidden';
+                            console.log('[AUTH] 🔧 🔓 Auth gate IMMEDIATELY hidden');
                         }
+
+                        // Update UI immediately
+                        UserManager.updateUserDisplay();
+
+                        // Load application state immediately for restored session
+                        console.log('[AUTH] 🔧 Loading application state for restored session');
+                        UserManager.loadUserApplicationState(true);
+
+                        console.log('[AUTH] 🔧 ✅ IMMEDIATE SESSION RESTORATION COMPLETE');
+                    } else {
+                        console.log('[AUTH] 🔧 ❌ Session invalid or expired');
                     }
-                } catch (error) {
-                    console.log('[AUTH] 🔧 Error in aggressive session check:', error);
+                } else {
+                    console.log('[AUTH] 🔧 ❌ No session data found');
                 }
-            }, 500); // Give UserManager.init() time to complete first
+            } catch (error) {
+                console.log('[AUTH] 🔧 Error in immediate session validation:', error);
+            }
+
+            // THEN perform standard authentication check
+            UserManager._performImmediateAuthCheck();
 
             // Add event listeners for authentication gate buttons
             const loginBtn = document.getElementById('loginBtn');
@@ -10647,6 +10657,24 @@ Best regards,
 {companyAddress}</textarea>
                             <small style="color: #666; display: block; margin-top: 5px;">Use company and contact variables in your template. Available variables are shown above.</small>
                         </div>
+
+                        <!-- Template Attachments Section -->
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #333; font-size: 13px;">📎 Template Attachments</label>
+                            <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 12px;">
+                                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                                    <button onclick="addTemplateAttachment()" style="background: #007bff; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 5px;">
+                                        <span>📎</span> Add Attachment
+                                    </button>
+                                    <small style="color: #6c757d; font-size: 11px;">Add files that will be automatically included in emails using this template</small>
+                                </div>
+                                <div id="templateAttachmentList" style="min-height: 20px;">
+                                    <div id="templateAttachmentEmpty" style="text-align: center; color: #9ca3af; font-style: italic; padding: 10px; font-size: 11px; border: 1px dashed #d1d5db; border-radius: 4px;">
+                                        No template attachments added yet
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                         <!-- Template Type Selection -->
                         <div style="background: #e3f2fd; padding: 12px; border-radius: 6px; margin-bottom: 15px; border-left: 4px solid #007bff;">
                             <h5 style="margin: 0 0 10px 0; color: #007bff; font-size: 14px;">📧 Template Type</h5>
@@ -10782,6 +10810,12 @@ Best regards,
 
             // Then load existing company data (after elements exist)
             CompanyOnboardingModule.loadData();
+
+            // Set up real-time sync for company fields
+            CompanyOnboardingModule.setupCompanyFieldListeners();
+
+            // Load template attachments
+            loadTemplateAttachments();
 
             // Initialize real-time sync UI
             setTimeout(() => {
@@ -10997,6 +11031,9 @@ Best regards,
 
                 // Update status indicator
                 this.updateStatusIndicator(isAutoSave ? 'Auto-saved successfully' : 'Data saved successfully');
+
+                // REAL-TIME UPDATE: Refresh personalized email content immediately
+                this.refreshPersonalizedEmailContent();
 
                 // User feedback
                 if (!isAutoSave) {
@@ -11279,6 +11316,60 @@ Best regards,
 
             } catch (error) {
                 console.error('[CompanyOnboarding] Cleanup failed:', error);
+            }
+        };
+
+        // Module: Real-time email content refresh when company data changes
+        CompanyOnboardingModule.refreshPersonalizedEmailContent = function() {
+            try {
+                console.log('[CompanyOnboarding] 🔄 Refreshing personalized email content in real-time');
+
+                // Get current company data
+                const companyData = this.getData();
+                if (!companyData || !companyData.emailTemplate) {
+                    console.log('[CompanyOnboarding] No company template to refresh with');
+                    return;
+                }
+
+                // Get currently selected contact (if any)
+                const selectedContact = window.selectedContact || null;
+
+                // Extract template content
+                const templateData = this.extractTemplateContent(companyData.emailTemplate);
+
+                // Update subject line
+                const subjectField = document.getElementById('subject');
+                if (subjectField && templateData.subject) {
+                    const personalizedSubject = personalizeEmailContent(templateData.subject, selectedContact, true);
+                    subjectField.value = personalizedSubject;
+                    console.log('[CompanyOnboarding] ✅ Updated subject line');
+                }
+
+                // Update message body
+                const messageBody = document.getElementById('messageBody');
+                if (messageBody && templateData.content) {
+                    const personalizedContent = personalizeEmailContent(templateData.content, selectedContact);
+                    // Clean up formatting issues
+                    const cleanedContent = personalizedContent
+                        .replace(/\s+{(\w+)}\s+/g, '{$1}')
+                        .replace(/\n/g, '<br>')
+                        .replace(/\s{2,}/g, ' ')
+                        .trim();
+                    const sanitizedContent = sanitizeHTML(cleanedContent);
+                    messageBody.innerHTML = sanitizedContent;
+
+                    // Update hidden textarea if it exists
+                    const hiddenTextarea = document.getElementById('messageBodyTextarea');
+                    if (hiddenTextarea) {
+                        hiddenTextarea.value = sanitizedContent;
+                    }
+
+                    console.log('[CompanyOnboarding] ✅ Updated message body');
+                }
+
+                console.log('[CompanyOnboarding] 🎉 Real-time email refresh completed');
+            } catch (error) {
+                console.error('[CompanyOnboarding] Error refreshing email content:', error);
             }
         };
 
@@ -12196,6 +12287,226 @@ Best regards,
 
             return { subject, content };
         };
+
+        // Module: Set up real-time sync listeners for company fields
+        CompanyOnboardingModule.setupCompanyFieldListeners = function() {
+            console.log('[CompanyOnboarding] Setting up real-time field listeners...');
+
+            // List of company fields that should trigger real-time updates
+            const companyFields = [
+                'companyName', 'companyIndustry', 'companyWebsite', 'companyYears',
+                'companyEmail', 'companyPhone', 'companyAddress', 'companyDescription',
+                'companyLogo', 'companyShortName', 'businesDevelopementManagerName',
+                'businesDevelopementManagerDesignation', 'productPortfolioPoints',
+                'OfferingPoints', 'Link1', 'Link2', 'Link3', 'Image1', 'Image2'
+            ];
+
+            // Debounced function to update email content
+            let updateTimeout;
+            const debouncedUpdate = () => {
+                clearTimeout(updateTimeout);
+                updateTimeout = setTimeout(() => {
+                    // Auto-save data
+                    this.saveData(true);
+
+                    // Update email content in real-time if sync is enabled
+                    if (this.isRealTimeSyncEnabled()) {
+                        this.refreshPersonalizedEmailContent();
+                        console.log('[CompanyOnboarding] ✅ Real-time email content updated');
+                    }
+                }, 800); // 800ms delay to avoid too frequent updates
+            };
+
+            // Add event listeners to all company fields
+            companyFields.forEach(fieldId => {
+                const field = document.getElementById(fieldId);
+                if (field) {
+                    // Add multiple event types for comprehensive coverage
+                    ['input', 'paste', 'keyup', 'change', 'blur'].forEach(eventType => {
+                        field.addEventListener(eventType, debouncedUpdate);
+                    });
+                    console.log(`[CompanyOnboarding] Added listeners to field: ${fieldId}`);
+                } else {
+                    console.log(`[CompanyOnboarding] Field not found: ${fieldId}`);
+                }
+            });
+
+            // Special handling for email template field
+            const templateField = document.getElementById('companyEmailTemplate');
+            if (templateField) {
+                templateField.addEventListener('input', debouncedUpdate);
+                templateField.addEventListener('paste', debouncedUpdate);
+                console.log('[CompanyOnboarding] Added listeners to email template field');
+            }
+
+            console.log('[CompanyOnboarding] ✅ Real-time field listeners setup complete');
+        };
+
+        // Module: Check if real-time sync is enabled
+        CompanyOnboardingModule.isRealTimeSyncEnabled = function() {
+            return localStorage.getItem('bulkEmail_realTimeSync') === 'true';
+        };
+
+        // Module: Enable real-time sync
+        CompanyOnboardingModule.enableRealTimeSync = function() {
+            localStorage.setItem('bulkEmail_realTimeSync', 'true');
+            console.log('[CompanyOnboarding] Real-time sync enabled');
+        };
+
+        // Module: Disable real-time sync
+        CompanyOnboardingModule.disableRealTimeSync = function() {
+            localStorage.setItem('bulkEmail_realTimeSync', 'false');
+            console.log('[CompanyOnboarding] Real-time sync disabled');
+        };
+
+        // Module: Template Attachment Management
+        let templateAttachments = [];
+
+        function addTemplateAttachment() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.multiple = true;
+            input.accept = '.pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.zip,.rar';
+
+            input.addEventListener('change', function(event) {
+                const files = Array.from(event.target.files);
+
+                files.forEach(file => {
+                    if (file.size > 25 * 1024 * 1024) { // 25MB limit
+                        showAlert(`File "${file.name}" is too large. Maximum size is 25MB.`, 'error');
+                        return;
+                    }
+
+                    // Convert file to base64 for storage
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const attachment = {
+                            id: 'att_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                            name: file.name,
+                            size: file.size,
+                            type: file.type,
+                            data: e.target.result,
+                            addedAt: new Date().toISOString()
+                        };
+
+                        templateAttachments.push(attachment);
+                        updateTemplateAttachmentList();
+
+                        // Save to company data
+                        saveTemplateAttachments();
+
+                        showAlert(`✅ Added attachment: ${file.name}`, 'success');
+                    };
+                    reader.readAsDataURL(file);
+                });
+            });
+
+            input.click();
+        }
+
+        function updateTemplateAttachmentList() {
+            const listContainer = document.getElementById('templateAttachmentList');
+            const emptyContainer = document.getElementById('templateAttachmentEmpty');
+
+            if (!listContainer) return;
+
+            if (templateAttachments.length === 0) {
+                listContainer.innerHTML = `
+                    <div id="templateAttachmentEmpty" style="text-align: center; color: #9ca3af; font-style: italic; padding: 10px; font-size: 11px; border: 1px dashed #d1d5db; border-radius: 4px;">
+                        No template attachments added yet
+                    </div>
+                `;
+                return;
+            }
+
+            const attachmentHTML = templateAttachments.map(attachment => `
+                <div style="background: white; border: 1px solid #e5e7eb; border-radius: 4px; padding: 8px; margin-bottom: 6px; display: flex; align-items: center; justify-content: between; font-size: 12px;">
+                    <div style="flex: 1; display: flex; align-items: center; gap: 8px;">
+                        <span>${getFileIcon(attachment.type)}</span>
+                        <div>
+                            <div style="font-weight: 500; color: #374151;">${attachment.name}</div>
+                            <div style="color: #6b7280; font-size: 11px;">${formatFileSize(attachment.size)} • Added ${new Date(attachment.addedAt).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                    <button onclick="removeTemplateAttachment('${attachment.id}')" style="background: #ef4444; color: white; border: none; border-radius: 3px; padding: 4px 8px; cursor: pointer; font-size: 11px;" title="Remove attachment">
+                        ✕
+                    </button>
+                </div>
+            `).join('');
+
+            listContainer.innerHTML = attachmentHTML;
+        }
+
+        function removeTemplateAttachment(attachmentId) {
+            const index = templateAttachments.findIndex(att => att.id === attachmentId);
+            if (index !== -1) {
+                const removedAttachment = templateAttachments.splice(index, 1)[0];
+                updateTemplateAttachmentList();
+                saveTemplateAttachments();
+                showAlert(`🗑️ Removed attachment: ${removedAttachment.name}`, 'info');
+            }
+        }
+
+        function getFileIcon(mimeType) {
+            if (mimeType.startsWith('image/')) return '🖼️';
+            if (mimeType.includes('pdf')) return '📄';
+            if (mimeType.includes('word') || mimeType.includes('document')) return '📝';
+            if (mimeType.includes('zip') || mimeType.includes('rar')) return '📦';
+            if (mimeType.includes('text')) return '📄';
+            return '📎';
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function saveTemplateAttachments() {
+            try {
+                const companyData = CompanyOnboardingModule.getData() || {};
+                companyData.templateAttachments = templateAttachments;
+
+                // Update the current company data
+                if (CompanyOnboardingModule.currentCompanyId) {
+                    CompanyOnboardingModule.companies[CompanyOnboardingModule.currentCompanyId] = companyData;
+                    CompanyOnboardingModule.saveAllCompanies();
+                } else {
+                    // Legacy storage
+                    localStorage.setItem(CompanyOnboardingModule.storageKey, JSON.stringify(companyData));
+                }
+
+                console.log('[TemplateAttachments] Saved', templateAttachments.length, 'attachments');
+            } catch (error) {
+                console.error('[TemplateAttachments] Error saving attachments:', error);
+                showAlert('❌ Failed to save attachments', 'error');
+            }
+        }
+
+        function loadTemplateAttachments() {
+            try {
+                const companyData = CompanyOnboardingModule.getData() || {};
+                templateAttachments = companyData.templateAttachments || [];
+                updateTemplateAttachmentList();
+                console.log('[TemplateAttachments] Loaded', templateAttachments.length, 'attachments');
+            } catch (error) {
+                console.error('[TemplateAttachments] Error loading attachments:', error);
+                templateAttachments = [];
+            }
+        }
+
+        // Module: Include template attachments in email sending
+        function getTemplateAttachmentsForEmail() {
+            return templateAttachments.map(attachment => ({
+                filename: attachment.name,
+                content: attachment.data.split(',')[1], // Remove data:mime/type;base64, prefix
+                encoding: 'base64',
+                contentType: attachment.type
+            }));
+        }
+
         // Email Analytics Dashboard Functions
         let autoRedirectEnabled = true;
 

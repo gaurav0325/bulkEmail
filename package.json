@@ -10,7 +10,8 @@
   "dependencies": {
     "nodemailer": "^6.9.7",
     "xlsx": "^0.18.5",
-    "mammoth": "^1.6.0"
+    "mammoth": "^1.6.0",
+    "@supabase/supabase-js": "^2.38.0"
   },
   "keywords": [
     "email",

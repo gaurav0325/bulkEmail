@@ -12,7 +12,8 @@
       "Bash(cat:*)",
       "Bash(npm install)",
       "Bash(python:*)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Read(//c/Users/nishk/OneDrive/Pictures/**)"
     ],
     "deny": [],
     "ask": []
