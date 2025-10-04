@@ -3702,7 +3702,7 @@ Phone: +91-XXXXXXXXXX`;
                     // Populate subject line with personalization
                     const subjectField = document.getElementById('subject');
                     if (subjectField && templateData.subject) {
-                        const personalizedSubject = personalizeEmailContent(templateData.subject, contact);
+                        const personalizedSubject = personalizeEmailContent(templateData.subject, contact, true);
                         subjectField.value = personalizedSubject;
                     } else if (subjectField) {
                         // Fallback subject if no template subject
@@ -3940,7 +3940,7 @@ Phone: +91-XXXXXXXXXX`;
 
                 // Apply personalized template with smart content
                 if (templateData.subject) {
-                    const personalizedSubject = personalizeEmailContent(templateData.subject, null);
+                    const personalizedSubject = personalizeEmailContent(templateData.subject, null, true);
                     document.getElementById('subject').value = personalizedSubject;
                 }
 
@@ -4803,7 +4803,7 @@ Phone: +91-XXXXXXXXXX`;
 
                         // Get personalized subject and message using enhanced engine
                         const contactCopyForPersonalization = { ...contact, email: emailAddress };
-                        const personalizedSubject = personalizeEmailContent(document.getElementById('subject').value, contactCopyForPersonalization);
+                        const personalizedSubject = personalizeEmailContent(document.getElementById('subject').value, contactCopyForPersonalization, true);
                         const personalizedMessage = personalizeEmailContent(document.getElementById('messageBody').innerHTML, contactCopyForPersonalization);
 
                         // Send actual email with preserved formatting
@@ -7802,7 +7802,13 @@ Phone: +91-XXXXXXXXXX`;
                     if (!user) {
                         console.error('[UserManager] LOGIN DEBUG - No user found!');
                         console.error('[UserManager] LOGIN DEBUG - localStorage content for', this.USERS_KEY, ':', localStorage.getItem(this.USERS_KEY));
-                        throw new Error('No account found with this email address. Please register first.');
+
+                        const totalUsers = Object.keys(users).length;
+                        if (totalUsers === 0) {
+                            throw new Error('No accounts found on this browser/device. Accounts are stored locally. If you previously registered, you may need to register again or import your account data. Use Settings > Export/Import Account to transfer accounts between browsers.');
+                        } else {
+                            throw new Error(`Account not found. This browser has ${totalUsers} account(s) but none match "${email}". Check your email spelling or register a new account. Note: Accounts are stored per browser - use Export/Import in Settings to transfer between browsers.`);
+                        }
                     }
 
                     // Check password for manual login
@@ -8374,6 +8380,12 @@ Phone: +91-XXXXXXXXXX`;
 
                         <div style="text-align: center; margin-top: 25px; padding-top: 20px; border-top: 1px solid #e1e5e9;">
                             <small style="color: #666; line-height: 1.4;">🔒 Your data is encrypted and stored securely. We never share your information with third parties.</small>
+                            <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 6px; padding: 10px; margin-top: 15px;">
+                                <small style="color: #856404; font-size: 11px; line-height: 1.3;">
+                                    📱 <strong>Account Storage:</strong> Accounts are stored locally in your browser. Clearing cache or switching browsers will require re-registration.
+                                    Use <strong>Settings > Export/Import Account</strong> to transfer accounts between browsers or devices.
+                                </small>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -11572,7 +11584,16 @@ Best regards,
         };
 
         // Enhanced Personalization Engine with Smart Content Logic
-        function personalizeEmailContent(content, contact) {
+        // Helper function to strip HTML tags (for subjects)
+        function stripHtmlTags(text) {
+            if (!text) return '';
+            // Create a temporary div to parse HTML and extract text content
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = text;
+            return tempDiv.textContent || tempDiv.innerText || '';
+        }
+
+        function personalizeEmailContent(content, contact, isSubject = false) {
             if (!content) return '';
 
             let personalizedContent = content;
@@ -11619,6 +11640,11 @@ Best regards,
 
             // Apply grammar checking and smart formatting
             personalizedContent = applySmartFormattingAndGrammar(personalizedContent);
+
+            // Strip HTML tags if this is for a subject line
+            if (isSubject) {
+                personalizedContent = stripHtmlTags(personalizedContent);
+            }
 
             return personalizedContent;
         }
