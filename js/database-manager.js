@@ -7,6 +7,7 @@ class DatabaseManager {
         this.sessionToken = null;
         this.currentUser = null;
         this.isOnline = navigator.onLine;
+        this.functionsAvailable = null; // null = testing, true/false = result
 
         // Test connectivity on startup
         this.testConnectivity();
@@ -342,20 +343,47 @@ class DatabaseManager {
 
             console.log('[DatabaseManager] Connectivity test response:', response.status, response.statusText);
 
-            if (response.status === 200 || response.status === 400) {
-                // Function exists (even if it returns an error for invalid token)
-                console.log('[DatabaseManager] ✅ Netlify Functions are available');
-                this.functionsAvailable = true;
+            if (response.status === 200 || response.status === 400 || response.status === 500) {
+                // Function exists (even if it returns an error)
+                console.log('[DatabaseManager] ✅ Netlify Functions are deployed');
+
+                // Try to read response to see if it's properly configured
+                try {
+                    const text = await response.text();
+                    console.log('[DatabaseManager] Response text:', text);
+
+                    if (text.includes('SUPABASE_URL') || text.includes('environment')) {
+                        console.log('[DatabaseManager] ⚠️ Functions deployed but environment variables not configured');
+                        this.functionsAvailable = false;
+                        this.configurationError = 'Environment variables not set in Netlify';
+                    } else {
+                        console.log('[DatabaseManager] ✅ Functions appear to be configured');
+                        this.functionsAvailable = true;
+                    }
+                } catch (textError) {
+                    console.log('[DatabaseManager] ✅ Functions deployed (could not read response)');
+                    this.functionsAvailable = true;
+                }
             } else if (response.status === 404) {
                 console.log('[DatabaseManager] ❌ Netlify Functions not found (404)');
                 this.functionsAvailable = false;
+                this.configurationError = 'Netlify Functions not deployed';
             } else {
                 console.log('[DatabaseManager] ⚠️ Unexpected response from Functions');
                 this.functionsAvailable = false;
+                this.configurationError = `Unexpected response: ${response.status}`;
             }
         } catch (error) {
             console.log('[DatabaseManager] ❌ Connectivity test failed:', error.message);
             this.functionsAvailable = false;
+            this.configurationError = `Network error: ${error.message}`;
+        }
+
+        // Trigger message update after test completes
+        if (typeof UserManager !== 'undefined' && UserManager.updateStorageMessage) {
+            setTimeout(() => {
+                UserManager.updateStorageMessage();
+            }, 100);
         }
     }
 }

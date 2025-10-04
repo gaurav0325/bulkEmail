@@ -7330,12 +7330,16 @@ Phone: +91-XXXXXXXXXX`;
                 const dbManagerExists = typeof dbManager !== 'undefined';
                 const hasApiBase = dbManager && dbManager.apiBase;
                 const functionsAvailable = dbManager && dbManager.functionsAvailable;
-                const dbAvailable = dbManagerExists && hasApiBase && functionsAvailable;
+
+                // If functions availability is still being tested, assume available for now
+                const functionsReady = functionsAvailable === true || functionsAvailable === null;
+                const dbAvailable = dbManagerExists && hasApiBase && functionsReady;
 
                 console.log('[UserManager] Database availability check:', {
                     dbManagerExists,
                     hasApiBase,
                     functionsAvailable,
+                    functionsReady,
                     result: dbAvailable
                 });
                 return dbAvailable;
@@ -7357,11 +7361,20 @@ Phone: +91-XXXXXXXXXX`;
                         accountStorageNotice.style.borderColor = '#c3e6cb';
                         storageMessage.style.color = '#155724';
                     } else {
-                        // localStorage only
-                        storageMessage.innerHTML = `
+                        // Check if we have configuration information
+                        let message = `
                             📱 <strong>Account Storage:</strong> Accounts are currently stored locally in your browser. Clearing cache or switching browsers will require re-registration.
                             Use Settings > Export/Import Account to transfer accounts between browsers or devices.
                         `;
+
+                        if (typeof dbManager !== 'undefined' && dbManager.configurationError) {
+                            message = `
+                                ⚙️ <strong>Database Setup:</strong> ${dbManager.configurationError}.
+                                Currently using local storage. See database setup guide for cross-device access.
+                            `;
+                        }
+
+                        storageMessage.innerHTML = message;
                         accountStorageNotice.style.background = '#d1ecf1';
                         accountStorageNotice.style.borderColor = '#bee5eb';
                         storageMessage.style.color = '#0c5460';
