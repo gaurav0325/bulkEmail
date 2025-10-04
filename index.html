@@ -8786,8 +8786,12 @@ Phone: +91-XXXXXXXXXX`;
                     // Try centralized database login first
                     if (this.isCentralizedDatabase()) {
                         try {
-                            console.log('[UserManager] Attempting centralized database login');
+                            console.log('[UserManager] Attempting centralized database login for:', email);
+                            console.log('[UserManager] Database manager available:', !!dbManager);
+                            console.log('[UserManager] Database functions available:', dbManager.functionsAvailable);
+
                             const result = await dbManager.loginUser(email, password, rememberMe);
+                            console.log('[UserManager] Database login result:', result);
 
                             if (result.success) {
                                 // Set user data
@@ -8898,8 +8902,11 @@ Phone: +91-XXXXXXXXXX`;
                     // Try centralized database registration first
                     if (this.isCentralizedDatabase()) {
                         try {
-                            console.log('[UserManager] Attempting centralized database registration');
+                            console.log('[UserManager] Attempting centralized database registration for:', email);
+                            console.log('[UserManager] Database manager available:', !!dbManager);
+
                             const result = await dbManager.registerUser(email, password, name);
+                            console.log('[UserManager] Database registration result:', result);
 
                             if (result.success) {
                                 this.showAuthMessage('🎉 Account created successfully! Your account is now accessible from any device.', 'success');
