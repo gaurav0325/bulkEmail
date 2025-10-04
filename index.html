@@ -5643,6 +5643,15 @@ Phone: +91-XXXXXXXXXX`;
             try {
                 if (!autoSaveEnabled) return;
 
+                // Check if centralized database is available
+                if (UserManager && UserManager.isCentralizedDatabase && UserManager.isCentralizedDatabase()) {
+                    console.log('[SaveData] Using centralized database storage');
+                    await saveToCentralizedDatabase();
+                    return;
+                }
+
+                console.log('[SaveData] Using localStorage fallback');
+
                 // Sanitize all data before encryption
                 const sanitizedContacts = contacts.map(contact => ({
                     email: sanitizeEmail(contact.email),
@@ -5681,6 +5690,100 @@ Phone: +91-XXXXXXXXXX`;
             } catch (error) {
                 console.error('Error saving to localStorage:', error);
                 showAlert('Failed to save data locally', 'error');
+            }
+        }
+
+        // New function to save to centralized database
+        async function saveToCentralizedDatabase() {
+            try {
+                if (!dbManager || !dbManager.isAuthenticated()) {
+                    console.log('[SaveData] Not authenticated, skipping centralized save');
+                    return;
+                }
+
+                console.log('[SaveData] Saving to centralized database:', {
+                    contacts: contacts.length,
+                    emailHistory: emailHistory.length
+                });
+
+                // Sanitize data before saving to database
+                const sanitizedContacts = contacts.map(contact => ({
+                    email: sanitizeEmail(contact.email),
+                    contactName: sanitizeText(contact.contactName),
+                    firm: sanitizeText(contact.firm),
+                    country: sanitizeText(contact.country),
+                    phone: sanitizeText(contact.phone),
+                    website: sanitizeText(contact.website),
+                    address: sanitizeText(contact.address),
+                    emailStatus: contact.emailStatus || 'pending'
+                }));
+
+                const sanitizedEmailHistory = emailHistory.map(entry => ({
+                    id: entry.id,
+                    toEmails: Array.isArray(entry.toEmails) ? entry.toEmails.map(sanitizeEmail) : [sanitizeEmail(entry.toEmails)],
+                    subject: sanitizeSubject(entry.subject),
+                    status: entry.status,
+                    timestamp: entry.timestamp,
+                    country: sanitizeText(entry.country),
+                    content: sanitizeHTML(entry.content)
+                }));
+
+                const dataToSave = {
+                    contacts: sanitizedContacts,
+                    emailHistory: sanitizedEmailHistory,
+                    uploadedSpreadsheetData: uploadedSpreadsheetData
+                };
+
+                // Save to database
+                await dbManager.saveAllUserData(dataToSave);
+                lastAutoSave = Date.now();
+                console.log('[SaveData] ✅ Data saved to centralized database successfully');
+
+            } catch (error) {
+                console.error('[SaveData] Failed to save to centralized database:', error);
+                // Fallback to localStorage if database save fails
+                console.log('[SaveData] Falling back to localStorage...');
+                await saveToLocalStorageDirectly();
+            }
+        }
+
+        // Separate function for direct localStorage saving (for fallback)
+        async function saveToLocalStorageDirectly() {
+            try {
+                const sanitizedContacts = contacts.map(contact => ({
+                    email: sanitizeEmail(contact.email),
+                    contactName: sanitizeText(contact.contactName),
+                    firm: sanitizeText(contact.firm),
+                    country: sanitizeText(contact.country),
+                    phone: sanitizeText(contact.phone),
+                    website: sanitizeText(contact.website),
+                    address: sanitizeText(contact.address),
+                    emailStatus: contact.emailStatus || 'pending'
+                }));
+
+                const sanitizedEmailHistory = emailHistory.map(entry => ({
+                    id: entry.id,
+                    toEmails: Array.isArray(entry.toEmails) ? entry.toEmails.map(sanitizeEmail) : [sanitizeEmail(entry.toEmails)],
+                    subject: sanitizeSubject(entry.subject),
+                    status: entry.status,
+                    timestamp: entry.timestamp,
+                    country: sanitizeText(entry.country),
+                    content: sanitizeHTML(entry.content)
+                }));
+
+                const dataToSave = {
+                    contacts: sanitizedContacts,
+                    emailHistory: sanitizedEmailHistory,
+                    uploadedSpreadsheetData: uploadedSpreadsheetData,
+                    savedAt: Date.now(),
+                    version: '2.2'
+                };
+
+                const encryptedData = await encryptData(dataToSave);
+                localStorage.setItem(STORAGE_KEYS.CONTACTS, encryptedData);
+                console.log('[SaveData] Data saved to localStorage as fallback');
+            } catch (error) {
+                console.error('[SaveData] Failed to save to localStorage fallback:', error);
             }
         }
 
@@ -9814,7 +9917,7 @@ Phone: +91-XXXXXXXXXX`;
                     try {
                         // 1. Initialize company system
                         console.log('[UserManager] Initializing company system');
-                        CompanyOnboardingModule.initializePersistence();
+                        await CompanyOnboardingModule.initializePersistence();
                         CompanyOnboardingModule.loadUserCompanies();
 
                         // 2. Load contact data
@@ -10232,11 +10335,38 @@ Phone: +91-XXXXXXXXXX`;
                 return companyId;
             },
 
-            loadAllCompanies: function() {
+            loadAllCompanies: async function() {
                 try {
-                    const companiesData = localStorage.getItem(this.companiesStorageKey);
-                    if (companiesData) {
-                        this.companies = JSON.parse(companiesData);
+                    // Check if centralized database is available and user is authenticated
+                    if (UserManager && UserManager.isCentralizedDatabase && UserManager.isCentralizedDatabase() &&
+                        dbManager && dbManager.isAuthenticated()) {
+
+                        console.log('[CompanyOnboarding] Loading companies from centralized database');
+
+                        try {
+                            const userData = await dbManager.getAllUserData();
+                            if (userData && userData.companies && userData.companies.length > 0) {
+                                // Convert array format back to object format
+                                this.companies = {};
+                                userData.companies.forEach(company => {
+                                    this.companies[company.id] = company;
+                                });
+                                console.log('[CompanyOnboarding] ✅ Loaded', userData.companies.length, 'companies from database');
+                            }
+                        } catch (dbError) {
+                            console.log('[CompanyOnboarding] Database load failed, falling back to localStorage:', dbError.message);
+                            // Fallback to localStorage
+                            const companiesData = localStorage.getItem(this.companiesStorageKey);
+                            if (companiesData) {
+                                this.companies = JSON.parse(companiesData);
+                            }
+                        }
+                    } else {
+                        console.log('[CompanyOnboarding] Using localStorage for companies');
+                        const companiesData = localStorage.getItem(this.companiesStorageKey);
+                        if (companiesData) {
+                            this.companies = JSON.parse(companiesData);
+                        }
                     }
 
                     // Always check for legacy data migration first
@@ -10312,12 +10442,40 @@ Phone: +91-XXXXXXXXXX`;
                 }
             },
 
-            saveAllCompanies: function() {
+            saveAllCompanies: async function() {
                 try {
-                    localStorage.setItem(this.companiesStorageKey, JSON.stringify(this.companies));
+                    // Check if centralized database is available and user is authenticated
+                    if (UserManager && UserManager.isCentralizedDatabase && UserManager.isCentralizedDatabase() &&
+                        dbManager && dbManager.isAuthenticated()) {
+
+                        console.log('[CompanyOnboarding] Saving companies to centralized database');
+
+                        // Convert companies object to array format for database
+                        const companiesArray = Object.keys(this.companies).map(id => ({
+                            id: id,
+                            ...this.companies[id],
+                            user_id: dbManager.getCurrentUser()?.id,
+                            created_at: this.companies[id].created_at || new Date().toISOString(),
+                            updated_at: new Date().toISOString()
+                        }));
+
+                        await dbManager.saveCompanies(companiesArray);
+                        console.log('[CompanyOnboarding] ✅ Companies saved to centralized database');
+                    } else {
+                        console.log('[CompanyOnboarding] Using localStorage fallback for companies');
+                        localStorage.setItem(this.companiesStorageKey, JSON.stringify(this.companies));
+                    }
+
                     console.log('[CompanyOnboarding] Saved all companies to storage');
                 } catch (error) {
-                    console.error('[CompanyOnboarding] Error saving companies:', error);
+                    console.error('[CompanyOnboarding] Error saving companies to database, falling back to localStorage:', error);
+                    // Fallback to localStorage if database save fails
+                    try {
+                        localStorage.setItem(this.companiesStorageKey, JSON.stringify(this.companies));
+                        console.log('[CompanyOnboarding] Companies saved to localStorage as fallback');
+                    } catch (localError) {
+                        console.error('[CompanyOnboarding] Failed to save companies to localStorage:', localError);
+                    }
                 }
             },
 
@@ -11782,12 +11940,12 @@ Best regards,
         };
 
         // Module: Initialize Data Persistence System
-        CompanyOnboardingModule.initializePersistence = function() {
+        CompanyOnboardingModule.initializePersistence = async function() {
             try {
                 console.log('[CompanyOnboarding] Initializing persistence system...');
 
                 // Load all companies and set current company
-                this.loadAllCompanies();
+                await this.loadAllCompanies();
 
                 // Load existing data (legacy support)
                 this.getData();
@@ -11851,10 +12009,10 @@ Best regards,
         };
 
         // Module: Get Company Data for Personalization
-        CompanyOnboardingModule.getData = function() {
+        CompanyOnboardingModule.getData = async function() {
             // Ensure companies are loaded
             if (Object.keys(this.companies).length === 0) {
-                this.loadAllCompanies();
+                await this.loadAllCompanies();
             }
 
             // If we have a current company, return its data
