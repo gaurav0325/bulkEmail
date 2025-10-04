@@ -5693,8 +5693,16 @@ Phone: +91-XXXXXXXXXX`;
                 if (!parsedData || !parsedData.contacts || !Array.isArray(parsedData.contacts)) return false;
 
                 // Validate and sanitize loaded data
+                console.log('[LoadData] 📊 Original contacts count:', parsedData.contacts.length);
+
                 const validatedContacts = parsedData.contacts
-                    .filter(contact => contact.email && EMAIL_REGEX.test(contact.email))
+                    .filter(contact => {
+                        const hasEmail = contact.email && EMAIL_REGEX.test(contact.email);
+                        if (!hasEmail) {
+                            console.log('[LoadData] ❌ Filtering out invalid contact:', contact.email || 'No email', contact);
+                        }
+                        return hasEmail;
+                    })
                     .map(contact => ({
                         email: sanitizeEmail(contact.email),
                         contactName: sanitizeText(contact.contactName),
@@ -5705,6 +5713,8 @@ Phone: +91-XXXXXXXXXX`;
                         address: sanitizeText(contact.address),
                         emailStatus: contact.emailStatus || 'pending'
                     }));
+
+                console.log('[LoadData] ✅ Validated contacts count:', validatedContacts.length);
 
                 // Restore data
                 contacts = validatedContacts;
@@ -9942,6 +9952,17 @@ Phone: +91-XXXXXXXXXX`;
                     throw new Error('User must be logged in to create companies');
                 }
 
+                // Check for duplicate company names for this user
+                const userCompanies = this.getUserCompanies(UserManager.currentUser.id);
+                const duplicateCompany = userCompanies.find(company =>
+                    company.companyName && companyData.companyName &&
+                    company.companyName.toLowerCase().trim() === companyData.companyName.toLowerCase().trim()
+                );
+
+                if (duplicateCompany) {
+                    throw new Error(`A company named "${companyData.companyName}" already exists. Please use a different name or edit the existing company.`);
+                }
+
                 const companyId = this.generateCompanyId();
                 const newCompany = {
                     ...companyData,
@@ -9959,6 +9980,10 @@ Phone: +91-XXXXXXXXXX`;
                     UserManager.currentUser.companies = [];
                 }
                 UserManager.currentUser.companies.push(companyId);
+
+                // ALWAYS set the newly created company as the current/default company
+                this.currentCompanyId = companyId;
+                console.log('[CompanyOnboarding] ✅ Set new company as default:', companyData.companyName);
 
                 // Set as active if it's the first company
                 if (!UserManager.currentUser.activeCompanies) {
@@ -11084,7 +11109,10 @@ Best regards,
         // Module: Edit Company
         CompanyOnboardingModule.editCompany = function(companyId) {
             this.setCurrentCompany(companyId);
-            document.getElementById('companySelectorModal').remove();
+            const modal = document.getElementById('companySelectorModal');
+            if (modal) {
+                modal.remove();
+            }
             this.showManager();
         };
 
