@@ -343,25 +343,36 @@ class DatabaseManager {
 
             console.log('[DatabaseManager] Connectivity test response:', response.status, response.statusText);
 
-            if (response.status === 200 || response.status === 400 || response.status === 500) {
+            // Read response text for all status codes to see the actual error
+            let responseText = '';
+            try {
+                responseText = await response.text();
+                console.log('[DatabaseManager] Response text:', responseText);
+            } catch (textError) {
+                console.log('[DatabaseManager] Could not read response text:', textError);
+            }
+
+            if (response.status === 200 || response.status === 400 || response.status === 401 || response.status === 500) {
                 // Function exists (even if it returns an error)
                 console.log('[DatabaseManager] ✅ Netlify Functions are deployed');
 
-                // Try to read response to see if it's properly configured
-                try {
-                    const text = await response.text();
-                    console.log('[DatabaseManager] Response text:', text);
-
-                    if (text.includes('SUPABASE_URL') || text.includes('environment')) {
-                        console.log('[DatabaseManager] ⚠️ Functions deployed but environment variables not configured');
-                        this.functionsAvailable = false;
-                        this.configurationError = 'Environment variables not set in Netlify';
-                    } else {
-                        console.log('[DatabaseManager] ✅ Functions appear to be configured');
-                        this.functionsAvailable = true;
-                    }
-                } catch (textError) {
-                    console.log('[DatabaseManager] ✅ Functions deployed (could not read response)');
+                // Analyze the response to determine configuration status
+                if (responseText.includes('SUPABASE_URL') || responseText.includes('environment') || responseText.includes('undefined')) {
+                    console.log('[DatabaseManager] ⚠️ Functions deployed but environment variables not configured properly');
+                    this.functionsAvailable = false;
+                    this.configurationError = 'Environment variables missing or incorrect in Netlify';
+                } else if (response.status === 401 && responseText.includes('Invalid or expired session token')) {
+                    console.log('[DatabaseManager] ✅ Functions configured correctly (expected 401 for test token)');
+                    this.functionsAvailable = true;
+                } else if (response.status === 401) {
+                    console.log('[DatabaseManager] ⚠️ Functions deployed but database authentication failed');
+                    this.functionsAvailable = false;
+                    this.configurationError = 'Database authentication failed - check Supabase configuration';
+                } else if (response.status === 400 && responseText.includes('Session token is required')) {
+                    console.log('[DatabaseManager] ✅ Functions configured correctly (expected 400 for missing token)');
+                    this.functionsAvailable = true;
+                } else {
+                    console.log('[DatabaseManager] ✅ Functions appear to be configured');
                     this.functionsAvailable = true;
                 }
             } else if (response.status === 404) {
