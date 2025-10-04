@@ -7808,6 +7808,12 @@ Phone: +91-XXXXXXXXXX`;
                 this.isLoggedIn = false;
                 localStorage.removeItem(this.SESSION_KEY);
                 localStorage.removeItem(this.CURRENT_USER_KEY);
+
+                // Also clear centralized database session
+                if (window.dbManager && typeof window.dbManager.clearSession === 'function') {
+                    window.dbManager.clearSession();
+                    console.log('[UserManager] Cleared centralized database session');
+                }
             },
 
             // Get all users
