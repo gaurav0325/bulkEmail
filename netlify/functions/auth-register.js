@@ -91,7 +91,8 @@ exports.handler = async (event, context) => {
                 data: {
                     full_name: fullName,
                     created_at: new Date().toISOString()
-                }
+                },
+                emailRedirectTo: undefined // Skip email verification for now
             }
         });
 
@@ -124,19 +125,37 @@ exports.handler = async (event, context) => {
             // Continue anyway as the auth user was created
         }
 
+        // For development/demo purposes, we'll auto-confirm the user
+        // In production, you'd want proper email verification
+        let isVerified = user.user.email_confirmed_at !== null;
+
+        if (!isVerified) {
+            // Auto-confirm the user for development
+            const { error: confirmError } = await supabase.auth.admin.updateUserById(
+                user.user.id,
+                { email_confirm: true }
+            );
+
+            if (!confirmError) {
+                isVerified = true;
+            }
+        }
+
         return {
             statusCode: 201,
             headers,
             body: JSON.stringify({
                 success: true,
-                message: 'Account created successfully! Please check your email to verify your account.',
+                message: isVerified
+                    ? 'Account created successfully! You can now log in immediately.'
+                    : 'Account created successfully! Please check your email to verify your account.',
                 user: {
                     id: user.user.id,
                     email: user.user.email,
                     fullName: fullName,
-                    isVerified: false
+                    isVerified: isVerified
                 },
-                needsVerification: true
+                needsVerification: !isVerified
             })
         };
 
