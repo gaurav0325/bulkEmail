@@ -7264,15 +7264,21 @@ Phone: +91-XXXXXXXXXX`;
             },
 
             // Save user session
-            saveSession: function() {
+            saveSession: function(extendedSession = false) {
                 if (this.currentUser) {
+                    // If remember me is checked, extend session to 30 days, otherwise 1 day
+                    const sessionDuration = extendedSession ? (30 * 24 * 60 * 60 * 1000) : (24 * 60 * 60 * 1000);
+
                     const session = {
                         userId: this.currentUser.id,
                         loginTime: Date.now(),
-                        expiresAt: Date.now() + (30 * 24 * 60 * 60 * 1000) // 30 days
+                        expiresAt: Date.now() + sessionDuration,
+                        extended: extendedSession
                     };
                     localStorage.setItem(this.SESSION_KEY, JSON.stringify(session));
                     localStorage.setItem(this.CURRENT_USER_KEY, JSON.stringify(this.currentUser));
+
+                    console.log(`[UserManager] Session saved for ${extendedSession ? '30 days (remembered)' : '1 day (not remembered)'}`);
                 }
             },
 
@@ -7377,7 +7383,7 @@ Phone: +91-XXXXXXXXXX`;
             },
 
             // Login user
-            login: function(email, password, provider = 'manual') {
+            login: function(email, password, provider = 'manual', rememberMe = false) {
                 try {
                     // Validate inputs
                     if (!email || !email.includes('@')) {
@@ -7419,7 +7425,7 @@ Phone: +91-XXXXXXXXXX`;
                     // Set current user
                     this.currentUser = user;
                     this.isLoggedIn = true;
-                    this.saveSession();
+                    this.saveSession(rememberMe);
 
                     console.log('[UserManager] User logged in:', email, 'via', provider);
 
@@ -7789,6 +7795,13 @@ Phone: +91-XXXXXXXXXX`;
                     return;
                 }
 
+                // Remove existing modal if any
+                const existingModal = document.getElementById('authModal');
+                if (existingModal) {
+                    console.log('[UserManager] Removing existing modal');
+                    existingModal.remove();
+                }
+
                 console.log('[UserManager] Creating authentication modal...');
 
                 const modal = document.createElement('div');
@@ -8073,13 +8086,10 @@ Phone: +91-XXXXXXXXXX`;
                     // Attempt login
                     setTimeout(() => {
                         try {
-                            this.login(email, password);
+                            this.login(email, password, 'manual', rememberMe);
 
-                            // Handle remember me
-                            if (rememberMe) {
-                                // Extend session (already handled in saveSession)
-                                console.log('[UserManager] Remember me enabled');
-                            }
+                            // Handle remember me - pass to saveSession
+                            console.log('[UserManager] Remember me:', rememberMe ? 'enabled' : 'disabled');
 
                             // Close modal and show success
                             document.getElementById('authModal').remove();
