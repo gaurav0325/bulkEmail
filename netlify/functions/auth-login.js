@@ -46,10 +46,57 @@ exports.handler = async (event, context) => {
         }
 
         // Attempt to sign in with Supabase
-        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        console.log('Login attempt for email:', email.toLowerCase());
+
+        let { data: authData, error: authError } = await supabase.auth.signInWithPassword({
             email: email.toLowerCase(),
             password: password
         });
+
+        console.log('Supabase auth response:', {
+            user: authData?.user ? 'User found' : 'No user',
+            userConfirmed: authData?.user?.email_confirmed_at ? 'Confirmed' : 'Not confirmed',
+            error: authError ? authError.message : 'No error'
+        });
+
+        if (authError) {
+            console.error('Supabase auth error details:', authError);
+
+            // Check if it's an email confirmation issue
+            if (authError.message?.includes('Email not confirmed') || authError.message?.includes('email_confirmed_at')) {
+                // Try to auto-confirm the user if they exist but aren't confirmed
+                const { data: userData } = await supabase
+                    .from('users')
+                    .select('id')
+                    .eq('email', email.toLowerCase())
+                    .single();
+
+                if (userData) {
+                    console.log('Found user, attempting auto-confirmation...');
+                    const { error: confirmError } = await supabase.auth.admin.updateUserById(
+                        userData.id,
+                        { email_confirm: true }
+                    );
+
+                    if (!confirmError) {
+                        console.log('Auto-confirmation successful, retrying login...');
+                        // Retry the login after confirmation
+                        const { data: retryAuthData, error: retryAuthError } = await supabase.auth.signInWithPassword({
+                            email: email.toLowerCase(),
+                            password: password
+                        });
+
+                        if (!retryAuthError && retryAuthData.user) {
+                            authData = retryAuthData;
+                            authError = null;
+                            console.log('Retry login successful');
+                        } else {
+                            console.error('Retry login failed:', retryAuthError);
+                        }
+                    }
+                }
+            }
+        }
 
         if (authError || !authData.user) {
             return {
