@@ -8,6 +8,9 @@ class DatabaseManager {
         this.currentUser = null;
         this.isOnline = navigator.onLine;
 
+        // Test connectivity on startup
+        this.testConnectivity();
+
         // Monitor online/offline status
         window.addEventListener('online', () => {
             this.isOnline = true;
@@ -322,10 +325,50 @@ class DatabaseManager {
     getSessionToken() {
         return this.sessionToken;
     }
+
+    // Test if Netlify Functions are available and configured
+    async testConnectivity() {
+        try {
+            console.log('[DatabaseManager] Testing connectivity to', this.apiBase);
+
+            // Try a simple test call to see if functions are available
+            const response = await fetch(`${this.apiBase}/auth-verify-session`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ token: 'test' })
+            });
+
+            console.log('[DatabaseManager] Connectivity test response:', response.status, response.statusText);
+
+            if (response.status === 200 || response.status === 400) {
+                // Function exists (even if it returns an error for invalid token)
+                console.log('[DatabaseManager] ✅ Netlify Functions are available');
+                this.functionsAvailable = true;
+            } else if (response.status === 404) {
+                console.log('[DatabaseManager] ❌ Netlify Functions not found (404)');
+                this.functionsAvailable = false;
+            } else {
+                console.log('[DatabaseManager] ⚠️ Unexpected response from Functions');
+                this.functionsAvailable = false;
+            }
+        } catch (error) {
+            console.log('[DatabaseManager] ❌ Connectivity test failed:', error.message);
+            this.functionsAvailable = false;
+        }
+    }
 }
 
 // Create global instance
 const dbManager = new DatabaseManager();
+
+console.log('[DatabaseManager] Initialized successfully');
+console.log('[DatabaseManager] API base:', dbManager.apiBase);
+console.log('[DatabaseManager] Available globally as window.dbManager');
+
+// Make it available globally
+window.dbManager = dbManager;
 
 // Export for use in other scripts
 if (typeof module !== 'undefined' && module.exports) {

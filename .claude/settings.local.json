@@ -13,7 +13,9 @@
       "Bash(npm install)",
       "Bash(python:*)",
       "Bash(timeout:*)",
-      "Read(//c/Users/nishk/OneDrive/Pictures/**)"
+      "Read(//c/Users/nishk/OneDrive/Pictures/**)",
+      "Bash(netlify env:list:*)",
+      "Bash(netlify:*)"
     ],
     "deny": [],
     "ask": []
