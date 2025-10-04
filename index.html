@@ -7964,12 +7964,22 @@ Phone: +91-XXXXXXXXXX`;
                     // Fallback to auto-verification for demo
                     const users = this.getAllUsers();
                     if (users[user.id]) {
-                        users[user.id].verified = true;
+                        users[user.id].isVerified = true; // Fix: Use isVerified not verified
                         users[user.id].verifiedAt = Date.now();
                         this.saveAllUsers(users);
 
-                        showAlert('🎉 Welcome! Your account has been created successfully. Email verification has been skipped for this demo.', 'success');
                         console.log('[UserManager] ✅ User auto-verified due to email service configuration');
+                        showAlert('🎉 Welcome! Your account has been created successfully. Email verification has been skipped for this demo.', 'success');
+
+                        // Auto-login the user since they're now verified
+                        this.currentUser = users[user.id];
+                        this.isLoggedIn = true;
+                        this.saveSession(true); // Save with Remember Me enabled
+
+                        console.log('[UserManager] 🔐 Auto-logging in verified user');
+                        this.hideAuthGate();
+                        this.updateUserDisplay();
+                        this.loadUserApplicationState(false);
                     }
                 }
             },
