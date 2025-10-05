@@ -2951,6 +2951,33 @@ Market Advantages:
             updateTemplateContent();
         }
 
+        function insertTemplateLink() {
+            const template = document.getElementById('companyEmailTemplate');
+            if (!template) return;
+
+            // Get selected text
+            const selection = window.getSelection();
+            const selectedText = selection.toString();
+
+            // Prompt for URL
+            const url = prompt('Enter URL:', 'https://');
+
+            if (url && url.trim() && url !== 'https://') {
+                template.focus();
+
+                if (selectedText) {
+                    // If text is selected, make it a link
+                    document.execCommand('createLink', false, url);
+                } else {
+                    // If no text selected, insert URL as clickable link
+                    const linkHtml = `<a href="${url}">${url}</a>`;
+                    document.execCommand('insertHTML', false, linkHtml);
+                }
+
+                updateTemplateContent();
+            }
+        }
+
         function showTemplateColorPicker() {
             const picker = document.getElementById('templateColorPicker');
             if (picker) {
@@ -11953,6 +11980,13 @@ Best regards,
 
                                     <div style="width: 1px; height: 16px; background: #d1d5db; margin: 0 4px;"></div>
 
+                                    <!-- Link -->
+                                    <button onclick="insertTemplateLink()" class="format-btn" style="padding: 4px 8px; font-size: 11px; background: white; border: 1px solid #d1d5db; border-radius: 4px; cursor: pointer;" title="Insert Link">
+                                        🔗 Link
+                                    </button>
+
+                                    <div style="width: 1px; height: 16px; background: #d1d5db; margin: 0 4px;"></div>
+
                                     <!-- Lists -->
                                     <button onclick="formatTemplateText('insertUnorderedList')" class="format-btn" style="padding: 4px 8px; font-size: 11px; background: white; border: 1px solid #d1d5db; border-radius: 4px; cursor: pointer;" title="Bullet List">
                                         • List
@@ -13207,11 +13241,30 @@ Best regards,
                 const cleanCountry = (contact.country || '').trim();
                 const cleanEmail = (contact.email || '').trim();
 
+                // Debug log for contact variables
+                if (!isSubject) {
+                    console.log('[Personalization] Contact variables:', {
+                        contactName: cleanContactName,
+                        firm: cleanFirm,
+                        country: cleanCountry,
+                        email: cleanEmail,
+                        hasEmailPlaceholder: content.includes('{email}')
+                    });
+                }
+
                 personalizedContent = personalizedContent
                     .replace(/{contactName}/g, cleanContactName)
                     .replace(/{firm}/g, cleanFirm)
                     .replace(/{country}/g, cleanCountry)
                     .replace(/{email}/g, cleanEmail);
+
+                // Verify email was replaced
+                if (!isSubject && content.includes('{email}')) {
+                    console.log('[Personalization] Email replacement result:', {
+                        before: content.substring(content.indexOf('{email}') - 20, content.indexOf('{email}') + 30),
+                        after: personalizedContent.substring(personalizedContent.indexOf(cleanEmail) - 20, personalizedContent.indexOf(cleanEmail) + cleanEmail.length + 10) || 'Email not found in result'
+                    });
+                }
             }
 
             // Get company data from module (use default company for personalization)
@@ -13237,8 +13290,12 @@ Best regards,
             // Replace company variables with smart content logic
             CompanyOnboardingModule.availableFields.forEach(field => {
                 if (companyData[field]) {
+                    // Trim the value to remove any extra spaces
+                    const value = typeof companyData[field] === 'string'
+                        ? companyData[field].trim()
+                        : companyData[field];
                     const regex = new RegExp(`{${field}}`, 'g');
-                    personalizedContent = personalizedContent.replace(regex, companyData[field]);
+                    personalizedContent = personalizedContent.replace(regex, value);
                 }
             });
 
