@@ -33,13 +33,23 @@ exports.handler = async (event, context) => {
     }
 
     try {
-        const { token, action, dataType, data } = JSON.parse(event.body);
+        const { token, action, data } = JSON.parse(event.body);
+
+        console.log('[DataSync] Request:', { action, dataLength: data ? data.length : 0 });
 
         if (!token) {
             return {
                 statusCode: 400,
                 headers,
                 body: JSON.stringify({ error: 'Authentication token is required' })
+            };
+        }
+
+        if (!action) {
+            return {
+                statusCode: 400,
+                headers,
+                body: JSON.stringify({ error: 'Action is required' })
             };
         }
 
@@ -72,11 +82,19 @@ exports.handler = async (event, context) => {
 
     } catch (error) {
         console.error('Data sync error:', error);
+
+        // Provide more specific error information
+        let errorMessage = 'Internal server error during data sync';
+        if (error.message) {
+            errorMessage = error.message;
+        }
+
         return {
             statusCode: 500,
             headers,
             body: JSON.stringify({
-                error: 'Internal server error during data sync'
+                error: errorMessage,
+                details: error.details || error.hint || null
             })
         };
     }
@@ -122,11 +140,19 @@ async function saveContacts(userId, contacts, headers) {
 
 async function saveCompanies(userId, companies, headers) {
     try {
+        console.log('[SaveCompanies] Starting save for user:', userId);
+        console.log('[SaveCompanies] Companies data:', companies ? companies.length : 0, 'items');
+
         // Delete existing companies for this user
-        await supabase
+        const { error: deleteError } = await supabase
             .from('companies')
             .delete()
             .eq('user_id', userId);
+
+        if (deleteError) {
+            console.error('[SaveCompanies] Delete error:', deleteError);
+            throw deleteError;
+        }
 
         // Insert new companies
         if (companies && companies.length > 0) {
@@ -136,11 +162,18 @@ async function saveCompanies(userId, companies, headers) {
                 created_at: company.created_at || new Date().toISOString()
             }));
 
+            console.log('[SaveCompanies] Inserting companies:', companiesToInsert.length);
+
             const { error } = await supabase
                 .from('companies')
                 .insert(companiesToInsert);
 
-            if (error) throw error;
+            if (error) {
+                console.error('[SaveCompanies] Insert error:', error);
+                throw error;
+            }
+        } else {
+            console.log('[SaveCompanies] No companies to save');
         }
 
         return {
