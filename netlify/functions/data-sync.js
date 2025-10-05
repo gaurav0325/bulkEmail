@@ -185,11 +185,58 @@ async function saveCompanies(userId, companies, headers) {
 
         // Insert new companies
         if (companies && companies.length > 0) {
-            const companiesToInsert = companies.map(company => ({
-                ...company,
-                user_id: userId,
-                created_at: company.created_at || new Date().toISOString()
-            }));
+            const companiesToInsert = companies.map(company => {
+                // Core fields that map directly to database columns
+                const coreFields = {
+                    id: company.id || company.companyId,
+                    user_id: userId,
+                    company_name: company.companyName || '',
+                    company_email: company.companyEmail || '',
+                    company_phone: company.companyPhone || '',
+                    company_website: company.companyWebsite || '',
+                    company_address: company.companyAddress || '',
+                    company_industry: company.companyIndustry || '',
+                    company_years: company.companyYears ? parseInt(company.companyYears) : null,
+                    company_description: company.companyDescription || '',
+                    is_active: company.isActive !== undefined ? company.isActive : true,
+                    is_default: company.isDefault || false,
+                    created_at: company.createdAt || company.created_at || new Date().toISOString(),
+                    updated_at: company.updatedAt || company.updated_at || new Date().toISOString()
+                };
+
+                // All additional fields go into additional_data JSONB
+                const additionalData = {
+                    companyLogo: company.companyLogo || '',
+                    companyShortName: company.companyShortName || '',
+                    businesDevelopementManagerName: company.businesDevelopementManagerName || '',
+                    businesDevelopementManagerDesignation: company.businesDevelopementManagerDesignation || '',
+                    productPortfolioPoints: company.productPortfolioPoints || '',
+                    OfferingPoints: company.OfferingPoints || '',
+                    Link1: company.Link1 || '',
+                    Link2: company.Link2 || '',
+                    Link3: company.Link3 || '',
+                    Image1: company.Image1 || '',
+                    Image2: company.Image2 || '',
+                    emailTemplate: company.emailTemplate || '',
+                    companyZohoEmail: company.companyZohoEmail || '',
+                    companyZohoPassword: company.companyZohoPassword || '',
+                    companySenderName: company.companySenderName || '',
+                    companyEmailEnabled: company.companyEmailEnabled || false,
+                    companyEmailJSService: company.companyEmailJSService || '',
+                    companyEmailJSTemplate: company.companyEmailJSTemplate || '',
+                    // Metadata
+                    ownerId: company.ownerId || null,
+                    lastModified: company.lastModified || new Date().toISOString(),
+                    dataVersion: company.dataVersion || '1.0'
+                };
+
+                // Only include non-empty additional data
+                if (Object.keys(additionalData).some(key => additionalData[key])) {
+                    coreFields.additional_data = additionalData;
+                }
+
+                return coreFields;
+            });
 
             console.log('[SaveCompanies] Inserting companies:', companiesToInsert.length);
 
@@ -299,11 +346,51 @@ async function getAllUserData(userId, headers) {
             return focusMap[category] || 'Business Growth & Expansion';
         }
 
-        const { data: companies } = await supabase
+        const { data: companiesRaw } = await supabase
             .from('companies')
             .select('*')
             .eq('user_id', userId)
-            .order('created_at', { ascending: false });
+            .order('created_at', { ascending: false});
+
+        // Map database fields back to frontend format
+        const companies = companiesRaw ? companiesRaw.map(company => ({
+            id: company.id,
+            companyId: company.id, // Backward compatibility
+            companyName: company.company_name || '',
+            companyEmail: company.company_email || '',
+            companyPhone: company.company_phone || '',
+            companyWebsite: company.company_website || '',
+            companyAddress: company.company_address || '',
+            companyIndustry: company.company_industry || '',
+            companyYears: company.company_years?.toString() || '',
+            companyDescription: company.company_description || '',
+            isActive: company.is_active !== undefined ? company.is_active : true,
+            isDefault: company.is_default || false,
+            createdAt: company.created_at,
+            updatedAt: company.updated_at,
+            // Extract additional fields from JSONB
+            companyLogo: company.additional_data?.companyLogo || '',
+            companyShortName: company.additional_data?.companyShortName || '',
+            businesDevelopementManagerName: company.additional_data?.businesDevelopementManagerName || '',
+            businesDevelopementManagerDesignation: company.additional_data?.businesDevelopementManagerDesignation || '',
+            productPortfolioPoints: company.additional_data?.productPortfolioPoints || '',
+            OfferingPoints: company.additional_data?.OfferingPoints || '',
+            Link1: company.additional_data?.Link1 || '',
+            Link2: company.additional_data?.Link2 || '',
+            Link3: company.additional_data?.Link3 || '',
+            Image1: company.additional_data?.Image1 || '',
+            Image2: company.additional_data?.Image2 || '',
+            emailTemplate: company.additional_data?.emailTemplate || '',
+            companyZohoEmail: company.additional_data?.companyZohoEmail || '',
+            companyZohoPassword: company.additional_data?.companyZohoPassword || '',
+            companySenderName: company.additional_data?.companySenderName || '',
+            companyEmailEnabled: company.additional_data?.companyEmailEnabled || false,
+            companyEmailJSService: company.additional_data?.companyEmailJSService || '',
+            companyEmailJSTemplate: company.additional_data?.companyEmailJSTemplate || '',
+            ownerId: company.additional_data?.ownerId || null,
+            lastModified: company.additional_data?.lastModified || company.updated_at,
+            dataVersion: company.additional_data?.dataVersion || '1.0'
+        })) : [];
 
         const { data: emailHistory } = await supabase
             .from('email_history')

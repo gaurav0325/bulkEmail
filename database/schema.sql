@@ -29,6 +29,8 @@ CREATE TABLE public.companies (
     company_years INTEGER,
     company_description TEXT,
     is_active BOOLEAN DEFAULT TRUE,
+    is_default BOOLEAN DEFAULT FALSE, -- Mark one company as default for email personalization
+    additional_data JSONB DEFAULT '{}'::jsonb, -- Store all additional company fields (templates, portfolio, etc.)
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
