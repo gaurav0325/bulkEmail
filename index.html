@@ -9,7 +9,7 @@
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <script src="js/database-manager.js" onload="console.log('[LOAD] database-manager.js loaded')" onerror="console.error('[ERROR] Failed to load database-manager.js')"></script>
     <meta name="cache-control" content="no-cache">
-    <meta name="version" content="2.1-contact-enhancements-fixed">
+    <meta name="version" content="2.2-DEBUGGING-SESSION-PERSISTENCE-2025-10-05-11-22">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
@@ -3481,8 +3481,16 @@ Phone: +91-XXXXXXXXXX`;
 
         function renderContacts() {
             console.log('=== RENDER CONTACTS CALLED ===');
-            console.log('Contacts to render:', contacts.length);
-            console.log('Contacts array:', contacts);
+
+            // Use window.contacts if available (from database), otherwise fall back to local contacts
+            const contactsToRender = window.contacts || contacts;
+            console.log('Contacts to render:', contactsToRender.length);
+            console.log('Using window.contacts:', !!window.contacts);
+            console.log('Local contacts length:', contacts.length);
+            console.log('Window contacts length:', window.contacts ? window.contacts.length : 0);
+            console.log('🔍 RENDER DEBUG - window.contacts value:', window.contacts);
+            console.log('🔍 RENDER DEBUG - local contacts value:', contacts);
+            console.log('🔍 RENDER DEBUG - contactsToRender value:', contactsToRender);
 
             const container = document.getElementById('contactsList');
             if (!container) {
@@ -3492,7 +3500,7 @@ Phone: +91-XXXXXXXXXX`;
 
             container.innerHTML = '';
 
-            if (contacts.length === 0) {
+            if (contactsToRender.length === 0) {
                 container.innerHTML = `
                     <div style="text-align: center; padding: 40px; color: #666; border: 2px dashed #ddd; border-radius: 8px; background: #f9f9f9;">
                         <h4 style="color: #999; margin-bottom: 10px;">📋 No Contacts Loaded</h4>
@@ -3504,9 +3512,10 @@ Phone: +91-XXXXXXXXXX`;
             }
 
             console.log('Rendering individual contacts...');
-            const contactsToRender = filteredContacts.length > 0 ? filteredContacts : contacts;
+            // Update contactsToRender with filtered contacts if available
+            const finalContactsToRender = filteredContacts.length > 0 ? filteredContacts : contactsToRender;
 
-            contactsToRender.forEach((contact, index) => {
+            finalContactsToRender.forEach((contact, index) => {
                 console.log(`Rendering contact ${index + 1}:`, contact);
                 const div = document.createElement('div');
                 div.className = 'contact-item';
@@ -6855,6 +6864,7 @@ Phone: +91-XXXXXXXXXX`;
 
         // Initialize on page load - no complex initialization
         document.addEventListener('DOMContentLoaded', async function() {
+            console.log('🚀 🚨 VERSION 2.2-DEBUGGING-SESSION-PERSISTENCE-2025-10-05-11-22 LOADED! 🚨 🚀');
             console.log('🚀 UPDATED VERSION - Secure email sender loaded - SESSION PERSISTENCE FIX ACTIVE');
             console.log('🔍 IMMEDIATE SESSION DEBUG - localStorage keys:', Object.keys(localStorage));
 
@@ -7501,13 +7511,33 @@ Phone: +91-XXXXXXXXXX`;
             // Load user data from centralized database
             loadCentralizedUserData: function(userData) {
                 try {
+                    console.log('[UserManager] 🚨 LOADCENTRAL FUNCTION CALLED!');
                     console.log('[UserManager] Loading centralized user data:', userData);
 
                     // Load contacts
+                    console.log('[UserManager] 🔍 LOADCENTRAL DEBUG - userData.contacts exists:', !!userData.contacts);
+                    console.log('[UserManager] 🔍 LOADCENTRAL DEBUG - userData.contacts length:', userData.contacts ? userData.contacts.length : 'undefined');
+                    console.log('[UserManager] 🔍 LOADCENTRAL DEBUG - condition check:', userData.contacts && userData.contacts.length > 0);
+
                     if (userData.contacts && userData.contacts.length > 0) {
+                        console.log('[UserManager] 🔍 LOADCENTRAL - BEFORE ASSIGNMENT - window.contacts:', window.contacts ? window.contacts.length : 'undefined');
+                        console.log('[UserManager] 🔍 LOADCENTRAL - BEFORE ASSIGNMENT - local contacts:', contacts.length);
+
                         window.contacts = userData.contacts;
+                        // Update local contacts array and filtered contacts for compatibility
+                        contacts = userData.contacts;
+                        filteredContacts = [...userData.contacts];
+
+                        console.log('[UserManager] 🔍 LOADCENTRAL - AFTER ASSIGNMENT - window.contacts:', window.contacts ? window.contacts.length : 'undefined');
+                        console.log('[UserManager] 🔍 LOADCENTRAL - AFTER ASSIGNMENT - local contacts:', contacts.length);
+                        console.log('[UserManager] 🔍 LOADCENTRAL - AFTER ASSIGNMENT - filteredContacts:', filteredContacts.length);
+
                         window.dataLoadedFromCentralizedDB = true; // Mark as loaded from DB
                         console.log('[UserManager] Loaded', userData.contacts.length, 'contacts from database');
+
+                        // CRITICAL: Render contacts immediately after assignment
+                        console.log('[UserManager] 🎯 LOADCENTRAL - About to call renderContacts...');
+                        renderContacts();
                     }
 
                     // Load companies
@@ -7802,6 +7832,7 @@ Phone: +91-XXXXXXXXXX`;
 
             // Save user session
             saveSession: function(extendedSession = false) {
+                console.log('[UserManager] 🚨 SAVESESSION CALLED! currentUser:', !!this.currentUser);
                 if (this.currentUser) {
                     // If remember me is checked, extend session to 30 days, otherwise 1 day
                     const sessionDuration = extendedSession ? (30 * 24 * 60 * 60 * 1000) : (24 * 60 * 60 * 1000);
@@ -7812,10 +7843,23 @@ Phone: +91-XXXXXXXXXX`;
                         expiresAt: Date.now() + sessionDuration,
                         extended: extendedSession
                     };
+
+                    console.log('[UserManager] 🚨 SAVESESSION - About to save to localStorage');
+                    console.log('[UserManager] 🚨 SAVESESSION - Session key:', this.SESSION_KEY);
+                    console.log('[UserManager] 🚨 SAVESESSION - User key:', this.CURRENT_USER_KEY);
+
                     localStorage.setItem(this.SESSION_KEY, JSON.stringify(session));
                     localStorage.setItem(this.CURRENT_USER_KEY, JSON.stringify(this.currentUser));
 
                     console.log(`[UserManager] Session saved for ${extendedSession ? '30 days (remembered)' : '1 day (not remembered)'}`);
+
+                    // Verify save
+                    const savedSession = localStorage.getItem(this.SESSION_KEY);
+                    const savedUser = localStorage.getItem(this.CURRENT_USER_KEY);
+                    console.log('[UserManager] 🚨 SAVESESSION - Verification - Session saved:', !!savedSession);
+                    console.log('[UserManager] 🚨 SAVESESSION - Verification - User saved:', !!savedUser);
+                } else {
+                    console.log('[UserManager] 🚨 SAVESESSION - Cannot save: no currentUser');
                 }
             },
 
@@ -7829,8 +7873,14 @@ Phone: +91-XXXXXXXXXX`;
                             const result = await dbManager.verifySession();
                             if (result && result.success) {
                                 console.log('[UserManager] ✅ Centralized database session verified');
+                                console.log('[UserManager] 🚨 ABOUT TO CREATE USER MANAGER SESSION!');
                                 this.currentUser = result.user;
                                 this.isLoggedIn = true;
+
+                                // CRITICAL: Create UserManager session for persistence across refreshes
+                                console.log('[UserManager] 🔄 Creating UserManager session from database session...');
+                                this.saveSession(true); // Assume extended session since they have a valid database session
+                                console.log('[UserManager] 🔄 ✅ UserManager session created for persistence');
                                 this.sessionRestored = true;
 
                                 // Load user data
@@ -7859,6 +7909,55 @@ Phone: +91-XXXXXXXXXX`;
 
                     if (!sessionRaw || !userRaw) {
                         console.log('[UserManager] ❌ Missing raw data - sessionRaw:', !!sessionRaw, 'userRaw:', !!userRaw);
+
+                        // Check if we can create UserManager session from database session
+                        console.log('[UserManager] 🔄 Checking for database session to convert...');
+                        const dbSessionToken = localStorage.getItem('db_session_token');
+                        const dbSessionExpires = localStorage.getItem('db_session_expires');
+                        const dbCurrentUser = localStorage.getItem('db_current_user');
+
+                        if (dbSessionToken && dbSessionExpires && dbCurrentUser) {
+                            console.log('[UserManager] 🔄 Found database session, creating UserManager session...');
+                            try {
+                                const user = JSON.parse(dbCurrentUser);
+                                const expiresAt = parseInt(dbSessionExpires);
+
+                                if (Date.now() < expiresAt) {
+                                    // Create UserManager session from database session
+                                    this.currentUser = user;
+                                    this.isLoggedIn = true;
+
+                                    // Create and save UserManager session
+                                    const sessionDuration = expiresAt - Date.now();
+                                    const session = {
+                                        userId: user.id,
+                                        loginTime: Date.now(),
+                                        expiresAt: expiresAt,
+                                        extended: sessionDuration > (24 * 60 * 60 * 1000) // More than 1 day = extended
+                                    };
+
+                                    localStorage.setItem(this.SESSION_KEY, JSON.stringify(session));
+                                    localStorage.setItem(this.CURRENT_USER_KEY, JSON.stringify(user));
+
+                                    console.log('[UserManager] 🔄 ✅ Created UserManager session from database session');
+                                    console.log('[UserManager] 🔄 User:', user.email, 'expires at:', new Date(expiresAt));
+
+                                    // Continue with the new session data
+                                    const newSessionRaw = localStorage.getItem(this.SESSION_KEY);
+                                    const newUserRaw = localStorage.getItem(this.CURRENT_USER_KEY);
+
+                                    if (newSessionRaw && newUserRaw) {
+                                        return true; // Session restored successfully
+                                    }
+                                } else {
+                                    console.log('[UserManager] 🔄 Database session expired');
+                                }
+                            } catch (error) {
+                                console.log('[UserManager] 🔄 Error creating UserManager session from database:', error);
+                            }
+                        } else {
+                            console.log('[UserManager] 🔄 No database session found either');
+                        }
 
                         // Only clear session if we don't already have valid authentication state from initialization
                         if (!this.isLoggedIn || !this.currentUser) {
@@ -8941,6 +9040,18 @@ Phone: +91-XXXXXXXXXX`;
                                 this.currentUser = result.user;
                                 this.isLoggedIn = true;
 
+                                // Save session to localStorage (CRITICAL for persistence)
+                                this.saveSession(rememberMe);
+                                console.log('[UserManager] Session saved to localStorage for persistence');
+
+                                // Verify session was saved correctly
+                                const savedSession = localStorage.getItem(this.SESSION_KEY);
+                                const savedUser = localStorage.getItem(this.CURRENT_USER_KEY);
+                                console.log('[UserManager] ✅ VERIFICATION - Session saved:', !!savedSession);
+                                console.log('[UserManager] ✅ VERIFICATION - User saved:', !!savedUser);
+                                console.log('[UserManager] ✅ VERIFICATION - Session key:', this.SESSION_KEY);
+                                console.log('[UserManager] ✅ VERIFICATION - User key:', this.CURRENT_USER_KEY);
+
                                 // Load user data
                                 if (result.userData) {
                                     this.loadCentralizedUserData(result.userData);
@@ -9962,6 +10073,17 @@ Phone: +91-XXXXXXXXXX`;
 
                 setTimeout(async () => {
                     try {
+                        // Wait for database manager to be ready and verify session
+                        if (this.isCentralizedDatabase() && dbManager) {
+                            console.log('[UserManager] Waiting for database session verification...');
+                            try {
+                                await dbManager.verifySession();
+                                console.log('[UserManager] Database session verification completed');
+                            } catch (verifyError) {
+                                console.log('[UserManager] Database session verification failed:', verifyError.message);
+                            }
+                        }
+
                         // 1. Initialize company system
                         console.log('[UserManager] Initializing company system');
                         await CompanyOnboardingModule.initializePersistence();
@@ -9971,24 +10093,38 @@ Phone: +91-XXXXXXXXXX`;
                         console.log('[UserManager] Loading contact data');
                         let dataLoaded = false;
 
-                        // First try centralized database if available
+                        // First try centralized database if available and authenticated
                         if (this.isCentralizedDatabase() && dbManager && dbManager.isAuthenticated()) {
                             try {
                                 console.log('[UserManager] Loading contact data from centralized database');
                                 const userData = await dbManager.getAllUserData();
                                 if (userData && userData.contacts) {
                                     console.log('[UserManager] Found', userData.contacts.length, 'contacts in database');
+                                    console.log('[UserManager] 🔍 BEFORE ASSIGNMENT - window.contacts:', window.contacts ? window.contacts.length : 'undefined');
+                                    console.log('[UserManager] 🔍 BEFORE ASSIGNMENT - local contacts:', contacts.length);
+
                                     window.contacts = userData.contacts;
+                                    // Update local contacts array and filtered contacts for compatibility
+                                    contacts = userData.contacts;
+                                    filteredContacts = [...userData.contacts];
+
+                                    console.log('[UserManager] 🔍 AFTER ASSIGNMENT - window.contacts:', window.contacts ? window.contacts.length : 'undefined');
+                                    console.log('[UserManager] 🔍 AFTER ASSIGNMENT - local contacts:', contacts.length);
+                                    console.log('[UserManager] 🔍 AFTER ASSIGNMENT - filteredContacts:', filteredContacts.length);
+
                                     if (userData.emailHistory) {
                                         window.emailHistory = userData.emailHistory;
                                     }
                                     window.dataLoadedFromCentralizedDB = true; // Mark as loaded from DB
                                     dataLoaded = true;
+                                    console.log('[UserManager] 🎯 About to call renderContacts...');
                                     renderContacts();
                                 }
                             } catch (dbError) {
                                 console.log('[UserManager] Database load failed, falling back to localStorage:', dbError.message);
                             }
+                        } else {
+                            console.log('[UserManager] Database not authenticated, using localStorage fallback');
                         }
 
                         // Fallback to localStorage if database failed or not available

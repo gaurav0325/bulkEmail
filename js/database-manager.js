@@ -12,6 +12,9 @@ class DatabaseManager {
         // Test connectivity on startup
         this.testConnectivity();
 
+        // Auto-verify session on startup
+        this.initializeSession();
+
         // Monitor online/offline status
         window.addEventListener('online', () => {
             this.isOnline = true;
@@ -67,6 +70,21 @@ class DatabaseManager {
             id: Math.random().toString(36).substr(2, 9)
         });
         localStorage.setItem('pendingSyncs', JSON.stringify(pending));
+    }
+
+    // Initialize session on startup
+    async initializeSession() {
+        console.log('[DatabaseManager] Initializing session on startup...');
+        try {
+            const result = await this.verifySession();
+            if (result && result.success) {
+                console.log('[DatabaseManager] Session initialized successfully');
+            } else {
+                console.log('[DatabaseManager] No valid session found on startup');
+            }
+        } catch (error) {
+            console.log('[DatabaseManager] Session initialization failed:', error.message);
+        }
     }
 
     // Sync pending changes when back online
