@@ -11499,6 +11499,78 @@ Phone: +91-XXXXXXXXXX`;
                 return false;
             },
 
+            // Cleanup utility: Remove duplicate companies with same name
+            removeDuplicateCompanies: async function() {
+                console.log('[CompanyOnboarding] 🔍 Checking for duplicate companies...');
+
+                const companyNames = {};
+                const duplicates = [];
+
+                // Find duplicates by company name
+                Object.keys(this.companies).forEach(id => {
+                    const name = this.companies[id].companyName;
+                    if (companyNames[name]) {
+                        duplicates.push({
+                            id: id,
+                            name: name,
+                            existing: companyNames[name],
+                            isDefault: this.companies[id].isDefault,
+                            createdAt: this.companies[id].createdAt
+                        });
+                    } else {
+                        companyNames[name] = id;
+                    }
+                });
+
+                if (duplicates.length === 0) {
+                    console.log('[CompanyOnboarding] ✅ No duplicates found');
+                    return { removed: 0, kept: Object.keys(this.companies).length };
+                }
+
+                console.log('[CompanyOnboarding] ⚠️ Found', duplicates.length, 'duplicate companies');
+
+                // For each duplicate, keep the one with isDefault=true, or the older one
+                duplicates.forEach(dup => {
+                    const existing = this.companies[dup.existing];
+                    const duplicate = this.companies[dup.id];
+
+                    let keepId, removeId;
+
+                    // Keep the default one if either is default
+                    if (duplicate.isDefault && !existing.isDefault) {
+                        keepId = dup.id;
+                        removeId = dup.existing;
+                        // Update the mapping
+                        companyNames[dup.name] = keepId;
+                    } else {
+                        // Keep existing (older one)
+                        keepId = dup.existing;
+                        removeId = dup.id;
+                    }
+
+                    console.log('[CompanyOnboarding] Removing duplicate:', {
+                        name: dup.name,
+                        keeping: keepId,
+                        removing: removeId
+                    });
+
+                    delete this.companies[removeId];
+                });
+
+                // Save cleaned companies
+                await this.saveAllCompanies();
+
+                const result = {
+                    removed: duplicates.length,
+                    kept: Object.keys(this.companies).length
+                };
+
+                console.log('[CompanyOnboarding] ✅ Cleanup complete:', result);
+                showAlert(`🧹 Removed ${result.removed} duplicate companies. ${result.kept} companies remaining.`, 'success');
+
+                return result;
+            },
+
             deleteCompany: function(companyId) {
                 if (this.companies[companyId]) {
                     delete this.companies[companyId];
