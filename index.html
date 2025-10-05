@@ -2972,7 +2972,19 @@ Market Advantages:
 
         function handleTemplatePaste(event) {
             event.preventDefault();
-            const text = (event.clipboardData || window.clipboardData).getData('text');
+
+            // Get plain text from clipboard
+            let text = (event.clipboardData || window.clipboardData).getData('text/plain');
+
+            // Clean up the text: normalize line breaks and remove extra spaces
+            text = text
+                .replace(/\r\n/g, '\n')  // Normalize Windows line breaks
+                .replace(/\r/g, '\n')     // Normalize Mac line breaks
+                .split('\n')
+                .map(line => line.trim())  // Trim each line
+                .join('\n');
+
+            // Insert as plain text (no HTML)
             document.execCommand('insertText', false, text);
             updateTemplateContent();
         }
@@ -11717,7 +11729,7 @@ Best regards,
                         </div>
                         <div>
                             <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">Website URL</label>
-                            <input type="url" id="companyWebsite" placeholder="https://your-company.com" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                            <input type="url" id="companyWebsite" placeholder="https://your-company.com" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" onblur="this.value = this.value.trim()" onpaste="setTimeout(() => this.value = this.value.trim(), 10)">
                         </div>
                         <div>
                             <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">Years in Business</label>
