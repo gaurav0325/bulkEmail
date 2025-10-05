@@ -4285,6 +4285,15 @@ Phone: +91-XXXXXXXXXX`;
                     const templateData = CompanyOnboardingModule.extractTemplateContent(companyData.emailTemplate);
                     console.log('[ContactSelection] Extracted template data:', templateData);
 
+                    // Debug: Verify contact object before personalization
+                    console.log('[ContactSelection] Contact object before personalization:', {
+                        hasContact: !!contact,
+                        contactName: contact?.contactName,
+                        firm: contact?.firm,
+                        country: contact?.country,
+                        email: contact?.email
+                    });
+
                     // Populate subject line with personalization
                     const subjectField = document.getElementById('subject');
                     if (subjectField && templateData.subject) {
@@ -4298,7 +4307,15 @@ Phone: +91-XXXXXXXXXX`;
                     // Populate message body with full personalization
                     const messageBody = document.getElementById('messageBody');
                     if (messageBody && templateData.content) {
+                        console.log('[ContactSelection] About to personalize template content with contact');
                         const personalizedContent = personalizeEmailContent(templateData.content, contact);
+
+                        // Debug: Check if {email} was replaced
+                        console.log('[ContactSelection] Personalization result:', {
+                            stillHasEmailPlaceholder: personalizedContent.includes('{email}'),
+                            emailSnippet: personalizedContent.substring(0, 200)
+                        });
+
                         // Clean up any extra whitespace and formatting issues
                         const cleanedContent = personalizedContent
                             .replace(/\s+{(\w+)}\s+/g, '{$1}') // Remove spaces around variables
