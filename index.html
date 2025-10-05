@@ -12964,8 +12964,20 @@ Best regards,
                     .replace(/{email}/g, cleanEmail);
             }
 
-            // Get company data from module
-            const companyData = CompanyOnboardingModule.getData();
+            // Get company data from module (use default company for personalization)
+            const defaultCompany = CompanyOnboardingModule.getDefaultCompany();
+            const companyData = defaultCompany || CompanyOnboardingModule.getDataSync() || {};
+
+            // Debug logging for personalization
+            if (!isSubject) {
+                console.log('[Personalization] Using company:', {
+                    name: companyData.companyName,
+                    isDefault: defaultCompany ? 'YES (Default)' : 'NO (Current)',
+                    hasTemplate: !!companyData.emailTemplate,
+                    hasPortfolio: !!companyData.productPortfolioPoints,
+                    hasOfferings: !!companyData.OfferingPoints
+                });
+            }
 
             // Auto-fill companyIndustry from web if empty (simulated)
             if (!companyData.companyIndustry && contact && contact.firm) {
