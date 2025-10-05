@@ -130,11 +130,13 @@ async function saveContacts(userId, contacts, headers) {
                     created_at: contact.created_at || new Date().toISOString()
                 };
 
-                // Store additional fields (phone, website, address) in additional_data JSONB
+                // Store additional fields (phone, website, address, businessFocus, marketStrength) in additional_data JSONB
                 const additionalData = {};
                 if (contact.phone) additionalData.phone = contact.phone;
                 if (contact.website) additionalData.website = contact.website;
                 if (contact.address) additionalData.address = contact.address;
+                if (contact.businessFocus) additionalData.businessFocus = contact.businessFocus;
+                if (contact.marketStrength) additionalData.marketStrength = contact.marketStrength;
 
                 if (Object.keys(additionalData).length > 0) {
                     mappedContact.additional_data = additionalData;
@@ -266,19 +268,36 @@ async function getAllUserData(userId, headers) {
 
         // Map database fields back to frontend format
         const contacts = contactsRaw ? contactsRaw.map(contact => ({
-            contactName: contact.contact_name,
-            firm: contact.firm,
-            email: contact.email,
-            country: contact.country,
-            category: contact.category,
-            emailStatus: contact.status,
-            source: contact.source_file,
+            contactName: contact.contact_name || 'Contact Person',
+            firm: contact.firm || 'Unknown Company',
+            email: contact.email || '',
+            country: contact.country || 'Unknown',
+            category: contact.category || 'General',
+            emailStatus: contact.status || 'pending',
+            source: contact.source_file || 'Database',
             // Extract additional fields from JSONB
             phone: contact.additional_data?.phone || '',
             website: contact.additional_data?.website || '',
             address: contact.additional_data?.address || '',
+            // Add missing frontend fields that are expected
+            businessFocus: contact.additional_data?.businessFocus || generateBusinessFocus(contact.category || 'General'),
+            marketStrength: contact.additional_data?.marketStrength || 'Medium',
             created_at: contact.created_at
         })) : [];
+
+        // Helper function to generate business focus
+        function generateBusinessFocus(category) {
+            const focusMap = {
+                'Technology': 'Innovation & Digital Solutions',
+                'Manufacturing': 'Production & Supply Chain',
+                'Healthcare': 'Patient Care & Medical Services',
+                'Finance': 'Financial Services & Investment',
+                'Education': 'Learning & Development',
+                'Retail': 'Customer Experience & Sales',
+                'General': 'Business Growth & Expansion'
+            };
+            return focusMap[category] || 'Business Growth & Expansion';
+        }
 
         const { data: companies } = await supabase
             .from('companies')
