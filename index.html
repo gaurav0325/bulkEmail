@@ -1055,6 +1055,7 @@
         let contacts = [];
         let filteredContacts = []; // For search functionality
         let selectedContactIndex = -1;
+        let dataLoadedFromCentralizedDB = false; // Flag to prevent localStorage from overwriting DB data
         let emailStatusCounts = {
             total: 0,
             sent: 0,
@@ -5795,6 +5796,12 @@ Phone: +91-XXXXXXXXXX`;
 
         async function loadFromLocalStorage() {
             try {
+                // Don't load from localStorage if data was already loaded from centralized DB
+                if (window.dataLoadedFromCentralizedDB) {
+                    console.log('[LoadData] Skipping localStorage load - data already loaded from centralized database');
+                    return true;
+                }
+
                 const savedData = localStorage.getItem(STORAGE_KEYS.CONTACTS);
                 if (!savedData) return false;
 
@@ -7499,6 +7506,7 @@ Phone: +91-XXXXXXXXXX`;
                     // Load contacts
                     if (userData.contacts && userData.contacts.length > 0) {
                         window.contacts = userData.contacts;
+                        window.dataLoadedFromCentralizedDB = true; // Mark as loaded from DB
                         console.log('[UserManager] Loaded', userData.contacts.length, 'contacts from database');
                     }
 
@@ -7510,6 +7518,7 @@ Phone: +91-XXXXXXXXXX`;
                             companiesObj[company.id] = company;
                         });
                         CompanyOnboardingModule.companies = companiesObj;
+                        CompanyOnboardingModule.companiesLoadedFromDB = true; // Mark as loaded from DB
 
                         // Set current company to the most recent one
                         const latestCompany = userData.companies.sort((a, b) =>
@@ -9960,7 +9969,33 @@ Phone: +91-XXXXXXXXXX`;
 
                         // 2. Load contact data
                         console.log('[UserManager] Loading contact data');
-                        const dataLoaded = await loadFromLocalStorage();
+                        let dataLoaded = false;
+
+                        // First try centralized database if available
+                        if (this.isCentralizedDatabase() && dbManager && dbManager.isAuthenticated()) {
+                            try {
+                                console.log('[UserManager] Loading contact data from centralized database');
+                                const userData = await dbManager.getAllUserData();
+                                if (userData && userData.contacts) {
+                                    console.log('[UserManager] Found', userData.contacts.length, 'contacts in database');
+                                    window.contacts = userData.contacts;
+                                    if (userData.emailHistory) {
+                                        window.emailHistory = userData.emailHistory;
+                                    }
+                                    window.dataLoadedFromCentralizedDB = true; // Mark as loaded from DB
+                                    dataLoaded = true;
+                                    renderContacts();
+                                }
+                            } catch (dbError) {
+                                console.log('[UserManager] Database load failed, falling back to localStorage:', dbError.message);
+                            }
+                        }
+
+                        // Fallback to localStorage if database failed or not available
+                        if (!dataLoaded) {
+                            console.log('[UserManager] Loading contact data from localStorage fallback');
+                            dataLoaded = await loadFromLocalStorage();
+                        }
 
                         if (!dataLoaded) {
                             renderContacts(); // Initialize empty contact list
@@ -10208,6 +10243,7 @@ Phone: +91-XXXXXXXXXX`;
             data: {},
             companies: {}, // Multi-company storage: { companyId: companyData }
             currentCompanyId: null, // Currently selected company
+            companiesLoadedFromDB: false, // Flag to prevent localStorage overwrite
             storageKey: 'bulkEmail_companyOnboardingData', // Legacy single company
             companiesStorageKey: 'bulkEmail_companies', // Multi-company storage
             currentCompanyKey: 'bulkEmail_currentCompany', // Selected company ID
@@ -10345,6 +10381,7 @@ Phone: +91-XXXXXXXXXX`;
                                 userData.companies.forEach(company => {
                                     this.companies[company.id] = company;
                                 });
+                                this.companiesLoadedFromDB = true; // Mark as loaded from DB
                                 console.log('[CompanyOnboarding] ✅ Loaded', userData.companies.length, 'companies from database');
                             }
                         } catch (dbError) {
@@ -10357,9 +10394,14 @@ Phone: +91-XXXXXXXXXX`;
                         }
                     } else {
                         console.log('[CompanyOnboarding] Using localStorage for companies');
-                        const companiesData = localStorage.getItem(this.companiesStorageKey);
-                        if (companiesData) {
-                            this.companies = JSON.parse(companiesData);
+                        // Only load from localStorage if not already loaded from DB
+                        if (!this.companiesLoadedFromDB) {
+                            const companiesData = localStorage.getItem(this.companiesStorageKey);
+                            if (companiesData) {
+                                this.companies = JSON.parse(companiesData);
+                            }
+                        } else {
+                            console.log('[CompanyOnboarding] Skipping localStorage - companies already loaded from database');
                         }
                     }
 
