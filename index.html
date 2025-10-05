@@ -5405,6 +5405,16 @@ Phone: +91-XXXXXXXXXX`;
                     reply_to: 'Intex Technologies <info@datanalysisninsights.co.uk>' // Use company name with email for replies
                 };
 
+                // Include attachments if any exist
+                if (attachments && attachments.length > 0) {
+                    emailData.attachments = attachments.map(att => ({
+                        filename: att.name,
+                        content: att.data, // Base64 encoded content
+                        type: att.type
+                    }));
+                    console.log(`Sending ${attachments.length} attachment(s) with email`);
+                }
+
                 console.log('Sending email to:', contact.email);
 
                 // Use Netlify function for email sending
@@ -7604,8 +7614,21 @@ Phone: +91-XXXXXXXXXX`;
 
             // Initialize email form data persistence
             setTimeout(() => {
-                loadEmailFormData();
-                setupEmailFormAutoSave();
+                // Wait for DOM elements to be ready
+                const checkAndLoad = () => {
+                    const subjectField = document.getElementById('subject');
+                    const messageBodyField = document.getElementById('messageBody');
+
+                    if (subjectField && messageBodyField) {
+                        console.log('[EmailForm] Fields ready, loading saved data...');
+                        loadEmailFormData();
+                        setupEmailFormAutoSave();
+                    } else {
+                        console.log('[EmailForm] Fields not ready yet, waiting...');
+                        setTimeout(checkAndLoad, 500);
+                    }
+                };
+                checkAndLoad();
 
                 // Setup comprehensive state manager auto-save
                 if (typeof setupAutoSaveListeners === 'function') {
@@ -12156,9 +12179,20 @@ Best regards,
                     emailEnabledCheckbox.checked = this.data.companyEmailEnabled || false;
                 }
 
+                // Handle default company checkbox
+                const isDefaultCheckbox = document.getElementById('isDefaultCompany');
+                if (isDefaultCheckbox) {
+                    isDefaultCheckbox.checked = this.data.isDefault || false;
+                    console.log('[CompanyOnboarding] Set default checkbox to:', this.data.isDefault);
+                }
+
                 // Update the current company display after loading
                 this.updateCurrentCompanyDisplay();
-                console.log('[CompanyOnboarding] Data loaded and form populated');
+                console.log('[CompanyOnboarding] Data loaded and form populated', {
+                    companyName: this.data.companyName,
+                    isDefault: this.data.isDefault,
+                    fieldCount: Object.keys(this.data).length
+                });
             } catch (error) {
                 console.error('[CompanyOnboarding] Error loading data:', error);
                 // Initialize with empty data on error
