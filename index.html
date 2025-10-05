@@ -12135,7 +12135,20 @@ Best regards,
                 this.updateStatusIndicator(isAutoSave ? 'Auto-saved successfully' : 'Data saved successfully');
 
                 // REAL-TIME UPDATE: Refresh personalized email content immediately
-                this.refreshPersonalizedEmailContent();
+                // Only refresh if this is the default company OR if real-time sync is enabled
+                const isDefaultCompany = this.currentCompanyId &&
+                                        this.companies[this.currentCompanyId] &&
+                                        this.companies[this.currentCompanyId].isDefault;
+
+                if (isDefaultCompany) {
+                    console.log('[CompanyOnboarding] 🔄 Refreshing email content (DEFAULT company saved)');
+                    this.refreshPersonalizedEmailContent();
+                } else if (this.isRealTimeSyncEnabled()) {
+                    console.log('[CompanyOnboarding] 🔄 Refreshing email content (sync enabled)');
+                    this.refreshPersonalizedEmailContent();
+                } else {
+                    console.log('[CompanyOnboarding] ℹ️ Skipping email refresh (not default company)');
+                }
 
                 // User feedback
                 if (!isAutoSave) {
@@ -12464,25 +12477,36 @@ Best regards,
                 const defaultCompany = this.getDefaultCompany();
                 const companyData = defaultCompany || this.getData(); // Fallback to current if no default
 
-                if (!companyData || !companyData.emailTemplate) {
-                    console.log('[CompanyOnboarding] No company template to refresh with');
+                console.log('[CompanyOnboarding] Default company:', defaultCompany ? defaultCompany.companyName : 'NONE');
+                console.log('[CompanyOnboarding] Current company:', this.data ? this.data.companyName : 'NONE');
+                console.log('[CompanyOnboarding] Using company:', companyData ? companyData.companyName : 'NONE', defaultCompany ? '(DEFAULT)' : '(CURRENT)');
+
+                if (!companyData) {
+                    console.warn('[CompanyOnboarding] ⚠️ No company data available for personalization');
                     return;
                 }
 
-                console.log('[CompanyOnboarding] Using company for personalization:', companyData.companyName, defaultCompany ? '(DEFAULT)' : '(CURRENT)');
+                if (!companyData.emailTemplate) {
+                    console.warn('[CompanyOnboarding] ⚠️ No email template found in company data');
+                    console.log('[CompanyOnboarding] Company data keys:', Object.keys(companyData));
+                    return;
+                }
 
                 // Get currently selected contact (if any)
                 const selectedContact = window.selectedContact || null;
 
                 // Extract template content
                 const templateData = this.extractTemplateContent(companyData.emailTemplate);
+                console.log('[CompanyOnboarding] Extracted template - Subject:', templateData.subject ? 'YES' : 'NO', '| Content:', templateData.content ? 'YES' : 'NO');
 
                 // Update subject line
                 const subjectField = document.getElementById('subject');
                 if (subjectField && templateData.subject) {
                     const personalizedSubject = personalizeEmailContent(templateData.subject, selectedContact, true);
                     subjectField.value = personalizedSubject;
-                    console.log('[CompanyOnboarding] ✅ Updated subject line');
+                    console.log('[CompanyOnboarding] ✅ Updated subject line to:', personalizedSubject.substring(0, 50) + '...');
+                } else {
+                    console.warn('[CompanyOnboarding] ⚠️ Could not update subject - Field:', !!subjectField, '| Template:', !!templateData.subject);
                 }
 
                 // Update message body
@@ -12504,10 +12528,12 @@ Best regards,
                         hiddenTextarea.value = sanitizedContent;
                     }
 
-                    console.log('[CompanyOnboarding] ✅ Updated message body');
+                    console.log('[CompanyOnboarding] ✅ Updated message body (', sanitizedContent.length, 'chars)');
+                } else {
+                    console.warn('[CompanyOnboarding] ⚠️ Could not update message body - Field:', !!messageBody, '| Content:', !!templateData.content);
                 }
 
-                console.log('[CompanyOnboarding] 🎉 Real-time email refresh completed');
+                console.log('[CompanyOnboarding] 🎉 Real-time email refresh completed successfully');
             } catch (error) {
                 console.error('[CompanyOnboarding] Error refreshing email content:', error);
             }
@@ -13463,10 +13489,22 @@ Best regards,
                     // Auto-save data
                     this.saveData(true);
 
-                    // Update email content in real-time if sync is enabled
-                    if (this.isRealTimeSyncEnabled()) {
+                    // ALWAYS update email content in real-time for DEFAULT company
+                    // Check if the current company being edited is the default company
+                    const isEditingDefaultCompany = this.currentCompanyId &&
+                                                   this.companies[this.currentCompanyId] &&
+                                                   this.companies[this.currentCompanyId].isDefault;
+
+                    if (isEditingDefaultCompany) {
+                        console.log('[CompanyOnboarding] 🔄 Auto-updating email content (editing DEFAULT company)');
                         this.refreshPersonalizedEmailContent();
-                        console.log('[CompanyOnboarding] ✅ Real-time email content updated');
+                        console.log('[CompanyOnboarding] ✅ Real-time email content updated for default company');
+                    } else if (this.isRealTimeSyncEnabled()) {
+                        // Still honor real-time sync setting for non-default companies
+                        this.refreshPersonalizedEmailContent();
+                        console.log('[CompanyOnboarding] ✅ Real-time email content updated (sync enabled)');
+                    } else {
+                        console.log('[CompanyOnboarding] ℹ️ Not default company, skipping real-time update');
                     }
                 }, 800); // 800ms delay to avoid too frequent updates
             };
