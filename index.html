@@ -10922,7 +10922,12 @@ Phone: +91-XXXXXXXXXX`;
 
             // Multi-company management functions
             generateCompanyId: function() {
-                return 'company_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                // Generate UUID v4 format compatible with database
+                return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                    const r = Math.random() * 16 | 0;
+                    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                    return v.toString(16);
+                });
             },
 
             // Get companies belonging to current user
@@ -12085,39 +12090,46 @@ Best regards,
                 // Create backup before saving
                 this.createBackup();
 
+                // Helper to safely get element value
+                const getElementValue = (id, defaultValue = '') => {
+                    const element = document.getElementById(id);
+                    if (!element) return defaultValue;
+                    return element.type === 'checkbox' ? element.checked : (element.value || defaultValue);
+                };
+
                 // Collect all data with metadata
                 const newData = {
                     // Core company data
-                    companyName: document.getElementById('companyName').value,
-                    companyIndustry: document.getElementById('companyIndustry').value,
-                    companyWebsite: document.getElementById('companyWebsite').value,
-                    companyYears: document.getElementById('companyYears').value,
-                    companyEmail: document.getElementById('companyEmail').value,
-                    companyPhone: document.getElementById('companyPhone').value,
-                    companyAddress: document.getElementById('companyAddress').value,
-                    companyDescription: document.getElementById('companyDescription').value,
-                    companyLogo: document.getElementById('companyLogo').value,
+                    companyName: getElementValue('companyName'),
+                    companyIndustry: getElementValue('companyIndustry'),
+                    companyWebsite: getElementValue('companyWebsite'),
+                    companyYears: getElementValue('companyYears'),
+                    companyEmail: getElementValue('companyEmail'),
+                    companyPhone: getElementValue('companyPhone'),
+                    companyAddress: getElementValue('companyAddress'),
+                    companyDescription: getElementValue('companyDescription'),
+                    companyLogo: getElementValue('companyLogo'),
 
                     // Enhanced data fields
-                    productPortfolioPoints: document.getElementById('productPortfolioPoints').value,
-                    OfferingPoints: document.getElementById('OfferingPoints').value,
-                    companyShortName: document.getElementById('companyShortName').value,
-                    businesDevelopementManagerName: document.getElementById('businesDevelopementManagerName').value,
-                    businesDevelopementManagerDesignation: document.getElementById('businesDevelopementManagerDesignation').value,
-                    Link1: document.getElementById('Link1').value,
-                    Link2: document.getElementById('Link2').value,
-                    Link3: document.getElementById('Link3').value,
-                    Image1: document.getElementById('Image1').value,
-                    Image2: document.getElementById('Image2').value,
-                    emailTemplate: document.getElementById('companyEmailTemplate').innerHTML,
+                    productPortfolioPoints: getElementValue('productPortfolioPoints'),
+                    OfferingPoints: getElementValue('OfferingPoints'),
+                    companyShortName: getElementValue('companyShortName'),
+                    businesDevelopementManagerName: getElementValue('businesDevelopementManagerName'),
+                    businesDevelopementManagerDesignation: getElementValue('businesDevelopementManagerDesignation'),
+                    Link1: getElementValue('Link1'),
+                    Link2: getElementValue('Link2'),
+                    Link3: getElementValue('Link3'),
+                    Image1: getElementValue('Image1'),
+                    Image2: getElementValue('Image2'),
+                    emailTemplate: document.getElementById('companyEmailTemplate')?.innerHTML || '',
 
                     // Email configuration fields
-                    companyZohoEmail: document.getElementById('companyZohoEmail').value,
-                    companyZohoPassword: document.getElementById('companyZohoPassword').value,
-                    companySenderName: document.getElementById('companySenderName').value,
-                    companyEmailEnabled: document.getElementById('companyEmailEnabled').checked,
-                    companyEmailJSService: document.getElementById('companyEmailJSService').value,
-                    companyEmailJSTemplate: document.getElementById('companyEmailJSTemplate').value,
+                    companyZohoEmail: getElementValue('companyZohoEmail'),
+                    companyZohoPassword: getElementValue('companyZohoPassword'),
+                    companySenderName: getElementValue('companySenderName'),
+                    companyEmailEnabled: getElementValue('companyEmailEnabled', false),
+                    companyEmailJSService: getElementValue('companyEmailJSService'),
+                    companyEmailJSTemplate: getElementValue('companyEmailJSTemplate'),
 
                     // Metadata for persistence tracking
                     dataVersion: this.dataVersion,
