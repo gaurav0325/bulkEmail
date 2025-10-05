@@ -11472,8 +11472,16 @@ Phone: +91-XXXXXXXXXX`;
 
             updateCompany: function(companyId, companyData) {
                 if (this.companies[companyId]) {
+                    const existingCompany = this.companies[companyId];
+
+                    // Special handling for isDefault flag
+                    // If new data sets isDefault to true, clear all other defaults first
+                    if (companyData.isDefault === true && !existingCompany.isDefault) {
+                        this.clearAllDefaultFlags();
+                    }
+
                     this.companies[companyId] = {
-                        ...this.companies[companyId],
+                        ...existingCompany,
                         ...companyData,
                         companyId: companyId, // Preserve ID
                         updatedAt: new Date().toISOString()
@@ -11485,7 +11493,7 @@ Phone: +91-XXXXXXXXXX`;
                         this.data = this.companies[companyId];
                     }
 
-                    console.log('[CompanyOnboarding] Updated company:', companyId);
+                    console.log('[CompanyOnboarding] Updated company:', companyId, '| isDefault:', this.companies[companyId].isDefault);
                     return true;
                 }
                 return false;
@@ -12400,6 +12408,9 @@ Best regards,
                     companyEmailEnabled: getElementValue('companyEmailEnabled', false),
                     companyEmailJSService: getElementValue('companyEmailJSService'),
                     companyEmailJSTemplate: getElementValue('companyEmailJSTemplate'),
+
+                    // Multi-company management fields
+                    isDefault: getElementValue('isDefaultCompany', false),
 
                     // Metadata for persistence tracking
                     dataVersion: this.dataVersion,
