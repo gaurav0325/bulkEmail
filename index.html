@@ -13442,11 +13442,21 @@ Best regards,
 
             // Removed automatic bold formatting of business terms to prevent unwanted bold text
 
-            // Proper spacing after punctuation
+            // IMPORTANT: Protect URLs and email addresses from grammar formatting
+            // Extract URLs and replace with placeholders
+            const urlPlaceholders = [];
+            const urlRegex = /https?:\/\/[^\s<>"]+|www\.[^\s<>"]+|[a-zA-Z0-9.-]+\.(com|org|net|in|uk|co|io|dev|app|info)[^\s<>"]*/gi;
+            formattedContent = formattedContent.replace(urlRegex, (match) => {
+                const placeholder = `__URL_PLACEHOLDER_${urlPlaceholders.length}__`;
+                urlPlaceholders.push(match);
+                return placeholder;
+            });
+
+            // Proper spacing after punctuation (now URLs are protected)
             formattedContent = formattedContent.replace(/([.!?])([A-Z])/g, '$1 $2');
             formattedContent = formattedContent.replace(/([,;])([A-Z])/g, '$1 $2');
 
-            // Ensure proper capitalization after periods
+            // Ensure proper capitalization after periods (now URLs are protected)
             formattedContent = formattedContent.replace(/\.\s*([a-z])/g, (match, letter) => `. ${letter.toUpperCase()}`);
 
             // Fix common grammar issues
@@ -13460,6 +13470,12 @@ Best regards,
 
             // Remove extra spaces
             formattedContent = formattedContent.replace(/\s{2,}/g, ' ');
+
+            // Restore URLs from placeholders
+            urlPlaceholders.forEach((url, index) => {
+                const placeholder = `__URL_PLACEHOLDER_${index}__`;
+                formattedContent = formattedContent.replace(placeholder, url);
+            });
 
             return formattedContent;
         }
