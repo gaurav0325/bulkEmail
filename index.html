@@ -3065,14 +3065,14 @@ Phone: +91-XXXXXXXXXX`;
 
         function toggleAttachments() {
             const container = document.getElementById('attachmentContainer');
-            const button = document.getElementById('attachmentToggle');
+            const button = document.getElementById('attachmentBtn');
 
-            if (container.style.display === 'none') {
+            if (container && container.style.display === 'none') {
                 container.style.display = 'block';
-                button.textContent = 'Hide';
-            } else {
+                if (button) button.textContent = '📎 Hide';
+            } else if (container) {
                 container.style.display = 'none';
-                button.textContent = 'Add Files';
+                if (button) button.textContent = '📎';
             }
         }
 
@@ -7317,9 +7317,16 @@ Phone: +91-XXXXXXXXXX`;
             // Extract headers from template if present
             for (let line of headerLines) {
                 if (line.startsWith('From: ')) {
-                    const fromEmail = line.replace('From: ', '').trim();
+                    let fromEmail = line.replace('From: ', '').trim();
+
+                    // Extract email from formats like "Name <email@domain.com>" or just "email@domain.com"
+                    const emailMatch = fromEmail.match(/<(.+?)>/) || fromEmail.match(/([^\s<>]+@[^\s<>]+)/);
+                    if (emailMatch && emailMatch[1]) {
+                        fromEmail = emailMatch[1].trim();
+                    }
+
                     // Only use template email if it's a valid email address
-                    if (fromEmail.includes('@')) {
+                    if (fromEmail.includes('@') && !fromEmail.includes('{') && !fromEmail.includes('}')) {
                         document.getElementById('fromEmail').value = fromEmail;
                     }
                 }
@@ -11567,6 +11574,63 @@ Best regards,
 {companyAddress}`
         };
 
+        // Module: Make modal draggable
+        CompanyOnboardingModule.makeDraggable = function() {
+            const modal = document.getElementById('companyModalContent');
+            const header = document.getElementById('companyModalHeader');
+
+            if (!modal || !header) return;
+
+            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            let isDragging = false;
+
+            header.onmousedown = dragMouseDown;
+
+            function dragMouseDown(e) {
+                e = e || window.event;
+                e.preventDefault();
+
+                // Get initial mouse position
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                isDragging = true;
+
+                // Visual feedback
+                header.style.background = '#e3f2fd';
+                modal.style.cursor = 'move';
+
+                document.onmouseup = closeDragElement;
+                document.onmousemove = elementDrag;
+            }
+
+            function elementDrag(e) {
+                if (!isDragging) return;
+
+                e = e || window.event;
+                e.preventDefault();
+
+                // Calculate new position
+                pos1 = pos3 - e.clientX;
+                pos2 = pos4 - e.clientY;
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+
+                // Set new position
+                modal.style.position = 'fixed';
+                modal.style.top = (modal.offsetTop - pos2) + "px";
+                modal.style.left = (modal.offsetLeft - pos1) + "px";
+            }
+
+            function closeDragElement() {
+                // Stop moving when mouse button is released
+                isDragging = false;
+                header.style.background = '';
+                modal.style.cursor = '';
+                document.onmouseup = null;
+                document.onmousemove = null;
+            }
+        };
+
         // Module: Show Company Onboarding Data Manager
         CompanyOnboardingModule.showManager = function() {
             const modal = document.createElement('div');
@@ -11578,10 +11642,10 @@ Best regards,
             `;
 
             modal.innerHTML = `
-                <div style="background: white; padding: 30px; border-radius: 8px; max-width: 800px; width: 90%; max-height: 80%; overflow-y: auto;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                <div id="companyModalContent" style="background: white; padding: 30px; border-radius: 8px; max-width: 800px; width: 90%; max-height: 80%; overflow-y: auto; position: relative;">
+                    <div id="companyModalHeader" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; cursor: move; user-select: none; padding: 5px; margin: -5px -5px 10px -5px; border-radius: 6px 6px 0 0;" title="Drag to move">
                         <h2 style="margin: 0; color: #007bff; display: flex; align-items: center; gap: 10px;">
-                            <span>🏢</span> Company Management
+                            <span>🏢</span> Company Management <span style="font-size: 12px; color: #999; font-weight: normal;">(Drag to move)</span>
                         </h2>
                         <div style="display: flex; gap: 8px; align-items: center;">
                             <button onclick="CompanyOnboardingModule.showCompanySelector()" style="background: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer;">📋 All Companies</button>
@@ -12003,6 +12067,9 @@ Best regards,
             setTimeout(() => {
                 CompanyOnboardingModule.initializeRealTimeSyncUI();
             }, 100);
+
+            // Make modal draggable
+            this.makeDraggable();
 
             // Enable auto-save functionality after modal is ready
             setTimeout(() => {
