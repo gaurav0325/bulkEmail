@@ -11885,7 +11885,7 @@ Best regards,
                         </div>
                         <div>
                             <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">Website URL</label>
-                            <input type="url" id="companyWebsite" placeholder="https://your-company.com" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" onblur="this.value = this.value.trim()" onpaste="setTimeout(() => this.value = this.value.trim(), 10)">
+                            <input type="url" id="companyWebsite" placeholder="https://your-company.com" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" onblur="this.value = this.value.replace(/\s+/g, '')" onpaste="setTimeout(() => this.value = this.value.replace(/\s+/g, ''), 10)" oninput="this.value = this.value.replace(/\s+/g, '')">
                         </div>
                         <div>
                             <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">Years in Business</label>
@@ -13216,11 +13216,9 @@ Best regards,
             // If we have a current company, return its data
             if (this.currentCompanyId && this.companies[this.currentCompanyId]) {
                 this.data = this.companies[this.currentCompanyId];
-                return this.data;
             }
-
             // Fallback to legacy single company data if no multi-company data exists
-            if (!this.data || Object.keys(this.data).length === 0) {
+            else if (!this.data || Object.keys(this.data).length === 0) {
                 const savedData = localStorage.getItem(this.storageKey);
                 if (savedData) {
                     try {
@@ -13229,6 +13227,20 @@ Best regards,
                         console.error('[CompanyOnboarding] Error loading legacy data:', error);
                         this.data = {};
                     }
+                }
+            }
+
+            // Clean up website URL by removing any internal spaces (migration fix)
+            if (this.data && this.data.companyWebsite && typeof this.data.companyWebsite === 'string') {
+                const cleanedUrl = this.data.companyWebsite.replace(/\s+/g, '');
+                if (cleanedUrl !== this.data.companyWebsite) {
+                    console.log('[CompanyOnboarding] Cleaned website URL:', {
+                        before: this.data.companyWebsite,
+                        after: cleanedUrl
+                    });
+                    this.data.companyWebsite = cleanedUrl;
+                    // Save the cleaned data back
+                    this.saveData(this.data);
                 }
             }
 
@@ -13311,6 +13323,20 @@ Best regards,
                     let value = typeof companyData[field] === 'string'
                         ? companyData[field].trim()
                         : companyData[field];
+
+                    // Special handling for companyWebsite - remove internal spaces from URL
+                    if (field === 'companyWebsite' && typeof value === 'string') {
+                        // Remove all spaces from URL (they shouldn't be there)
+                        const originalValue = value;
+                        value = value.replace(/\s+/g, '');
+
+                        if (!isSubject && originalValue !== value) {
+                            console.log('[Personalization] Fixed companyWebsite spacing:', {
+                                original: originalValue,
+                                fixed: value
+                            });
+                        }
+                    }
 
                     // Escape HTML special characters to prevent browser from treating them as tags
                     // This is especially important for companyEmail which may contain < and >
