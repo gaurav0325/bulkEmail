@@ -11181,11 +11181,22 @@ Phone: +91-XXXXXXXXXX`;
                 }
 
                 const companyId = this.generateCompanyId();
+
+                // Check if this should be the default company (first company or explicitly set)
+                const isFirstCompany = Object.keys(this.companies).length === 0;
+                const shouldBeDefault = companyData.isDefault !== undefined ? companyData.isDefault : isFirstCompany;
+
+                // If setting as default, unset all other defaults first
+                if (shouldBeDefault) {
+                    this.clearAllDefaultFlags();
+                }
+
                 const newCompany = {
                     ...companyData,
                     id: companyId,
                     companyId: companyId, // Keep for backward compatibility
                     ownerId: UserManager.isLoggedIn ? UserManager.currentUser.id : null,
+                    isDefault: shouldBeDefault, // Mark as default for personalization
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString(),
                     lastModified: new Date().toISOString(),
@@ -11271,8 +11282,52 @@ Phone: +91-XXXXXXXXXX`;
                     name: company.companyName || 'Unnamed Company',
                     email: company.companyEmail || '',
                     createdAt: company.createdAt || '',
-                    isActive: id === this.currentCompanyId
+                    isActive: id === this.currentCompanyId,
+                    isDefault: company.isDefault || false
                 }));
+            },
+
+            // Clear all default flags from companies
+            clearAllDefaultFlags: function() {
+                Object.keys(this.companies).forEach(companyId => {
+                    if (this.companies[companyId].isDefault) {
+                        this.companies[companyId].isDefault = false;
+                        this.companies[companyId].updatedAt = new Date().toISOString();
+                    }
+                });
+                console.log('[CompanyOnboarding] Cleared all default company flags');
+            },
+
+            // Set a specific company as default
+            setDefaultCompany: function(companyId) {
+                if (!this.companies[companyId]) {
+                    console.error('[CompanyOnboarding] Cannot set default - company not found:', companyId);
+                    return false;
+                }
+
+                // Clear all other defaults first
+                this.clearAllDefaultFlags();
+
+                // Set this company as default
+                this.companies[companyId].isDefault = true;
+                this.companies[companyId].updatedAt = new Date().toISOString();
+
+                // Save changes
+                this.saveAllCompanies();
+
+                // Refresh personalization
+                this.refreshPersonalizedEmailContent();
+
+                console.log('[CompanyOnboarding] ✅ Set default company:', this.companies[companyId].companyName);
+                showAlert(`✅ ${this.companies[companyId].companyName} is now your default company for personalization`, 'success');
+
+                return true;
+            },
+
+            // Get the default company
+            getDefaultCompany: function() {
+                const defaultCompanyId = Object.keys(this.companies).find(id => this.companies[id].isDefault);
+                return defaultCompanyId ? this.companies[defaultCompanyId] : null;
             },
 
             // Auto-fill templates for different business types
@@ -12159,12 +12214,21 @@ Best regards,
 
                         <div style="space-y: 8px;">
                             ${companies.map(company => `
-                                <div style="border: 1px solid ${company.isActive ? '#007bff' : '#ddd'}; border-radius: 6px; padding: 16px; background: ${company.isActive ? '#f0f8ff' : 'white'}; cursor: pointer;" onclick="CompanyOnboardingModule.switchToCompany('${company.id}')">
+                                <div style="border: 1px solid ${company.isActive ? '#007bff' : (company.isDefault ? '#28a745' : '#ddd')}; border-radius: 6px; padding: 16px; background: ${company.isActive ? '#f0f8ff' : (company.isDefault ? '#f0fff4' : 'white')}; cursor: pointer;" onclick="CompanyOnboardingModule.switchToCompany('${company.id}')">
                                     <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                                         <div style="flex: 1;">
-                                            <div style="font-weight: 500; font-size: 14px; color: #333; margin-bottom: 4px;">
-                                                ${company.isActive ? '🟢 ' : ''}${escapeHTML(company.name)}
-                                                ${company.isActive ? '<span style="background: #007bff; color: white; padding: 2px 8px; border-radius: 12px; font-size: 10px; margin-left: 8px;">ACTIVE</span>' : ''}
+                                            <div style="font-weight: 500; font-size: 14px; color: #333; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+                                                <label style="display: flex; align-items: center; cursor: pointer; margin: 0;" onclick="event.stopPropagation();">
+                                                    <input type="checkbox"
+                                                           ${company.isDefault ? 'checked' : ''}
+                                                           onchange="CompanyOnboardingModule.toggleDefaultCompany('${company.id}', this.checked); event.stopPropagation();"
+                                                           style="width: 16px; height: 16px; cursor: pointer; accent-color: #28a745; margin-right: 6px;"
+                                                           title="Set as default company for email personalization">
+                                                    <span style="font-size: 12px; color: #666; font-weight: normal;">Default</span>
+                                                </label>
+                                                <span>${company.isActive ? '🟢 ' : ''}${escapeHTML(company.name)}</span>
+                                                ${company.isActive ? '<span style="background: #007bff; color: white; padding: 2px 8px; border-radius: 12px; font-size: 10px;">ACTIVE</span>' : ''}
+                                                ${company.isDefault ? '<span style="background: #28a745; color: white; padding: 2px 8px; border-radius: 12px; font-size: 10px;">DEFAULT</span>' : ''}
                                             </div>
                                             <div style="font-size: 12px; color: #666;">${escapeHTML(company.email)}</div>
                                             <div style="font-size: 11px; color: #999; margin-top: 4px;">Created: ${new Date(company.createdAt).toLocaleDateString()}</div>
@@ -12223,6 +12287,31 @@ Best regards,
             if (existingModal) existingModal.remove();
 
             this.showManager();
+        };
+
+        // Module: Toggle Default Company
+        CompanyOnboardingModule.toggleDefaultCompany = function(companyId, isChecked) {
+            if (isChecked) {
+                // Set this company as default
+                this.setDefaultCompany(companyId);
+            } else {
+                // Uncheck - but we need at least one default, so warn user
+                if (Object.keys(this.companies).length > 1) {
+                    showAlert('⚠️ At least one company must be set as default. Please select another company as default first.', 'warning');
+                    // Refresh the modal to restore checkbox state
+                    setTimeout(() => {
+                        document.getElementById('companySelectorModal').remove();
+                        this.showCompanySelector();
+                    }, 100);
+                } else {
+                    showAlert('⚠️ Your only company must remain as default.', 'warning');
+                    // Refresh the modal to restore checkbox state
+                    setTimeout(() => {
+                        document.getElementById('companySelectorModal').remove();
+                        this.showCompanySelector();
+                    }, 100);
+                }
+            }
         };
 
         // Module: Confirm Delete Company
@@ -12371,12 +12460,16 @@ Best regards,
             try {
                 console.log('[CompanyOnboarding] 🔄 Refreshing personalized email content in real-time');
 
-                // Get current company data
-                const companyData = this.getData();
+                // Get the default company data (used for personalization)
+                const defaultCompany = this.getDefaultCompany();
+                const companyData = defaultCompany || this.getData(); // Fallback to current if no default
+
                 if (!companyData || !companyData.emailTemplate) {
                     console.log('[CompanyOnboarding] No company template to refresh with');
                     return;
                 }
+
+                console.log('[CompanyOnboarding] Using company for personalization:', companyData.companyName, defaultCompany ? '(DEFAULT)' : '(CURRENT)');
 
                 // Get currently selected contact (if any)
                 const selectedContact = window.selectedContact || null;
