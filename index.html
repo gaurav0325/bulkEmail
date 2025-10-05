@@ -11013,42 +11013,75 @@ Phone: +91-XXXXXXXXXX`;
 
             loadAllCompanies: async function() {
                 try {
-                    // Check if centralized database is available and user is authenticated
-                    if (UserManager && UserManager.isCentralizedDatabase && UserManager.isCentralizedDatabase() &&
-                        dbManager && dbManager.isAuthenticated()) {
+                    console.log('[CompanyOnboarding] 🔄 Starting to load companies...');
 
-                        console.log('[CompanyOnboarding] Loading companies from centralized database');
+                    // Detailed checks for database availability
+                    const dbManagerExists = typeof dbManager !== 'undefined';
+                    const userManagerExists = typeof UserManager !== 'undefined';
+                    const isCentralized = userManagerExists && UserManager.isCentralizedDatabase && UserManager.isCentralizedDatabase();
+                    const isAuthenticated = dbManagerExists && dbManager.isAuthenticated && dbManager.isAuthenticated();
+                    const currentUser = dbManagerExists ? dbManager.getCurrentUser() : null;
+
+                    console.log('[CompanyOnboarding] Database load check:', {
+                        dbManagerExists,
+                        userManagerExists,
+                        isCentralized,
+                        isAuthenticated,
+                        hasCurrentUser: !!currentUser,
+                        userId: currentUser?.id
+                    });
+
+                    // Try to load from centralized database first
+                    if (dbManagerExists && isAuthenticated && currentUser) {
+                        console.log('[CompanyOnboarding] 💾 Attempting to load companies from centralized database...');
 
                         try {
                             const userData = await dbManager.getAllUserData();
+                            console.log('[CompanyOnboarding] Received data from database:', {
+                                hasData: !!userData,
+                                hasCompanies: !!(userData && userData.companies),
+                                companiesCount: userData?.companies?.length || 0
+                            });
+
                             if (userData && userData.companies && userData.companies.length > 0) {
                                 // Convert array format back to object format
                                 this.companies = {};
                                 userData.companies.forEach(company => {
                                     this.companies[company.id] = company;
+                                    console.log('[CompanyOnboarding] Loaded company:', company.companyName || company.company_name, '| Default:', company.isDefault);
                                 });
                                 this.companiesLoadedFromDB = true; // Mark as loaded from DB
-                                console.log('[CompanyOnboarding] ✅ Loaded', userData.companies.length, 'companies from database');
+                                console.log('[CompanyOnboarding] ✅ ✅ ✅ Successfully loaded', userData.companies.length, 'companies from DATABASE! ✅ ✅ ✅');
+                            } else {
+                                console.log('[CompanyOnboarding] No companies found in database, will try localStorage');
                             }
                         } catch (dbError) {
-                            console.log('[CompanyOnboarding] Database load failed, falling back to localStorage:', dbError.message);
-                            // Fallback to localStorage
-                            const companiesData = localStorage.getItem(this.companiesStorageKey);
-                            if (companiesData) {
-                                this.companies = JSON.parse(companiesData);
-                            }
+                            console.error('[CompanyOnboarding] ❌ Database load failed:', dbError);
+                            console.error('[CompanyOnboarding] Error details:', dbError.message, dbError.stack);
                         }
                     } else {
-                        console.log('[CompanyOnboarding] Using localStorage for companies');
-                        // Only load from localStorage if not already loaded from DB
-                        if (!this.companiesLoadedFromDB) {
-                            const companiesData = localStorage.getItem(this.companiesStorageKey);
-                            if (companiesData) {
-                                this.companies = JSON.parse(companiesData);
-                            }
+                        console.warn('[CompanyOnboarding] ⚠️ Cannot load from database:', {
+                            reason: !dbManagerExists ? 'dbManager not available' :
+                                   !isAuthenticated ? 'User not authenticated' :
+                                   !currentUser ? 'No current user' : 'Unknown'
+                        });
+                    }
+
+                    // Fallback to localStorage if needed
+                    if (!this.companiesLoadedFromDB) {
+                        console.log('[CompanyOnboarding] Loading from localStorage...');
+                        const companiesData = localStorage.getItem(this.companiesStorageKey);
+                        if (companiesData) {
+                            this.companies = JSON.parse(companiesData);
+                            console.log('[CompanyOnboarding] ✅ Loaded', Object.keys(this.companies).length, 'companies from localStorage');
+                            Object.keys(this.companies).forEach(id => {
+                                console.log('[CompanyOnboarding] LocalStorage company:', this.companies[id].companyName, '| Default:', this.companies[id].isDefault);
+                            });
                         } else {
-                            console.log('[CompanyOnboarding] Skipping localStorage - companies already loaded from database');
+                            console.log('[CompanyOnboarding] No companies found in localStorage either');
                         }
+                    } else {
+                        console.log('[CompanyOnboarding] Skipping localStorage - companies already loaded from database');
                     }
 
                     // Always check for legacy data migration first
@@ -11126,37 +11159,62 @@ Phone: +91-XXXXXXXXXX`;
 
             saveAllCompanies: async function() {
                 try {
-                    // Check if centralized database is available and user is authenticated
-                    if (UserManager && UserManager.isCentralizedDatabase && UserManager.isCentralizedDatabase() &&
-                        dbManager && dbManager.isAuthenticated()) {
+                    // Always save to localStorage first as backup
+                    localStorage.setItem(this.companiesStorageKey, JSON.stringify(this.companies));
+                    console.log('[CompanyOnboarding] ✅ Companies saved to localStorage (backup)');
 
-                        console.log('[CompanyOnboarding] Saving companies to centralized database');
+                    // Detailed checks for database availability
+                    const dbManagerExists = typeof dbManager !== 'undefined';
+                    const userManagerExists = typeof UserManager !== 'undefined';
+                    const isCentralized = userManagerExists && UserManager.isCentralizedDatabase && UserManager.isCentralizedDatabase();
+                    const isAuthenticated = dbManagerExists && dbManager.isAuthenticated && dbManager.isAuthenticated();
+                    const currentUser = dbManagerExists ? dbManager.getCurrentUser() : null;
+
+                    console.log('[CompanyOnboarding] Database save check:', {
+                        dbManagerExists,
+                        userManagerExists,
+                        isCentralized,
+                        isAuthenticated,
+                        hasCurrentUser: !!currentUser,
+                        userId: currentUser?.id
+                    });
+
+                    // Try to save to centralized database if available
+                    if (dbManagerExists && isAuthenticated && currentUser) {
+                        console.log('[CompanyOnboarding] 💾 Attempting to save companies to centralized database...');
 
                         // Convert companies object to array format for database
                         const companiesArray = Object.keys(this.companies).map(id => ({
                             id: id,
                             ...this.companies[id],
-                            user_id: dbManager.getCurrentUser()?.id,
-                            created_at: this.companies[id].created_at || new Date().toISOString(),
+                            user_id: currentUser.id,
+                            created_at: this.companies[id].createdAt || this.companies[id].created_at || new Date().toISOString(),
                             updated_at: new Date().toISOString()
                         }));
 
+                        console.log('[CompanyOnboarding] Sending', companiesArray.length, 'companies to database');
+
                         await dbManager.saveCompanies(companiesArray);
-                        console.log('[CompanyOnboarding] ✅ Companies saved to centralized database');
+                        console.log('[CompanyOnboarding] ✅ ✅ ✅ Companies SUCCESSFULLY saved to centralized database! ✅ ✅ ✅');
                     } else {
-                        console.log('[CompanyOnboarding] Using localStorage fallback for companies');
-                        localStorage.setItem(this.companiesStorageKey, JSON.stringify(this.companies));
+                        console.warn('[CompanyOnboarding] ⚠️ Cannot save to database:', {
+                            reason: !dbManagerExists ? 'dbManager not available' :
+                                   !isAuthenticated ? 'User not authenticated' :
+                                   !currentUser ? 'No current user' : 'Unknown'
+                        });
+                        console.log('[CompanyOnboarding] Using localStorage only (database not available)');
                     }
 
-                    console.log('[CompanyOnboarding] Saved all companies to storage');
                 } catch (error) {
-                    console.error('[CompanyOnboarding] Error saving companies to database, falling back to localStorage:', error);
+                    console.error('[CompanyOnboarding] ❌ Error saving companies to database:', error);
+                    console.error('[CompanyOnboarding] Error details:', error.message, error.stack);
+
                     // Fallback to localStorage if database save fails
                     try {
                         localStorage.setItem(this.companiesStorageKey, JSON.stringify(this.companies));
-                        console.log('[CompanyOnboarding] Companies saved to localStorage as fallback');
+                        console.log('[CompanyOnboarding] Companies saved to localStorage as fallback after error');
                     } catch (localError) {
-                        console.error('[CompanyOnboarding] Failed to save companies to localStorage:', localError);
+                        console.error('[CompanyOnboarding] ❌ CRITICAL: Failed to save companies to localStorage:', localError);
                     }
                 }
             },
