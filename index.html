@@ -3242,7 +3242,7 @@ Phone: +91-XXXXXXXXXX`;
 
         function addToEmailHistory(toEmails, subject, status, timestamp, country = '') {
             // Get current company information
-            const companyData = CompanyOnboardingModule.getData();
+            const companyData = CompanyOnboardingModule.getDataSync();
             const currentCompanyId = CompanyOnboardingModule.currentCompanyId;
 
             const historyItem = {
@@ -4003,7 +4003,11 @@ Phone: +91-XXXXXXXXXX`;
             }
 
             console.log('Rendering individual contacts...');
-            // Update contactsToRender with filtered contacts if available
+            // Always update filteredContacts if contactsToRender is different
+            if (contactsToRender.length > 0 && filteredContacts.length !== contactsToRender.length) {
+                console.log('🔧 RENDER FIX - Syncing filteredContacts with contactsToRender');
+                filteredContacts = [...contactsToRender];
+            }
             const finalContactsToRender = filteredContacts.length > 0 ? filteredContacts : contactsToRender;
 
             finalContactsToRender.forEach((contact, index) => {
@@ -4011,8 +4015,9 @@ Phone: +91-XXXXXXXXXX`;
                 const div = document.createElement('div');
                 div.className = 'contact-item';
 
-                // Add click handler for contact selection
-                div.onclick = () => selectContact(index);
+                // Add click handler for contact selection - use actual contact array index
+                const actualIndex = contactsToRender.indexOf(contact);
+                div.onclick = () => selectContact(actualIndex >= 0 ? actualIndex : index);
                 div.setAttribute('role', 'option');
                 div.setAttribute('aria-selected', 'false');
                 div.setAttribute('tabindex', '-1');
@@ -4194,7 +4199,7 @@ Phone: +91-XXXXXXXXXX`;
             }
 
             // Get company onboarding data for personalization
-            const companyData = CompanyOnboardingModule.getData();
+            const companyData = CompanyOnboardingModule.getDataSync();
             console.log('[ContactSelection] Company data retrieved:', companyData);
 
             // Check if company data exists and use personalized template
@@ -4426,7 +4431,7 @@ Phone: +91-XXXXXXXXXX`;
         function switchToPersonalizedEmail() {
             try {
                 // Check if company data exists
-                const companyData = CompanyOnboardingModule.getData();
+                const companyData = CompanyOnboardingModule.getDataSync();
                 if (!companyData || !companyData.emailTemplate) {
                     showAlert('⚠️ Please configure your company data and email template first.\n\nClick "🏢 Company Onboarding Data" in the settings menu.', 'warning');
                     // Automatically open the company onboarding manager
@@ -11880,10 +11885,10 @@ Best regards,
         };
 
         // Module: Load Company Onboarding Data
-        CompanyOnboardingModule.loadData = function() {
+        CompanyOnboardingModule.loadData = async function() {
             try {
                 // Use the multi-company getData function instead of direct localStorage access
-                this.data = this.getData();
+                this.data = await this.getData();
 
                 // Populate form fields with safe element access
                 const fields = [
@@ -12712,6 +12717,30 @@ Best regards,
             }
 
             return this.data;
+        };
+
+        // Synchronous version for backwards compatibility
+        CompanyOnboardingModule.getDataSync = function() {
+            // If we have a current company, return its data
+            if (this.currentCompanyId && this.companies[this.currentCompanyId]) {
+                this.data = this.companies[this.currentCompanyId];
+                return this.data;
+            }
+
+            // Fallback to legacy single company data if no multi-company data exists
+            if (!this.data || Object.keys(this.data).length === 0) {
+                const savedData = localStorage.getItem(this.storageKey);
+                if (savedData) {
+                    try {
+                        this.data = JSON.parse(savedData);
+                    } catch (error) {
+                        console.error('[CompanyOnboarding] Error loading legacy data:', error);
+                        this.data = {};
+                    }
+                }
+            }
+
+            return this.data || {};
         };
 
         // Enhanced Personalization Engine with Smart Content Logic
