@@ -110,11 +110,32 @@ async function saveContacts(userId, contacts, headers) {
 
         // Insert new contacts
         if (contacts && contacts.length > 0) {
-            const contactsToInsert = contacts.map(contact => ({
-                ...contact,
-                user_id: userId,
-                created_at: contact.created_at || new Date().toISOString()
-            }));
+            const contactsToInsert = contacts.map(contact => {
+                // Map frontend fields to database schema
+                const mappedContact = {
+                    user_id: userId,
+                    contact_name: contact.contactName || contact.contact_name || '',
+                    firm: contact.firm || '',
+                    email: contact.email || '',
+                    country: contact.country || '',
+                    category: contact.category || '',
+                    status: contact.emailStatus || contact.status || 'pending',
+                    source_file: contact.source || contact.source_file || '',
+                    created_at: contact.created_at || new Date().toISOString()
+                };
+
+                // Store additional fields (phone, website, address) in additional_data JSONB
+                const additionalData = {};
+                if (contact.phone) additionalData.phone = contact.phone;
+                if (contact.website) additionalData.website = contact.website;
+                if (contact.address) additionalData.address = contact.address;
+
+                if (Object.keys(additionalData).length > 0) {
+                    mappedContact.additional_data = additionalData;
+                }
+
+                return mappedContact;
+            });
 
             const { error } = await supabase
                 .from('contacts')
@@ -231,11 +252,27 @@ async function saveEmailHistory(userId, emailHistory, headers) {
 
 async function getAllUserData(userId, headers) {
     try {
-        const { data: contacts } = await supabase
+        const { data: contactsRaw } = await supabase
             .from('contacts')
             .select('*')
             .eq('user_id', userId)
             .order('created_at', { ascending: false });
+
+        // Map database fields back to frontend format
+        const contacts = contactsRaw ? contactsRaw.map(contact => ({
+            contactName: contact.contact_name,
+            firm: contact.firm,
+            email: contact.email,
+            country: contact.country,
+            category: contact.category,
+            emailStatus: contact.status,
+            source: contact.source_file,
+            // Extract additional fields from JSONB
+            phone: contact.additional_data?.phone || '',
+            website: contact.additional_data?.website || '',
+            address: contact.additional_data?.address || '',
+            created_at: contact.created_at
+        })) : [];
 
         const { data: companies } = await supabase
             .from('companies')
