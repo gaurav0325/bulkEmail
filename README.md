@@ -52,6 +52,9 @@ A comprehensive, production-ready bulk email application with advanced features 
 - **Dynamic Variables**: {contactName}, {firm}, {country}, {email}
 - **Contact Search**: Real-time filtering and selection
 - **Visual Selection**: Highlighted contact with preview
+- **Default Company**: Mark one company as default for automatic personalization
+- **Auto-Save**: All company field changes auto-saved in real-time (800ms debounce)
+- **Smart Toggle**: Easy checkbox to set/change default company
 
 ### 📊 Analytics & Tracking
 - **Email Analytics Dashboard**: Success/failure rates by country and date
@@ -197,9 +200,9 @@ The application intelligently detects columns containing:
 - **[Deployment Guide](./DEPLOYMENT_GUIDE.md)**: Step-by-step deployment instructions
 
 ### Version Information
-- **Current Version**: 2.4 (Enhanced Multi-Table Processing with Data Validation)
-- **Release Date**: January 27, 2025
-- **Status**: Production Ready - Contact Counting Issues Resolved
+- **Current Version**: 2.4.1 (Default Company & Auto-Save Enhancement)
+- **Release Date**: October 5, 2025
+- **Status**: Production Ready - Default Company System Active
 - **Live URL**: https://bulkemailvishwas.netlify.app
 
 ## 🤝 Contributing & Support

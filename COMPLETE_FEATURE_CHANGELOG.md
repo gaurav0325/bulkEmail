@@ -3,9 +3,50 @@
 ## 📅 Development Timeline & Feature Implementation
 
 **Project Start**: January 2025
-**Total Development Sessions**: 15+ comprehensive sessions
+**Total Development Sessions**: 16+ comprehensive sessions
 **Current Status**: ✅ **PRODUCTION READY**
 **Live URL**: https://bulkemailvishwas.netlify.app
+**Latest Update**: October 5, 2025 - Default Company & Auto-Save Enhancement
+
+---
+
+## 🚀 Major Feature Releases
+
+### **Release 2.4.0** - Default Company & Auto-Save *(October 5, 2025)*
+
+#### **✅ Default Company System**
+- **Default Company Flag**: Added `isDefault` field to company data structure
+- **Automatic Default**: First company automatically set as default for personalization
+- **Visual Indicators**:
+  - Green border and "DEFAULT" badge for default company in list
+  - Green background highlight (#f0fff4) for default company cards
+  - Checkbox with "Default" label for easy selection
+- **Single Default Logic**: Only one company can be default at any time
+  - Unchecking default prompts user to select another default first
+  - Automatically unsets previous default when new one is selected
+- **Smart Toggle**: Click checkbox to toggle default status with real-time updates
+
+#### **✅ Auto-Save Enhancement**
+- **Real-time Auto-Save**: All company field changes automatically saved with 800ms debounce
+- **Comprehensive Field Coverage**: Auto-save on input, paste, keyup, change, and blur events
+- **Zero User Action Required**: No manual save button needed
+- **Data Persistence**: Changes immediately saved to both database and localStorage
+- **Visual Feedback**: Status indicator shows "Auto-saved successfully"
+- **Error Handling**: Fallback to localStorage if database save fails
+
+#### **✅ Real-Time Personalization**
+- **Default Company Integration**: Email personalization uses default company automatically
+- **Instant Updates**: Any field change immediately reflects in email templates
+- **Smart Refresh**: `refreshPersonalizedEmailContent()` uses default company data
+- **Fallback Logic**: Falls back to current company if no default set
+- **Console Logging**: Clear indication of which company is being used for personalization
+
+#### **✅ User Experience Improvements**
+- **Success Messages**: Clear feedback when default company is set
+- **Warning Messages**: Prevents unchecking when no alternative default exists
+- **Immediate Propagation**: Changes instantly visible in subject line and message body
+- **No Page Refresh**: All updates happen seamlessly without reload
+- **Visual Consistency**: Color-coded indicators (blue for active, green for default)
 
 ---
 
