@@ -7382,7 +7382,13 @@ Phone: +91-XXXXXXXXXX`;
         // Test connection functionality removed
 
         function extractTemplateHeaders() {
-            const companyData = CompanyOnboardingModule.getData();
+            // Get default company for email template (synchronous)
+            const defaultCompany = CompanyOnboardingModule.getDefaultCompany();
+            const companyData = defaultCompany || CompanyOnboardingModule.getDataSync() || {};
+
+            console.log('[ExtractTemplate] Using company:', companyData.companyName || 'No company');
+            console.log('[ExtractTemplate] Has template:', !!companyData.emailTemplate);
+
             const template = companyData.emailTemplate || '';
             const headerLines = template.split('\n');
 
@@ -10689,6 +10695,10 @@ Phone: +91-XXXXXXXXXX`;
                         await CompanyOnboardingModule.initializePersistence();
                         CompanyOnboardingModule.loadUserCompanies();
 
+                        // Extract template headers from default company after companies loaded
+                        console.log('[UserManager] Extracting email template from default company');
+                        extractTemplateHeaders();
+
                         // 2. Load contact data
                         console.log('[UserManager] Loading contact data');
                         let dataLoaded = false;
@@ -10703,22 +10713,47 @@ Phone: +91-XXXXXXXXXX`;
                                     console.log('[UserManager] 🔍 BEFORE ASSIGNMENT - window.contacts:', window.contacts ? window.contacts.length : 'undefined');
                                     console.log('[UserManager] 🔍 BEFORE ASSIGNMENT - local contacts:', contacts.length);
 
+                                    // CRITICAL: Assign to window first to prevent race conditions
                                     window.contacts = userData.contacts;
-                                    // Update local contacts array and filtered contacts for compatibility
                                     contacts = userData.contacts;
                                     filteredContacts = [...userData.contacts];
 
-                                    console.log('[UserManager] 🔍 AFTER ASSIGNMENT - window.contacts:', window.contacts ? window.contacts.length : 'undefined');
-                                    console.log('[UserManager] 🔍 AFTER ASSIGNMENT - local contacts:', contacts.length);
-                                    console.log('[UserManager] 🔍 AFTER ASSIGNMENT - filteredContacts:', filteredContacts.length);
+                                    console.log('[UserManager] ✅ CONTACTS LOADED FROM DATABASE:', {
+                                        totalContacts: userData.contacts.length,
+                                        windowContacts: window.contacts.length,
+                                        localContacts: contacts.length,
+                                        filteredContacts: filteredContacts.length
+                                    });
 
                                     if (userData.emailHistory) {
                                         window.emailHistory = userData.emailHistory;
+                                        console.log('[UserManager] ✅ EMAIL HISTORY LOADED:', userData.emailHistory.length, 'entries');
                                     }
-                                    window.dataLoadedFromCentralizedDB = true; // Mark as loaded from DB
+
+                                    window.dataLoadedFromCentralizedDB = true;
                                     dataLoaded = true;
-                                    console.log('[UserManager] 🎯 About to call renderContacts...');
+
+                                    console.log('[UserManager] 🎯 Rendering contacts UI...');
                                     renderContacts();
+                                    console.log('[UserManager] ✅ Contacts rendered. Current count:', contacts.length);
+
+                                    // Verify contacts didn't get cleared after render
+                                    setTimeout(() => {
+                                        if (contacts.length !== userData.contacts.length) {
+                                            console.error('[UserManager] ⚠️ CONTACTS COUNT MISMATCH!', {
+                                                loaded: userData.contacts.length,
+                                                current: contacts.length
+                                            });
+                                            // Restore if they got cleared
+                                            window.contacts = userData.contacts;
+                                            contacts = userData.contacts;
+                                            filteredContacts = [...userData.contacts];
+                                            renderContacts();
+                                            console.log('[UserManager] 🔧 Contacts restored to original count');
+                                        } else {
+                                            console.log('[UserManager] ✅ Contacts count verified:', contacts.length);
+                                        }
+                                    }, 1000);
                                 }
                             } catch (dbError) {
                                 console.log('[UserManager] Database load failed, falling back to localStorage:', dbError.message);
