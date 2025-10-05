@@ -72,6 +72,12 @@ exports.handler = async (event, context) => {
             case 'save_all_data':
                 return await saveAllUserData(user.id, data, headers);
 
+            case 'save_user_state':
+                return await saveUserState(user.id, data, headers);
+
+            case 'get_user_state':
+                return await getUserState(user.id, headers);
+
             default:
                 return {
                     statusCode: 400,
@@ -335,6 +341,101 @@ async function saveAllUserData(userId, data, headers) {
         };
     } catch (error) {
         console.error('Save all data error:', error);
+        throw error;
+    }
+}
+
+async function saveUserState(userId, state, headers) {
+    try {
+        console.log('[UserState] Saving comprehensive user state for user:', userId);
+
+        // Check if user_state table entry exists
+        const { data: existingState } = await supabase
+            .from('user_state')
+            .select('id')
+            .eq('user_id', userId)
+            .single();
+
+        const stateData = {
+            user_id: userId,
+            state_data: state,
+            updated_at: new Date().toISOString()
+        };
+
+        let result;
+        if (existingState) {
+            // Update existing state
+            result = await supabase
+                .from('user_state')
+                .update(stateData)
+                .eq('user_id', userId);
+        } else {
+            // Insert new state
+            stateData.created_at = new Date().toISOString();
+            result = await supabase
+                .from('user_state')
+                .insert([stateData]);
+        }
+
+        if (result.error) {
+            console.error('[UserState] Database error:', result.error);
+            throw result.error;
+        }
+
+        console.log('[UserState] User state saved successfully');
+
+        return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify({
+                success: true,
+                message: 'User state saved successfully'
+            })
+        };
+    } catch (error) {
+        console.error('Save user state error:', error);
+        throw error;
+    }
+}
+
+async function getUserState(userId, headers) {
+    try {
+        console.log('[UserState] Getting user state for user:', userId);
+
+        const { data: userState, error } = await supabase
+            .from('user_state')
+            .select('state_data, updated_at')
+            .eq('user_id', userId)
+            .single();
+
+        if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+            console.error('[UserState] Database error:', error);
+            throw error;
+        }
+
+        if (!userState) {
+            return {
+                statusCode: 200,
+                headers,
+                body: JSON.stringify({
+                    success: true,
+                    state: null,
+                    message: 'No user state found'
+                })
+            };
+        }
+
+        return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify({
+                success: true,
+                state: userState.state_data,
+                lastUpdated: userState.updated_at
+            })
+        };
+    } catch (error) {
+        console.error('Get user state error:', error);
         throw error;
     }
 }

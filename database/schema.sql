@@ -79,11 +79,25 @@ CREATE INDEX idx_email_history_company_id ON public.email_history(company_id);
 CREATE INDEX idx_email_history_timestamp ON public.email_history(user_id, timestamp DESC);
 CREATE INDEX idx_email_history_status ON public.email_history(user_id, status);
 
+-- User state table for comprehensive application state persistence
+CREATE TABLE public.user_state (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    state_data JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Add user_state indexes
+CREATE INDEX idx_user_state_user_id ON public.user_state(user_id);
+CREATE INDEX idx_user_state_updated_at ON public.user_state(updated_at);
+
 -- Enable Row Level Security (RLS)
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.companies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.contacts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.email_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_state ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for users table
 CREATE POLICY "Users can view own profile" ON public.users
@@ -131,6 +145,19 @@ CREATE POLICY "Users can update own email history" ON public.email_history
 CREATE POLICY "Users can delete own email history" ON public.email_history
     FOR DELETE USING (auth.uid() = user_id);
 
+-- RLS Policies for user_state table
+CREATE POLICY "Users can view own state" ON public.user_state
+    FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own state" ON public.user_state
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own state" ON public.user_state
+    FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own state" ON public.user_state
+    FOR DELETE USING (auth.uid() = user_id);
+
 -- Functions for automatic timestamp updates
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -148,6 +175,9 @@ CREATE TRIGGER update_companies_updated_at BEFORE UPDATE ON public.companies
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_contacts_updated_at BEFORE UPDATE ON public.contacts
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_user_state_updated_at BEFORE UPDATE ON public.user_state
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Insert trigger to automatically create user profile when auth user is created

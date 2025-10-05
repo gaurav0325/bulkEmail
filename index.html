@@ -1082,7 +1082,419 @@
         let autoSaveEnabled = true;
         let lastAutoSave = Date.now();
 
-        // Email Form Data Persistence Functions
+        // Comprehensive User State Management System
+        class UserStateManager {
+            constructor() {
+                this.stateKey = 'bulkEmail_comprehensiveUserState';
+                this.debounceTimeout = null;
+                this.debounceDelay = 1000; // Save state 1 second after last change
+
+                // Initialize comprehensive state structure
+                this.defaultState = {
+                    // Email composition state
+                    emailForm: {
+                        selectedContactIndex: -1,
+                        selectedContact: null,
+                        fromAddress: '',
+                        subject: '',
+                        messageBody: '',
+                        attachments: [],
+                        lastUsedTemplate: '',
+                        isDraft: false,
+                        draftSavedAt: null,
+                        personalizedEmail: ''
+                    },
+
+                    // Company data and onboarding
+                    companies: {},
+                    activeCompanies: [],
+                    onboardingProgress: {},
+                    companySelections: {},
+
+                    // User preferences and settings
+                    preferences: {
+                        defaultFromAddress: '',
+                        emailSignature: '',
+                        autoSaveInterval: 30000,
+                        showPreview: true,
+                        compactView: false,
+                        notifications: true,
+                        lastUsedFromAddresses: []
+                    },
+
+                    // Email analytics and statistics
+                    analytics: {
+                        totalEmailsSent: 0,
+                        successRate: 0,
+                        lastSendDate: null,
+                        monthlyStats: {},
+                        frequentContacts: [],
+                        emailStatusCounts: {
+                            total: 0,
+                            sent: 0,
+                            failed: 0,
+                            pending: 0
+                        }
+                    },
+
+                    // UI state and user interactions
+                    ui: {
+                        selectedTab: 'compose',
+                        sidebarExpanded: true,
+                        lastViewedContact: null,
+                        searchQuery: '',
+                        filterSettings: {},
+                        sortPreferences: {},
+                        messageExpanded: false,
+                        currentUploadedFileName: ''
+                    },
+
+                    // Upload and processing state
+                    uploads: {
+                        lastUploadStats: { total: 0, read: 0, unread: 0 },
+                        failedUploads: [],
+                        uploadedSpreadsheetData: [],
+                        currentUploadProgress: null
+                    },
+
+                    // Session information
+                    session: {
+                        lastUpdated: Date.now(),
+                        version: '2.2'
+                    }
+                };
+
+                // Bind methods to preserve context
+                this.saveEmailForm = this.saveEmailForm.bind(this);
+                this.restoreEmailForm = this.restoreEmailForm.bind(this);
+            }
+
+            // Get current state or return default
+            getState() {
+                try {
+                    const stored = localStorage.getItem(this.stateKey);
+                    if (stored) {
+                        const state = JSON.parse(stored);
+                        return this.mergeWithDefault(state);
+                    }
+                } catch (error) {
+                    console.error('[UserStateManager] Error loading state:', error);
+                }
+                return { ...this.defaultState };
+            }
+
+            // Merge stored state with default state
+            mergeWithDefault(stored) {
+                const merged = { ...this.defaultState };
+
+                Object.keys(this.defaultState).forEach(key => {
+                    if (stored[key] && typeof stored[key] === 'object' && !Array.isArray(stored[key])) {
+                        merged[key] = { ...this.defaultState[key], ...stored[key] };
+                    } else if (stored[key] !== undefined) {
+                        merged[key] = stored[key];
+                    }
+                });
+
+                return merged;
+            }
+
+            // Save state with debouncing
+            saveState(newState, immediate = false) {
+                const state = { ...this.getState(), ...newState };
+                state.session.lastUpdated = Date.now();
+
+                if (immediate) {
+                    this.performSave(state);
+                } else {
+                    clearTimeout(this.debounceTimeout);
+                    this.debounceTimeout = setTimeout(() => {
+                        this.performSave(state);
+                    }, this.debounceDelay);
+                }
+            }
+
+            // Perform the actual save
+            performSave(state) {
+                try {
+                    localStorage.setItem(this.stateKey, JSON.stringify(state));
+                    console.log('[UserStateManager] Comprehensive state saved successfully');
+
+                    // Also save to centralized database if authenticated
+                    this.saveToCentralizedDatabase(state);
+                } catch (error) {
+                    console.error('[UserStateManager] Error saving state:', error);
+                }
+            }
+
+            // Save to centralized database
+            async saveToCentralizedDatabase(state) {
+                if (typeof dbManager !== 'undefined' && dbManager.isAuthenticated()) {
+                    try {
+                        await dbManager.apiCall('data-sync', {
+                            action: 'save_user_state',
+                            data: state
+                        });
+                        console.log('[UserStateManager] State synced to centralized database');
+                    } catch (error) {
+                        console.log('[UserStateManager] Failed to sync state to database:', error.message);
+                    }
+                }
+            }
+
+            // Load from centralized database
+            async loadFromCentralizedDatabase() {
+                if (typeof dbManager !== 'undefined' && dbManager.isAuthenticated()) {
+                    try {
+                        const result = await dbManager.apiCall('data-sync', {
+                            action: 'get_user_state'
+                        });
+
+                        if (result.success && result.data) {
+                            console.log('[UserStateManager] State loaded from centralized database');
+                            const merged = this.mergeWithDefault(result.data);
+                            localStorage.setItem(this.stateKey, JSON.stringify(merged));
+                            return merged;
+                        }
+                    } catch (error) {
+                        console.log('[UserStateManager] Failed to load state from database:', error.message);
+                    }
+                }
+                return null;
+            }
+
+            // Save current email form state
+            saveEmailForm() {
+                try {
+                    const fromEmail = document.getElementById('fromEmail');
+                    const toEmail = document.getElementById('toEmail');
+                    const subject = document.getElementById('subject');
+                    const messageBody = document.getElementById('messageBody');
+
+                    const emailFormState = {
+                        selectedContactIndex: selectedContactIndex,
+                        selectedContact: selectedContactIndex >= 0 ? filteredContacts[selectedContactIndex] : null,
+                        fromAddress: fromEmail ? fromEmail.value : '',
+                        subject: subject ? subject.value : '',
+                        messageBody: messageBody ? messageBody.innerHTML : '',
+                        attachments: [...attachments],
+                        isDraft: true,
+                        draftSavedAt: Date.now()
+                    };
+
+                    this.updateEmailForm(emailFormState);
+                    console.log('[UserStateManager] Email form state saved');
+                } catch (error) {
+                    console.error('[UserStateManager] Error saving email form:', error);
+                }
+            }
+
+            // Restore email form state
+            restoreEmailForm() {
+                try {
+                    const state = this.getState();
+                    const emailForm = state.emailForm;
+
+                    if (emailForm && emailForm.isDraft) {
+                        console.log('[UserStateManager] Restoring email form state...');
+
+                        // Restore form fields
+                        const fromEmail = document.getElementById('fromEmail');
+                        const toEmail = document.getElementById('toEmail');
+                        const subject = document.getElementById('subject');
+                        const messageBody = document.getElementById('messageBody');
+
+                        if (fromEmail && emailForm.fromAddress) {
+                            fromEmail.value = emailForm.fromAddress;
+                        }
+
+                        if (subject && emailForm.subject) {
+                            subject.value = emailForm.subject;
+                        }
+
+                        if (messageBody && emailForm.messageBody) {
+                            messageBody.innerHTML = emailForm.messageBody;
+                        }
+
+                        // Restore selected contact
+                        if (emailForm.selectedContactIndex >= 0 && filteredContacts.length > emailForm.selectedContactIndex) {
+                            selectedContactIndex = emailForm.selectedContactIndex;
+                            selectContact(selectedContactIndex);
+                        }
+
+                        // Restore attachments
+                        if (emailForm.attachments && emailForm.attachments.length > 0) {
+                            attachments = [...emailForm.attachments];
+                            updateAttachmentDisplay();
+                        }
+
+                        console.log('[UserStateManager] Email form state restored');
+
+                        // Show draft indicator
+                        if (emailForm.draftSavedAt) {
+                            showAlert(`📝 Draft restored from ${new Date(emailForm.draftSavedAt).toLocaleString()}`, 'info');
+                        }
+                    }
+                } catch (error) {
+                    console.error('[UserStateManager] Error restoring email form:', error);
+                }
+            }
+
+            // Update specific sections
+            updateEmailForm(updates) {
+                const state = this.getState();
+                state.emailForm = { ...state.emailForm, ...updates };
+                this.saveState(state);
+            }
+
+            updateCompanies(companies, activeCompanies = []) {
+                const state = this.getState();
+                state.companies = companies;
+                state.activeCompanies = activeCompanies;
+                this.saveState(state);
+            }
+
+            updatePreferences(preferences) {
+                const state = this.getState();
+                state.preferences = { ...state.preferences, ...preferences };
+                this.saveState(state, true);
+            }
+
+            updateAnalytics(analytics) {
+                const state = this.getState();
+                state.analytics = { ...state.analytics, ...analytics };
+                this.saveState(state);
+            }
+
+            updateUI(uiUpdates) {
+                const state = this.getState();
+                state.ui = { ...state.ui, ...uiUpdates };
+                this.saveState(state);
+            }
+
+            updateUploads(uploadData) {
+                const state = this.getState();
+                state.uploads = { ...state.uploads, ...uploadData };
+                this.saveState(state);
+            }
+
+            // Get specific state sections
+            getEmailForm() {
+                return this.getState().emailForm;
+            }
+
+            getCompanies() {
+                return this.getState().companies;
+            }
+
+            getPreferences() {
+                return this.getState().preferences;
+            }
+
+            getAnalytics() {
+                return this.getState().analytics;
+            }
+
+            getUI() {
+                return this.getState().ui;
+            }
+
+            // Clear all state (for logout)
+            clearState() {
+                localStorage.removeItem(this.stateKey);
+                console.log('[UserStateManager] Comprehensive state cleared');
+            }
+
+            // Initialize and restore complete user state
+            async initializeUserState() {
+                console.log('[UserStateManager] Initializing comprehensive user state...');
+
+                // Try to load from centralized database first
+                const dbState = await this.loadFromCentralizedDatabase();
+
+                if (dbState) {
+                    console.log('[UserStateManager] State loaded from centralized database');
+                    this.restoreCompleteState(dbState);
+                } else {
+                    // Load from localStorage
+                    const localState = this.getState();
+                    console.log('[UserStateManager] State loaded from localStorage');
+                    this.restoreCompleteState(localState);
+                }
+            }
+
+            // Restore complete application state
+            restoreCompleteState(state) {
+                try {
+                    console.log('[UserStateManager] Restoring complete application state...');
+
+                    // Restore companies
+                    if (state.companies && Object.keys(state.companies).length > 0) {
+                        if (typeof CompanyOnboardingModule !== 'undefined') {
+                            CompanyOnboardingModule.companies = state.companies;
+                            CompanyOnboardingModule.companiesLoadedFromDB = true;
+                            console.log('[UserStateManager] Companies restored');
+                        }
+                    }
+
+                    // Restore active companies
+                    if (state.activeCompanies && state.activeCompanies.length > 0 && typeof UserManager !== 'undefined') {
+                        UserManager.currentUser.activeCompanies = state.activeCompanies;
+                        console.log('[UserStateManager] Active companies restored');
+                    }
+
+                    // Restore UI state
+                    if (state.ui) {
+                        // Restore message expansion
+                        if (state.ui.messageExpanded) {
+                            messageExpanded = state.ui.messageExpanded;
+                        }
+
+                        // Restore uploaded file name
+                        if (state.ui.currentUploadedFileName) {
+                            currentUploadedFileName = state.ui.currentUploadedFileName;
+                        }
+
+                        console.log('[UserStateManager] UI state restored');
+                    }
+
+                    // Restore upload statistics
+                    if (state.uploads) {
+                        if (state.uploads.lastUploadStats) {
+                            uploadStats = state.uploads.lastUploadStats;
+                        }
+                        if (state.uploads.failedUploads) {
+                            failedUploads = state.uploads.failedUploads;
+                        }
+                        if (state.uploads.uploadedSpreadsheetData) {
+                            uploadedSpreadsheetData = state.uploads.uploadedSpreadsheetData;
+                        }
+                        console.log('[UserStateManager] Upload state restored');
+                    }
+
+                    // Restore analytics
+                    if (state.analytics && state.analytics.emailStatusCounts) {
+                        emailStatusCounts = state.analytics.emailStatusCounts;
+                        console.log('[UserStateManager] Analytics restored');
+                    }
+
+                    // Restore email form will be called after DOM is ready
+                    setTimeout(() => {
+                        this.restoreEmailForm();
+                    }, 1000);
+
+                    console.log('[UserStateManager] ✅ Complete application state restored');
+
+                } catch (error) {
+                    console.error('[UserStateManager] Error restoring complete state:', error);
+                }
+            }
+        }
+
+        // Create global comprehensive state manager
+        const userStateManager = new UserStateManager();
+        window.userStateManager = userStateManager;
+
+        // Email Form Data Persistence Functions (Legacy - replaced by UserStateManager)
         function saveEmailFormData() {
             try {
                 const formData = {
@@ -1095,9 +1507,88 @@
 
                 localStorage.setItem(STORAGE_KEYS.EMAIL_FORM_DATA, JSON.stringify(formData));
                 console.log('[EmailForm] Form data saved');
+
+                // Also save to comprehensive state manager
+                if (typeof userStateManager !== 'undefined') {
+                    userStateManager.saveEmailForm();
+                }
             } catch (error) {
                 console.error('[EmailForm] Error saving form data:', error);
             }
+        }
+
+        // Enhanced Auto-Save with State Manager Integration
+        function setupAutoSaveListeners() {
+            console.log('[UserStateManager] Setting up auto-save listeners...');
+
+            // Auto-save on form field changes
+            const fromEmail = document.getElementById('fromEmail');
+            const subject = document.getElementById('subject');
+            const messageBody = document.getElementById('messageBody');
+
+            if (fromEmail) {
+                fromEmail.addEventListener('input', () => {
+                    if (typeof userStateManager !== 'undefined') {
+                        userStateManager.saveEmailForm();
+                    }
+                });
+                console.log('[UserStateManager] FromEmail auto-save enabled');
+            }
+
+            if (subject) {
+                subject.addEventListener('input', () => {
+                    if (typeof userStateManager !== 'undefined') {
+                        userStateManager.saveEmailForm();
+                    }
+                });
+                console.log('[UserStateManager] Subject auto-save enabled');
+            }
+
+            if (messageBody) {
+                messageBody.addEventListener('input', () => {
+                    if (typeof userStateManager !== 'undefined') {
+                        userStateManager.saveEmailForm();
+                    }
+                });
+                messageBody.addEventListener('paste', () => {
+                    setTimeout(() => {
+                        if (typeof userStateManager !== 'undefined') {
+                            userStateManager.saveEmailForm();
+                        }
+                    }, 100);
+                });
+                console.log('[UserStateManager] MessageBody auto-save enabled');
+            }
+
+            // Save state when contact is selected
+            window.originalSelectContact = window.selectContact;
+            window.selectContact = function(index) {
+                if (typeof window.originalSelectContact === 'function') {
+                    window.originalSelectContact(index);
+                }
+                setTimeout(() => {
+                    if (typeof userStateManager !== 'undefined') {
+                        userStateManager.saveEmailForm();
+                    }
+                }, 100);
+            };
+
+            // Save analytics when email status changes
+            const originalUpdateEmailStatus = window.updateEmailStatus;
+            if (originalUpdateEmailStatus) {
+                window.updateEmailStatus = function(...args) {
+                    const result = originalUpdateEmailStatus.apply(this, args);
+                    if (typeof userStateManager !== 'undefined') {
+                        userStateManager.updateAnalytics({
+                            emailStatusCounts: emailStatusCounts,
+                            lastSendDate: Date.now()
+                        });
+                    }
+                    return result;
+                };
+            }
+
+            console.log('[UserStateManager] ✅ Auto-save listeners configured');
         }
 
         function loadEmailFormData() {
@@ -7089,6 +7580,12 @@ Phone: +91-XXXXXXXXXX`;
             setTimeout(() => {
                 loadEmailFormData();
                 setupEmailFormAutoSave();
+
+                // Setup comprehensive state manager auto-save
+                if (typeof setupAutoSaveListeners === 'function') {
+                    setupAutoSaveListeners();
+                }
+
                 console.log('[EmailForm] Form persistence initialized');
             }, 500);
 
@@ -10169,6 +10666,12 @@ Phone: +91-XXXXXXXXXX`;
                         }
 
                         console.log('[UserManager] ✅ Application state loaded successfully');
+
+                        // Initialize comprehensive user state management
+                        console.log('[UserManager] 🔄 Initializing comprehensive user state...');
+                        if (typeof userStateManager !== 'undefined') {
+                            await userStateManager.initializeUserState();
+                        }
 
                     } catch (error) {
                         console.error('[UserManager] Error loading application state:', error);
