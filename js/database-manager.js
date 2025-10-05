@@ -138,6 +138,13 @@ class DatabaseManager {
         const storedExpiry = localStorage.getItem('db_session_expires');
         const storedUser = localStorage.getItem('db_current_user');
 
+        console.log('[DatabaseManager] Session verification debug:', {
+            hasToken: !!storedToken,
+            hasExpiry: !!storedExpiry,
+            hasUser: !!storedUser,
+            tokenLength: storedToken ? storedToken.length : 0
+        });
+
         if (!storedToken || !storedExpiry || !storedUser) {
             console.log('[DatabaseManager] No stored session found');
             return false;
@@ -314,9 +321,21 @@ class DatabaseManager {
         }
     }
 
+
     // Utility methods
     isAuthenticated() {
-        return this.sessionToken && this.currentUser;
+        const hasDbAuth = this.sessionToken && this.currentUser;
+
+        if (!hasDbAuth) {
+            // Check if user is logged in via UserManager but not DatabaseManager
+            if (typeof window !== 'undefined' && window.UserManager &&
+                window.UserManager.isLoggedIn && window.UserManager.currentUser) {
+                console.log('[DatabaseManager] ⚠️ User logged in via UserManager but not authenticated with centralized database');
+                console.log('[DatabaseManager] 💡 Please log out and log back in to sync with centralized database');
+            }
+        }
+
+        return hasDbAuth;
     }
 
     getCurrentUser() {
