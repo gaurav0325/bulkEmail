@@ -3183,41 +3183,87 @@ Phone: +91-XXXXXXXXXX`;
             const container = document.getElementById('attachmentList');
             const emptyState = document.getElementById('attachmentEmpty');
 
-            if (attachments.length === 0) {
+            // Get template attachments from company onboarding
+            const templateAttachmentsForEmail = getTemplateAttachmentsForEmail();
+            const hasTemplateAttachments = templateAttachmentsForEmail && templateAttachmentsForEmail.length > 0;
+
+            if (attachments.length === 0 && !hasTemplateAttachments) {
                 container.innerHTML = '<div id="attachmentEmpty" style="text-align: center; color: #999; font-style: italic; padding: 20px;">No attachments selected</div>';
                 return;
             }
 
-            const attachmentHTML = attachments.map(attachment => {
-                const sizeKB = Math.round(attachment.size / 1024);
-                const sizeText = sizeKB < 1024 ? `${sizeKB} KB` : `${Math.round(sizeKB / 1024)} MB`;
+            let allHTML = '';
 
-                return `
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: white; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 5px;">
-                        <div style="display: flex; align-items: center; flex: 1;">
-                            <span style="margin-right: 8px;">${getFileIcon(attachment.name)}</span>
-                            <div>
-                                <div style="font-size: 12px; font-weight: bold; color: #333;">${sanitizeInput(attachment.name)}</div>
-                                <div style="font-size: 10px; color: #666;">${sizeText}</div>
+            // Show template attachments first (from company onboarding)
+            if (hasTemplateAttachments) {
+                const templateHTML = templateAttachmentsForEmail.map(attachment => {
+                    const sizeKB = Math.round(attachment.size / 1024) || 0;
+                    const sizeText = sizeKB < 1024 ? `${sizeKB} KB` : `${Math.round(sizeKB / 1024)} MB`;
+
+                    return `
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: #f0fff4; border: 1px solid #86efac; border-radius: 4px; margin-bottom: 5px;">
+                            <div style="display: flex; align-items: center; flex: 1;">
+                                <span style="margin-right: 8px;">${getFileIcon(attachment.filename)}</span>
+                                <div>
+                                    <div style="font-size: 12px; font-weight: bold; color: #333;">${sanitizeInput(attachment.filename)}</div>
+                                    <div style="font-size: 10px; color: #16a34a;">📋 Template Attachment (Auto-included)</div>
+                                </div>
                             </div>
+                            <span style="padding: 2px 8px; font-size: 10px; background: #22c55e; color: white; border-radius: 3px;">Auto</span>
                         </div>
-                        <button onclick="removeAttachment('${attachment.id}')" style="padding: 2px 6px; font-size: 10px; background: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer;" title="Remove attachment">
-                            X
-                        </button>
+                    `;
+                }).join('');
+
+                allHTML += `
+                    <div style="margin-bottom: 10px;">
+                        <div style="font-size: 11px; font-weight: bold; color: #16a34a; margin-bottom: 5px;">📎 Default Template Attachments (${templateAttachmentsForEmail.length})</div>
+                        ${templateHTML}
                     </div>
                 `;
-            }).join('');
+            }
 
-            container.innerHTML = attachmentHTML;
+            // Show one-time attachments
+            if (attachments.length > 0) {
+                const attachmentHTML = attachments.map(attachment => {
+                    const sizeKB = Math.round(attachment.size / 1024);
+                    const sizeText = sizeKB < 1024 ? `${sizeKB} KB` : `${Math.round(sizeKB / 1024)} MB`;
 
-            // Show total size
+                    return `
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: white; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 5px;">
+                            <div style="display: flex; align-items: center; flex: 1;">
+                                <span style="margin-right: 8px;">${getFileIcon(attachment.name)}</span>
+                                <div>
+                                    <div style="font-size: 12px; font-weight: bold; color: #333;">${sanitizeInput(attachment.name)}</div>
+                                    <div style="font-size: 10px; color: #666;">${sizeText}</div>
+                                </div>
+                            </div>
+                            <button onclick="removeAttachment('${attachment.id}')" style="padding: 2px 6px; font-size: 10px; background: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer;" title="Remove attachment">
+                                X
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+
+                allHTML += `
+                    <div>
+                        <div style="font-size: 11px; font-weight: bold; color: #6b7280; margin-bottom: 5px;">📎 One-Time Attachments (${attachments.length})</div>
+                        ${attachmentHTML}
+                    </div>
+                `;
+            }
+
+            container.innerHTML = allHTML;
+
+            // Show total count
+            const totalAttachments = attachments.length + (templateAttachmentsForEmail ? templateAttachmentsForEmail.length : 0);
             const totalSize = attachments.reduce((sum, att) => sum + att.size, 0);
             const totalMB = Math.round(totalSize / 1024 / 1024 * 100) / 100;
             const maxMB = Math.round(MAX_TOTAL_SIZE / 1024 / 1024);
 
             container.innerHTML += `
                 <div style="padding: 8px; background: #f8f9fa; border-radius: 4px; margin-top: 10px; font-size: 11px; color: #666; text-align: center;">
-                    Total: ${totalMB} MB of ${maxMB} MB used (${attachments.length}/${MAX_ATTACHMENTS} files)
+                    📧 Total: ${totalAttachments} attachment(s) will be sent with your emails
+                    ${attachments.length > 0 ? `<br><span style="font-size: 10px;">One-time attachments: ${totalMB} MB of ${maxMB} MB (${attachments.length}/${MAX_ATTACHMENTS} files)</span>` : ''}
                 </div>
             `;
         }
@@ -5495,14 +5541,34 @@ Phone: +91-XXXXXXXXXX`;
                     reply_to: 'Intex Technologies <info@datanalysisninsights.co.uk>' // Use company name with email for replies
                 };
 
-                // Include attachments if any exist
+                // Combine template attachments (from company onboarding) with one-time attachments
+                const allAttachments = [];
+
+                // Add template attachments from company onboarding
+                const templateAttachmentsForEmail = getTemplateAttachmentsForEmail();
+                if (templateAttachmentsForEmail && templateAttachmentsForEmail.length > 0) {
+                    allAttachments.push(...templateAttachmentsForEmail.map(att => ({
+                        filename: att.filename,
+                        content: att.content, // Already base64 without prefix
+                        type: att.contentType
+                    })));
+                    console.log(`📎 Including ${templateAttachmentsForEmail.length} template attachment(s) from company onboarding`);
+                }
+
+                // Add one-time attachments (from 📎 button)
                 if (attachments && attachments.length > 0) {
-                    emailData.attachments = attachments.map(att => ({
+                    allAttachments.push(...attachments.map(att => ({
                         filename: att.name,
                         content: att.data, // Base64 encoded content
                         type: att.type
-                    }));
-                    console.log(`Sending ${attachments.length} attachment(s) with email`);
+                    })));
+                    console.log(`📎 Including ${attachments.length} one-time attachment(s)`);
+                }
+
+                // Set attachments if we have any
+                if (allAttachments.length > 0) {
+                    emailData.attachments = allAttachments;
+                    console.log(`📧 Total attachments to send: ${allAttachments.length}`);
                 }
 
                 console.log('Sending email to:', contact.email);
