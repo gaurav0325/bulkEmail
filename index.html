@@ -3282,8 +3282,17 @@ Phone: +91-XXXXXXXXXX`;
             const companyData = CompanyOnboardingModule.getDataSync();
             const currentCompanyId = CompanyOnboardingModule.currentCompanyId;
 
+            // Generate UUID v4 for email history ID (compatible with database)
+            const generateUUID = () => {
+                return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                    const r = Math.random() * 16 | 0;
+                    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                    return v.toString(16);
+                });
+            };
+
             const historyItem = {
-                id: Date.now(),
+                id: generateUUID(),
                 toEmails: Array.isArray(toEmails) ? toEmails : [toEmails],
                 subject: subject,
                 status: status, // 'sent', 'failed'
@@ -5664,10 +5673,18 @@ Phone: +91-XXXXXXXXXX`;
                 content: emailData.html_content || emailData.text_content
             };
 
+            // Include attachments if present
+            if (emailData.attachments && emailData.attachments.length > 0) {
+                transformedData.attachments = emailData.attachments;
+                console.log(`📎 Including ${emailData.attachments.length} attachment(s)`);
+            }
+
             console.log('📧 Email data being sent:', {
                 to_email: transformedData.to_email,
                 from_email: transformedData.from_email,
-                subject: transformedData.subject
+                subject: transformedData.subject,
+                hasAttachments: !!transformedData.attachments,
+                attachmentCount: transformedData.attachments?.length || 0
             });
 
             try {

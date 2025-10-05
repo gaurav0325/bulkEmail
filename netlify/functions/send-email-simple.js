@@ -64,8 +64,14 @@ exports.handler = async (event, context) => {
     }
 
     // Parse request body
-    const { from_email, from_name, to_email, subject, content, reply_to } = JSON.parse(event.body);
-    console.log('📧 Email request:', { from_email, to_email, subject: subject?.substring(0, 50) });
+    const { from_email, from_name, to_email, subject, content, reply_to, attachments } = JSON.parse(event.body);
+    console.log('📧 Email request:', {
+      from_email,
+      to_email,
+      subject: subject?.substring(0, 50),
+      hasAttachments: !!attachments,
+      attachmentCount: attachments?.length || 0
+    });
 
     // Check environment variables
     const requiredEnvVars = ['SMTP_USERNAME', 'SMTP_PASSWORD', 'SMTP_SERVER', 'SMTP_PORT'];
@@ -154,11 +160,23 @@ exports.handler = async (event, context) => {
       replyTo: replyToEmail // Replies go to user's actual email
     };
 
+    // Add attachments if present
+    if (attachments && attachments.length > 0) {
+      mailOptions.attachments = attachments.map(att => ({
+        filename: att.filename,
+        content: att.content, // Base64 encoded content
+        encoding: 'base64',
+        contentType: att.type
+      }));
+      console.log(`📎 Added ${attachments.length} attachment(s) to email`);
+    }
+
     console.log('📤 Mail options:', {
       from: mailOptions.from,
       to: mailOptions.to,
       subject: mailOptions.subject,
-      replyTo: mailOptions.replyTo
+      replyTo: mailOptions.replyTo,
+      attachmentCount: mailOptions.attachments?.length || 0
     });
 
     console.log('📤 Sending email...');
