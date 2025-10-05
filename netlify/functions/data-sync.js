@@ -282,8 +282,19 @@ async function saveEmailHistory(userId, emailHistory, headers) {
         // Insert new email history
         if (emailHistory && emailHistory.length > 0) {
             const historyToInsert = emailHistory.map(item => ({
-                ...item,
+                id: item.id,
                 user_id: userId,
+                company_id: item.companyId || item.company_id || null,
+                to_emails: item.toEmails || item.to_emails || [],
+                subject: item.subject || '',
+                content: item.content || '',
+                status: item.status || 'pending',
+                timestamp: item.timestamp || new Date().toISOString(),
+                country: item.country || null,
+                company_name: item.companyName || item.company_name || null,
+                company_email: item.companyEmail || item.company_email || null,
+                error_message: item.errorMessage || item.error_message || null,
+                metadata: item.metadata || {},
                 created_at: item.created_at || new Date().toISOString()
             }));
 
