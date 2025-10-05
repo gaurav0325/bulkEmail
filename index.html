@@ -11333,6 +11333,30 @@ Phone: +91-XXXXXXXXXX`;
                     // Always check for legacy data migration first
                     this.migrateLegacyData();
 
+                    // Auto-set default company if there's only one company and no default is set
+                    const companyIds = Object.keys(this.companies);
+                    if (companyIds.length === 1) {
+                        const onlyCompanyId = companyIds[0];
+                        const onlyCompany = this.companies[onlyCompanyId];
+
+                        // If it's not already marked as default, set it
+                        if (!onlyCompany.isDefault) {
+                            console.log('[CompanyOnboarding] ⭐ Only one company exists, auto-setting as default:', onlyCompany.companyName);
+                            this.companies[onlyCompanyId].isDefault = true;
+                            this.companies[onlyCompanyId].updatedAt = new Date().toISOString();
+                            this.saveAllCompanies();
+                        }
+                    } else if (companyIds.length > 1) {
+                        // If multiple companies but none are default, set the first as default
+                        const hasDefault = companyIds.some(id => this.companies[id].isDefault);
+                        if (!hasDefault) {
+                            console.log('[CompanyOnboarding] ⚠️ Multiple companies but no default set, auto-setting first as default');
+                            this.companies[companyIds[0]].isDefault = true;
+                            this.companies[companyIds[0]].updatedAt = new Date().toISOString();
+                            this.saveAllCompanies();
+                        }
+                    }
+
                     // Load currently selected company
                     const currentId = localStorage.getItem(this.currentCompanyKey);
                     if (currentId && this.companies[currentId]) {
@@ -11341,7 +11365,6 @@ Phone: +91-XXXXXXXXXX`;
                         console.log('[CompanyOnboarding] Loaded existing company:', currentId);
                     } else {
                         // If no current company but companies exist, select the first one
-                        const companyIds = Object.keys(this.companies);
                         if (companyIds.length > 0) {
                             const firstCompanyId = companyIds[0];
                             this.setCurrentCompany(firstCompanyId);
