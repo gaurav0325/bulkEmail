@@ -4509,8 +4509,22 @@ Phone: +91-XXXXXXXXXX`;
             const subjectValid = validateSubject(document.getElementById('subject'));
             const messageValid = validateMessage(document.getElementById('messageBody'));
 
+            console.log('[SendEmail] Validation results:', {
+                fromEmailValid,
+                toEmailValid,
+                subjectValid,
+                messageValid
+            });
+
             if (!fromEmailValid || !toEmailValid || !subjectValid || !messageValid) {
-                showAlert('Please fix all validation errors before sending', 'error');
+                const errors = [];
+                if (!fromEmailValid) errors.push('From Email');
+                if (!toEmailValid) errors.push('To Email');
+                if (!subjectValid) errors.push('Subject');
+                if (!messageValid) errors.push('Message');
+
+                console.error('[SendEmail] Validation failed for:', errors);
+                showAlert(`Please fix validation errors: ${errors.join(', ')}`, 'error');
                 return;
             }
 
