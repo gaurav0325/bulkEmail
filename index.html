@@ -11592,11 +11592,28 @@ Best regards,
 
                     <!-- Current Company Indicator -->
                     <div id="currentCompanyIndicator" style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 12px; margin-bottom: 15px; border-radius: 4px;">
-                        <div style="font-size: 13px; font-weight: 500; color: #1976d2;">
-                            ${this.currentCompanyId ? `✏️ Editing: ${this.data.companyName || 'Unnamed Company'}` : '➕ Creating New Company'}
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-size: 13px; font-weight: 500; color: #1976d2;">
+                                    ${this.currentCompanyId ? `✏️ Editing: ${this.data.companyName || 'Unnamed Company'}` : '➕ Creating New Company'}
+                                </div>
+                                <div style="font-size: 11px; color: #666; margin-top: 4px;">
+                                    ${this.currentCompanyId ? `Company ID: ${this.currentCompanyId}` : 'Fill in details below to create your first company profile'}
+                                </div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px; background: white; padding: 8px 12px; border-radius: 6px; border: 1px solid #28a745;">
+                                <input type="checkbox"
+                                       id="isDefaultCompany"
+                                       ${this.data.isDefault ? 'checked' : ''}
+                                       onchange="CompanyOnboardingModule.handleDefaultToggle(this.checked)"
+                                       style="width: 18px; height: 18px; cursor: pointer; accent-color: #28a745;">
+                                <label for="isDefaultCompany" style="cursor: pointer; margin: 0; font-weight: 500; color: #28a745; font-size: 13px;">
+                                    ⭐ Set as Default Company
+                                </label>
+                            </div>
                         </div>
-                        <div style="font-size: 11px; color: #666; margin-top: 4px;">
-                            ${this.currentCompanyId ? `Company ID: ${this.currentCompanyId}` : 'Fill in details below to create your first company profile'}
+                        <div style="font-size: 11px; color: #666; margin-top: 8px; padding: 6px; background: #f0fff4; border-radius: 4px;">
+                            💡 <strong>Default Company</strong> is used for all email personalizations. Check this box to use this company's data in your email templates.
                         </div>
                     </div>
 
@@ -12370,6 +12387,37 @@ Best regards,
             if (existingModal) existingModal.remove();
 
             this.showManager();
+        };
+
+        // Module: Handle Default Toggle in Main Form
+        CompanyOnboardingModule.handleDefaultToggle = function(isChecked) {
+            if (isChecked) {
+                // Mark current company as default
+                if (this.currentCompanyId && this.companies[this.currentCompanyId]) {
+                    this.companies[this.currentCompanyId].isDefault = true;
+                } else {
+                    // For new company being created
+                    this.data.isDefault = true;
+                }
+
+                // Clear all other defaults
+                Object.keys(this.companies).forEach(id => {
+                    if (id !== this.currentCompanyId && this.companies[id].isDefault) {
+                        this.companies[id].isDefault = false;
+                    }
+                });
+
+                console.log('[CompanyOnboarding] ⭐ Marked as default company');
+
+                // Trigger auto-save to persist the change
+                this.scheduleAutoSave();
+            } else {
+                // User unchecked - warn them
+                showAlert('⚠️ At least one company should be set as default for email personalization. You can create another company and set it as default instead.', 'warning');
+                // Restore the checkbox
+                const checkbox = document.getElementById('isDefaultCompany');
+                if (checkbox) checkbox.checked = true;
+            }
         };
 
         // Module: Toggle Default Company
