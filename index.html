@@ -1231,6 +1231,7 @@
                 if (typeof dbManager !== 'undefined' && dbManager.isAuthenticated()) {
                     try {
                         await dbManager.apiCall('data-sync', {
+                            token: dbManager.getSessionToken(),
                             action: 'save_user_state',
                             data: state
                         });
@@ -1246,6 +1247,7 @@
                 if (typeof dbManager !== 'undefined' && dbManager.isAuthenticated()) {
                     try {
                         const result = await dbManager.apiCall('data-sync', {
+                            token: dbManager.getSessionToken(),
                             action: 'get_user_state'
                         });
 
