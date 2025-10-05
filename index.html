@@ -3296,7 +3296,7 @@ Phone: +91-XXXXXXXXXX`;
                 toEmails: Array.isArray(toEmails) ? toEmails : [toEmails],
                 subject: subject,
                 status: status, // 'sent', 'failed'
-                timestamp: timestamp,
+                timestamp: typeof timestamp === 'number' ? new Date(timestamp).toISOString() : timestamp,
                 country: country,
                 content: document.getElementById('messageBody').innerHTML ? document.getElementById('messageBody').innerHTML.substring(0, 100) + '...' : 'No content',
                 // Company tracking
