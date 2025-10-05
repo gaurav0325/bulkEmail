@@ -238,14 +238,18 @@ async function saveCompanies(userId, companies, headers) {
                 return coreFields;
             });
 
-            console.log('[SaveCompanies] Inserting companies:', companiesToInsert.length);
+            console.log('[SaveCompanies] Upserting companies:', companiesToInsert.length);
 
+            // Use upsert to insert or update (handles duplicates gracefully)
             const { error } = await supabase
                 .from('companies')
-                .insert(companiesToInsert);
+                .upsert(companiesToInsert, {
+                    onConflict: 'id',
+                    ignoreDuplicates: false
+                });
 
             if (error) {
-                console.error('[SaveCompanies] Insert error:', error);
+                console.error('[SaveCompanies] Upsert error:', error);
                 throw error;
             }
         } else {
