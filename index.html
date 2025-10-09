@@ -557,9 +557,14 @@
             <div style="padding: 8px; border: 1px solid #ddd; border-radius: 5px; background: #f8f9fa; margin-bottom: 12px;" role="region" aria-label="File Upload">
                 <div style="display: flex; align-items: center; justify-content: space-between;">
                     <span style="font-size: 12px; color: #666;">📁 Upload Contacts:</span>
-                    <label for="fileUpload" class="button button-success" style="cursor: pointer; padding: 6px 12px; font-size: 12px;" aria-describedby="fileUploadDesc">
-                        Choose File
-                    </label>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <label for="fileUpload" class="button button-success" style="cursor: pointer; padding: 6px 12px; font-size: 12px;" aria-describedby="fileUploadDesc">
+                            Choose File
+                        </label>
+                        <button onclick="clearAllContacts()" class="button" style="padding: 4px 8px; font-size: 11px; background: #dc3545; color: white; border: 1px solid #dc3545;" title="Clear all contacts from list and database">
+                            🗑️ Clear
+                        </button>
+                    </div>
                 </div>
                 <input type="file" id="fileUpload" accept=".xlsx,.xls,.csv,.pdf,.doc,.docx,.ppt,.pptx,.png,.jpg,.jpeg,.gif,.bmp,.tiff" onchange="handleAdvancedFileUpload(event)" style="display: none;" aria-label="Upload Contact File" aria-describedby="fileUploadDesc">
                 <small id="fileUploadDesc" style="color: #666; font-size: 9px;">Excel/CSV/PDF/Word/PowerPoint/Image files (max 10MB)</small>
@@ -4126,6 +4131,66 @@ Phone: +91-XXXXXXXXXX`;
                 if (categoryLower.includes(key)) return focus;
             }
             return 'Consumer electronics and technology solutions';
+        }
+
+        // Clear all contacts from list and database
+        async function clearAllContacts() {
+            // Confirm with user before clearing
+            const confirmMessage = `Are you sure you want to clear all ${contacts.length} contact(s)?\n\nThis will:\n✓ Remove all contacts from the list\n✓ Delete contacts from the database\n✓ Clear the contact display\n\nThis action cannot be undone.`;
+
+            if (!confirm(confirmMessage)) {
+                console.log('[ClearContacts] User cancelled clear operation');
+                return;
+            }
+
+            console.log('[ClearContacts] Starting to clear all contacts...');
+            console.log('[ClearContacts] Current contact count:', contacts.length);
+
+            try {
+                // Clear local contact arrays
+                contacts = [];
+                filteredContacts = [];
+                selectedContactIndex = -1;
+                window.contacts = [];
+
+                console.log('[ClearContacts] ✅ Local arrays cleared');
+
+                // Clear from UI
+                renderContacts();
+                console.log('[ClearContacts] ✅ UI cleared');
+
+                // Clear from centralized database
+                const dbAvailable = typeof dbManager !== 'undefined' &&
+                                  dbManager.isAuthenticated &&
+                                  dbManager.isAuthenticated();
+
+                if (dbAvailable) {
+                    console.log('[ClearContacts] Clearing from centralized database...');
+
+                    // Save empty contacts array to database
+                    await dbManager.saveAllUserData({
+                        contacts: [],
+                        emailHistory: [] // Keep email history separate, only clear contacts
+                    });
+
+                    console.log('[ClearContacts] ✅ Database cleared');
+                    showAlert('🗑️ All contacts cleared from list and database!', 'success');
+                } else {
+                    console.log('[ClearContacts] Database not available, cleared locally only');
+                    showAlert('🗑️ Contacts cleared from list (database not available)', 'info');
+                }
+
+                // Clear email form
+                document.getElementById('toEmail').value = '';
+                document.getElementById('subject').value = '';
+                document.getElementById('messageBody').innerHTML = '';
+
+                console.log('[ClearContacts] ✅ Clear operation complete');
+
+            } catch (error) {
+                console.error('[ClearContacts] Error clearing contacts:', error);
+                showAlert('❌ Error clearing contacts: ' + error.message, 'error');
+            }
         }
 
         function renderContacts() {
