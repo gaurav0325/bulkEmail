@@ -4070,6 +4070,25 @@ Phone: +91-XXXXXXXXXX`;
             // Initialize filtered contacts
             filteredContacts = [...contacts];
 
+            // CRITICAL FIX: Ensure file upload event listener is attached
+            const fileUploadInput = document.getElementById('fileUpload');
+            if (fileUploadInput) {
+                console.log('[FILE UPLOAD FIX] Attaching programmatic event listener to fileUpload input');
+
+                // Remove any existing onchange attribute to avoid conflicts
+                fileUploadInput.removeAttribute('onchange');
+
+                // Add event listener programmatically
+                fileUploadInput.addEventListener('change', function(event) {
+                    console.log('[FILE UPLOAD FIX] ✅ Change event fired! Files:', event.target.files);
+                    handleAdvancedFileUpload(event);
+                });
+
+                console.log('[FILE UPLOAD FIX] ✅ Event listener attached successfully');
+            } else {
+                console.error('[FILE UPLOAD FIX] ❌ fileUpload input element not found!');
+            }
+
             // Set focus to first interactive element for accessibility
             const firstButton = document.querySelector('button:not([disabled])');
             if (firstButton) {
