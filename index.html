@@ -13883,141 +13883,121 @@ Best regards,
         }
 
 
-                // Module: Load Professional Email Template
+                // Module: Load Professional Email Template - Enhanced Version
         CompanyOnboardingModule.loadProfessionalTemplate = function() {
+            console.log('[LoadProfessionalTemplate] Starting professional template enhancement...');
+
+            // Get existing Custom Email Template content
+            const templateEditor = document.getElementById('companyEmailTemplate');
+            if (!templateEditor) {
+                showAlert('❌ Custom Email Template editor not found', 'error');
+                return;
+            }
+
+            const existingContent = templateEditor.innerHTML.trim() || templateEditor.textContent.trim();
+
+            if (!existingContent) {
+                showAlert('⚠️ Custom Email Template is empty. Please add some content first, then click "Load Professional Template" to enhance it.', 'warning');
+                return;
+            }
+
+            console.log('[LoadProfessionalTemplate] Existing content found, length:', existingContent.length);
+
             // Get current company data
             const companyData = this.getData();
             console.log('[LoadProfessionalTemplate] Company data retrieved:', companyData);
 
-            // Professional HTML email template with company data variables
-            let professionalTemplate = `<!DOCTYPE html>
+            // Create professional HTML email structure wrapping the existing content
+            const professionalTemplate = this.createProfessionalEmailStructure(existingContent, companyData);
+
+            // Show preview modal
+            this.showProfessionalTemplatePreview(professionalTemplate);
+        };
+
+        // Create professional email structure from existing content
+        CompanyOnboardingModule.createProfessionalEmailStructure = function(content, companyData) {
+            const companyLogo = companyData?.companyLogo || '';
+            const companyName = companyData?.companyName || '{companyName}';
+            const companyWebsite = companyData?.companyWebsite || '{companyWebsite}';
+            const companyEmail = companyData?.companyEmail || '{companyEmail}';
+            const companyPhone = companyData?.companyPhone || '{companyPhone}';
+            const companyAddress = companyData?.companyAddress || '';
+            const companyIndustry = companyData?.companyIndustry || '{companyIndustry}';
+
+            // Professional HTML email template structure wrapping existing content
+            const professionalTemplate = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{companyName} Campaign Email</title>
+  <title>${companyName} - Professional Email</title>
   <style>
-    /* Basic reset / mobile-friendly rules */
-    body, table, td, a {
-      -webkit-text-size-adjust: 100%;
-      -ms-text-size-adjust: 100%;
-    }
-    img {
-      border: 0;
-      height: auto;
-      line-height: 100%;
-      outline: none;
-      text-decoration: none;
-      max-width: 100%;
-    }
-    table {
-      border-collapse: collapse !important;
-    }
-    body {
-      width: 100% !important;
-      height: 100% !important;
-      margin: 0;
-      padding: 0;
-    }
-    /* Responsive */
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    img { border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; max-width: 100%; }
+    table { border-collapse: collapse !important; }
+    body { width: 100% !important; height: 100% !important; margin: 0; padding: 0; }
     @media screen and (max-width:600px) {
-      .responsive-table {
-        width: 100% !important;
-      }
-      .padding {
-        padding: 10px !important;
-      }
-    }
-    /* Button style */
-    .btn {
-      display: inline-block;
-      background-color: #007bff;
-      color: #ffffff;
-      padding: 12px 24px;
-      text-decoration: none;
-      font-weight: bold;
-      border-radius: 4px;
+      .responsive-table { width: 100% !important; }
+      .padding { padding: 10px !important; }
     }
   </style>
 </head>
-<body style="background-color: #f4f4f4; margin:0; padding:0;">
-
-  <!-- Wrapper / outer table -->
+<body style="background-color: #f4f4f4; margin:0; padding:0; font-family: Arial, sans-serif;">
   <table border="0" cellpadding="0" cellspacing="0" width="100%">
     <tr>
       <td align="center" style="padding: 20px 0;">
-        <!-- Main container -->
-        <table class="responsive-table" border="0" cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 8px; overflow: hidden;">
+        <table class="responsive-table" border="0" cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
 
-          <!-- Header / logo -->
+          <!-- Header with Logo -->
+          ${companyLogo ? `
           <tr>
-            <td align="center" style="padding: 20px;">
-              <img src="{companyLogo}" alt="{companyName} Logo" width="200" style="display: block;">
+            <td align="center" style="padding: 30px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+              <img src="${companyLogo}" alt="${companyName}" style="max-width: 180px; height: auto;">
+            </td>
+          </tr>
+          ` : `
+          <tr>
+            <td align="center" style="padding: 30px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600;">${companyName}</h1>
+            </td>
+          </tr>
+          `}
+
+          <!-- Main Content (User's Custom Email Template Content) -->
+          <tr>
+            <td class="padding" style="padding: 30px 40px; font-family: Arial, sans-serif; color: #333333; font-size: 16px; line-height: 1.6;">
+              ${content}
             </td>
           </tr>
 
-          <!-- Hero / banner image -->
+          <!-- Footer with Contact Info -->
           <tr>
-            <td align="center">
-              <img src="https://via.placeholder.com/600x200/007bff/ffffff?text={companyName}" alt="Main banner image" style="display: block; width:100%; height: auto;">
+            <td style="padding: 25px 40px; background-color: #f8f9fa; border-top: 3px solid #667eea;">
+              <table width="100%" border="0" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="font-family: Arial, sans-serif; font-size: 14px; color: #555;">
+                    <p style="margin: 0 0 12px 0; font-weight: 600; color: #333;">${companyName}</p>
+                    ${companyIndustry !== '{companyIndustry}' ? `<p style="margin: 0 0 8px 0;">${companyIndustry}</p>` : ''}
+                    ${companyAddress ? `<p style="margin: 0 0 8px 0;">${companyAddress}</p>` : ''}
+                    <p style="margin: 0 0 8px 0;">
+                      <a href="mailto:${companyEmail}" style="color: #667eea; text-decoration: none;">${companyEmail}</a>
+                    </p>
+                    ${companyPhone !== '{companyPhone}' ? `<p style="margin: 0 0 8px 0;">${companyPhone}</p>` : ''}
+                    ${companyWebsite !== '{companyWebsite}' ? `
+                    <p style="margin: 0;">
+                      <a href="${companyWebsite}" style="color: #667eea; text-decoration: none;" target="_blank">${companyWebsite}</a>
+                    </p>
+                    ` : ''}
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
 
-          <!-- Content block -->
+          <!-- Social/Professional Footer -->
           <tr>
-            <td class="padding" style="padding: 20px; font-family: Arial, sans-serif; color: #333333;">
-              <h1 style="font-size: 24px; margin: 0 0 10px;">Partnership Opportunity with {companyName}</h1>
-              <p style="font-size: 16px; line-height: 1.5; margin: 0 0 15px;">
-                Dear {contactName},
-              </p>
-              <p style="font-size: 16px; line-height: 1.5; margin: 0 0 15px;">
-                We are excited to introduce you to {companyName}, a leading company in the {companyIndustry} industry with {companyYears} years of proven expertise and excellence.
-              </p>
-              <p style="font-size: 16px; line-height: 1.5; margin: 0 0 15px;">
-                {companyDescription}
-              </p>
-
-              <hr style="border: 0; border-top: 1px solid #dddddd; margin: 20px 0;">
-
-              <h2 style="font-size: 20px; margin: 0 0 10px;">Why Partner with {companyName}?</h2>
-              <ul style="font-size: 16px; line-height: 1.5; margin: 0 0 20px; padding-left: 20px;">
-                <li>{companyYears} years of industry leadership and expertise</li>
-                <li>Comprehensive solutions in {companyIndustry}</li>
-                <li>Proven track record of successful partnerships</li>
-                <li>Dedicated support and professional service</li>
-                <li>Competitive terms and mutual growth opportunities</li>
-              </ul>
-
-              <p style="font-size: 16px; line-height: 1.5; margin: 0 0 20px;">
-                We believe that {firm} in {country} would be an excellent partner for expanding our market presence and delivering exceptional value to customers in your region.
-              </p>
-
-              <p style="text-align: center; margin: 20px 0;">
-                <a href="{companyWebsite}" class="btn" target="_blank">Learn More About {companyName}</a>
-              </p>
-            </td>
-          </tr>
-
-          <!-- Contact / social block -->
-          <tr>
-            <td class="padding" style="padding: 20px; font-family: Arial, sans-serif; color: #777777; font-size: 14px;">
-              <p>We would love to discuss partnership opportunities with {firm}. Please feel free to contact us:</p>
-              <p><strong>Email:</strong> <a href="mailto:{companyEmail}" style="color:#007bff;">{companyEmail}</a></p>
-              <p><strong>Phone:</strong> {companyPhone}</p>
-              <p><strong>Website:</strong> <a href="{companyWebsite}" style="color:#007bff;">{companyWebsite}</a></p>
-
-              <p style="margin-top: 20px;">
-                We look forward to exploring how {companyName} and {firm} can create a successful partnership that benefits both our organizations and the customers we serve in {country}.
-              </p>
-            </td>
-          </tr>
-
-          <!-- Footer -->
-          <tr>
-            <td align="center" style="padding: 20px; background-color: #f9f9f9; font-family: Arial, sans-serif; font-size: 12px; color: #999999;">
-              <p>{companyName}</p>
-              <p>{companyAddress}</p>
-              <p><a href="{companyWebsite}" style="color: #999999;">{companyWebsite}</a> | <a href="mailto:{companyEmail}" style="color: #999999;">{companyEmail}</a></p>
+            <td align="center" style="padding: 20px; background-color: #667eea; color: #ffffff; font-size: 12px;">
+              <p style="margin: 0;">Professional Email Communication from ${companyName}</p>
             </td>
           </tr>
 
@@ -14025,65 +14005,108 @@ Best regards,
       </td>
     </tr>
   </table>
-
 </body>
 </html>`;
 
-            // Replace company variables with actual company data
-            if (companyData) {
-                this.availableFields.forEach(field => {
-                    if (companyData[field]) {
-                        const regex = new RegExp(`{${field}}`, 'g');
-                        professionalTemplate = professionalTemplate.replace(regex, companyData[field]);
-                    }
-                });
+            return professionalTemplate;
+        };
 
-                // Remove any remaining empty company placeholders
-                this.availableFields.forEach(field => {
-                    const regex = new RegExp(`{${field}}`, 'g');
-                    professionalTemplate = professionalTemplate.replace(regex, '');
-                });
+        // Show preview modal for professional template
+        CompanyOnboardingModule.showProfessionalTemplatePreview = function(enhancedTemplate) {
+            const modal = document.createElement('div');
+            modal.id = 'professionalTemplatePreviewModal';
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center;
+                z-index: 15000; padding: 20px;
+            `;
+
+            modal.innerHTML = `
+                <div style="background: white; border-radius: 12px; max-width: 900px; width: 95%; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+                    <div style="padding: 20px 30px; border-bottom: 2px solid #e3f2fd; display: flex; justify-content: space-between; align-items: center;">
+                        <h2 style="margin: 0; color: #007bff; font-size: 20px;">✨ Professional Email Template Preview</h2>
+                        <button onclick="document.getElementById('professionalTemplatePreviewModal').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">&times;</button>
+                    </div>
+
+                    <div style="padding: 20px 30px; background: #f8f9fa; border-bottom: 1px solid #dee2e6;">
+                        <p style="margin: 0; font-size: 14px; color: #666;">
+                            📧 This is how your email will look with professional formatting. All variables like <code>{contactName}</code>, <code>{companyName}</code>, etc. will be replaced when sending.
+                        </p>
+                    </div>
+
+                    <div style="flex: 1; overflow-y: auto; padding: 20px; background: #f4f4f4;">
+                        <iframe id="professionalTemplatePreviewFrame" style="width: 100%; min-height: 600px; border: 1px solid #ddd; border-radius: 6px; background: white;"></iframe>
+                    </div>
+
+                    <div style="padding: 20px 30px; border-top: 2px solid #e3f2fd; display: flex; gap: 12px; justify-content: flex-end; background: #f8f9fa;">
+                        <button onclick="document.getElementById('professionalTemplatePreviewModal').remove()" style="padding: 12px 24px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
+                            ✕ Reject
+                        </button>
+                        <button onclick="CompanyOnboardingModule.acceptProfessionalTemplate()" style="padding: 12px 24px; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
+                            ✓ Accept & Use This Template
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+
+            // Load template into iframe for preview
+            const iframe = document.getElementById('professionalTemplatePreviewFrame');
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            iframeDoc.open();
+            iframeDoc.write(enhancedTemplate);
+            iframeDoc.close();
+
+            // Store the enhanced template temporarily for acceptance
+            this.pendingProfessionalTemplate = enhancedTemplate;
+
+            console.log('[LoadProfessionalTemplate] Preview modal displayed');
+        };
+
+        // Accept professional template
+        CompanyOnboardingModule.acceptProfessionalTemplate = function() {
+            if (!this.pendingProfessionalTemplate) {
+                showAlert('❌ No pending professional template found', 'error');
+                return;
             }
 
-            // Create subject with company data
-            let subjectTemplate = 'Partnership Opportunity - {companyName} & {firm}';
-            if (companyData && companyData.companyName) {
-                subjectTemplate = subjectTemplate.replace(/{companyName}/g, companyData.companyName);
-            }
+            // Store the professional template as active (separate from custom template)
+            this.professionalTemplate = this.pendingProfessionalTemplate;
+            this.useProfessionalTemplate = true;
 
-            // Load professional template into the Custom Email Template field (instead of message body)
-            // This allows users to edit it with variables, formatting, and add attachments
-            const templateEditor = document.getElementById('companyEmailTemplate');
-            if (templateEditor) {
-                templateEditor.innerHTML = professionalTemplate;
-                console.log('[LoadProfessionalTemplate] Professional template loaded into custom email template editor');
-
-                // Show appropriate success message
-                const populatedFields = companyData ? this.availableFields.filter(field =>
-                    companyData[field] && companyData[field].trim()
-                ).length : 0;
-
-                if (populatedFields > 0) {
-                    showAlert(`✨ Professional template loaded into Custom Email Template! 📧 ${populatedFields}/${this.availableFields.length} company fields populated. You can now edit it, add formatting, variables, and attachments. Click "💾 Save Template" when done.`, 'success');
-                } else {
-                    showAlert('📧 Professional template loaded into Custom Email Template! ⚠️ No company data found - please complete your company profile for full personalization. You can still edit the template and add variables.', 'warning');
+            // Save to localStorage and database
+            this.saveToLocalStorage();
+            if (typeof dbManager !== 'undefined' && dbManager.isAuthenticated && dbManager.isAuthenticated()) {
+                const companyId = this.currentCompanyId;
+                if (companyId && this.companies[companyId]) {
+                    this.companies[companyId].professionalTemplate = this.professionalTemplate;
+                    this.companies[companyId].useProfessionalTemplate = true;
+                    this.companies[companyId].updatedAt = new Date().toISOString();
+                    this.saveAllCompanies();
                 }
-
-                // Scroll to template editor so user sees where it loaded
-                setTimeout(() => {
-                    templateEditor.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }, 300);
-
-                // Don't close the modal - let user edit the template
-                console.log('[LoadProfessionalTemplate] Modal kept open for template editing');
-            } else {
-                showAlert('❌ Template editor not found. Please try again.', 'error');
             }
+
+            // Close modal
+            document.getElementById('professionalTemplatePreviewModal').remove();
+
+            showAlert('✅ Professional template accepted! This will be used for email personalization. Click "💾 Save Template" to apply it.', 'success');
+
+            console.log('[LoadProfessionalTemplate] Professional template accepted and set as active');
         };
 
         // Module: Apply Template to Message Composer
         CompanyOnboardingModule.applyTemplateToMessage = function() {
-            const template = document.getElementById('companyEmailTemplate').innerHTML;
+            // Check if user has accepted professional template
+            let template;
+            if (this.useProfessionalTemplate && this.professionalTemplate) {
+                console.log('[ApplyTemplate] Using professional template');
+                template = this.professionalTemplate;
+            } else {
+                console.log('[ApplyTemplate] Using custom email template');
+                template = document.getElementById('companyEmailTemplate').innerHTML;
+            }
+
             if (!template) {
                 showAlert('Template is empty. Please enter template content first.', 'warning');
                 return;
