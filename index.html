@@ -561,9 +561,6 @@
                         <label for="fileUpload" class="button button-success" style="cursor: pointer; padding: 6px 12px; font-size: 12px;" aria-describedby="fileUploadDesc">
                             Choose File
                         </label>
-                        <button onclick="clearAllContacts()" class="button" style="padding: 4px 8px; font-size: 11px; background: #dc3545; color: white; border: 1px solid #dc3545;" title="Clear all contacts from list and database">
-                            🗑️ Clear
-                        </button>
                     </div>
                 </div>
                 <input type="file" id="fileUpload" accept=".xlsx,.xls,.csv,.pdf,.doc,.docx,.ppt,.pptx,.png,.jpg,.jpeg,.gif,.bmp,.tiff" onchange="handleAdvancedFileUpload(event)" style="display: none;" aria-label="Upload Contact File" aria-describedby="fileUploadDesc">
@@ -586,6 +583,9 @@
                         <span id="sentCount" style="color: #22c55e;">0 sent</span> |
                         <span id="failedCount" style="color: #ef4444;">0 failed</span>
                     </div>
+                    <button onclick="clearAllContacts()" class="button" style="padding: 3px 6px; font-size: 9px; background: #dc3545; color: white; border: 1px solid #dc3545;" title="Clear all contacts from list and database">
+                        🗑️ Clear
+                    </button>
                     <button onclick="downloadContactStatus()" class="button button-secondary" style="padding: 4px 8px; font-size: 10px; display: none;" id="downloadContactsBtn" title="Download contact status spreadsheet">
                         Download
                     </button>
@@ -1727,11 +1727,25 @@
             currentUploadedFileName = file.name;
 
             try {
-                // Clear existing data
+                // Clear existing data from memory AND database before uploading new contacts
+                console.log('[ADVANCED FILE UPLOAD] 🗑️ Clearing old contacts from memory and database...');
                 contacts = [];
                 filteredContacts = [];
                 selectedContactIndex = -1;
                 currentUploadProgress = { current: 0, total: 0 };
+
+                // Clear from database immediately before processing new file
+                if (typeof dbManager !== 'undefined' && dbManager.isAuthenticated && dbManager.isAuthenticated()) {
+                    try {
+                        await dbManager.saveAllUserData({
+                            contacts: [],
+                            emailHistory: window.emailHistory || []
+                        });
+                        console.log('[ADVANCED FILE UPLOAD] ✅ Old contacts cleared from database');
+                    } catch (dbError) {
+                        console.error('[ADVANCED FILE UPLOAD] ⚠️ Failed to clear old contacts from database:', dbError);
+                    }
+                }
 
                 showProgress(0, 100, 'Processing document...');
 
@@ -3606,12 +3620,26 @@ Phone: +91-XXXXXXXXXX`;
             }
 
             try {
-                // Clear existing data
+                // Clear existing data from memory AND database before uploading new contacts
+                console.log('[FILE UPLOAD] 🗑️ Clearing old contacts from memory and database...');
                 contacts = [];
                 filteredContacts = [];
                 selectedContactIndex = -1;
                 uploadedSpreadsheetData = [];
                 currentUploadProgress = { current: 0, total: 0 };
+
+                // Clear from database immediately before processing new file
+                if (typeof dbManager !== 'undefined' && dbManager.isAuthenticated && dbManager.isAuthenticated()) {
+                    try {
+                        await dbManager.saveAllUserData({
+                            contacts: [],
+                            emailHistory: window.emailHistory || []
+                        });
+                        console.log('[FILE UPLOAD] ✅ Old contacts cleared from database');
+                    } catch (dbError) {
+                        console.error('[FILE UPLOAD] ⚠️ Failed to clear old contacts from database:', dbError);
+                    }
+                }
 
                 showProgress(0, 100, 'Starting file processing...');
                 let totalProcessed = 0;
