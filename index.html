@@ -583,8 +583,8 @@
                         <span id="sentCount" style="color: #22c55e;">0 sent</span> |
                         <span id="failedCount" style="color: #ef4444;">0 failed</span>
                     </div>
-                    <button onclick="clearAllContacts()" class="button" style="padding: 3px 6px; font-size: 9px; background: #dc3545; color: white; border: 1px solid #dc3545;" title="Clear all contacts from list and database">
-                        🗑️ Clear
+                    <button onclick="clearAllContacts()" style="background: none; border: none; cursor: pointer; font-size: 14px; padding: 2px 4px; opacity: 0.6; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'" title="Clear all contacts from list and database">
+                        🗑️
                     </button>
                     <button onclick="downloadContactStatus()" class="button button-secondary" style="padding: 4px 8px; font-size: 10px; display: none;" id="downloadContactsBtn" title="Download contact status spreadsheet">
                         Download
@@ -4230,7 +4230,8 @@ Phone: +91-XXXXXXXXXX`;
 
                 // Clear from UI
                 renderContacts();
-                console.log('[ClearContacts] ✅ UI cleared');
+                updateContactCounts(); // Update contact counts to show 0 contacts
+                console.log('[ClearContacts] ✅ UI cleared and counts updated');
 
                 // Clear from centralized database
                 const dbAvailable = typeof dbManager !== 'undefined' &&
