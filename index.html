@@ -14039,10 +14039,10 @@ Best regards,
                     </div>
 
                     <div style="padding: 20px 30px; border-top: 2px solid #e3f2fd; display: flex; gap: 12px; justify-content: flex-end; background: #f8f9fa;">
-                        <button onclick="document.getElementById('professionalTemplatePreviewModal').remove()" style="padding: 12px 24px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
+                        <button id="rejectProfessionalTemplateBtn" style="padding: 12px 24px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
                             ✕ Reject
                         </button>
-                        <button onclick="CompanyOnboardingModule.acceptProfessionalTemplate()" style="padding: 12px 24px; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
+                        <button id="acceptProfessionalTemplateBtn" style="padding: 12px 24px; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
                             ✓ Accept & Use This Template
                         </button>
                     </div>
@@ -14061,7 +14061,21 @@ Best regards,
             // Store the enhanced template temporarily for acceptance
             this.pendingProfessionalTemplate = enhancedTemplate;
 
-            console.log('[LoadProfessionalTemplate] Preview modal displayed');
+            // Attach event listeners to buttons
+            const rejectBtn = document.getElementById('rejectProfessionalTemplateBtn');
+            const acceptBtn = document.getElementById('acceptProfessionalTemplateBtn');
+
+            rejectBtn.addEventListener('click', () => {
+                console.log('[LoadProfessionalTemplate] Template rejected by user');
+                document.getElementById('professionalTemplatePreviewModal').remove();
+            });
+
+            acceptBtn.addEventListener('click', () => {
+                console.log('[LoadProfessionalTemplate] Accept button clicked');
+                CompanyOnboardingModule.acceptProfessionalTemplate();
+            });
+
+            console.log('[LoadProfessionalTemplate] Preview modal displayed with event listeners attached');
         };
 
         // Accept professional template
