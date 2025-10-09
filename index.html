@@ -589,8 +589,8 @@
                     <button onclick="downloadContactStatus()" class="button button-secondary" style="padding: 4px 8px; font-size: 10px; display: none;" id="downloadContactsBtn" title="Download contact status spreadsheet">
                         Download
                     </button>
-                    <button id="scrollTopBtn" class="button" onclick="scrollToTop()" style="padding: 4px 8px; font-size: 12px; display: none;">
-                        Top
+                    <button id="scrollTopBtn" onclick="scrollToTop()" style="background: none; border: none; cursor: pointer; font-size: 16px; padding: 2px 4px; opacity: 0.6; transition: opacity 0.2s; display: none;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'" title="Scroll to top of contact list">
+                        ⬆️
                     </button>
                 </div>
             </div>
@@ -4288,6 +4288,10 @@ Phone: +91-XXXXXXXXXX`;
 
             container.innerHTML = '';
 
+            // Check if we have a search active
+            const searchInput = document.getElementById('contactSearch');
+            const hasSearchTerm = searchInput && searchInput.value.trim().length > 0;
+
             if (contactsToRender.length === 0) {
                 container.innerHTML = `
                     <div style="text-align: center; padding: 40px; color: #666; border: 2px dashed #ddd; border-radius: 8px; background: #f9f9f9;">
@@ -4300,12 +4304,28 @@ Phone: +91-XXXXXXXXXX`;
             }
 
             console.log('Rendering individual contacts...');
-            // Always update filteredContacts if contactsToRender is different
-            if (contactsToRender.length > 0 && filteredContacts.length !== contactsToRender.length) {
-                console.log('🔧 RENDER FIX - Syncing filteredContacts with contactsToRender');
+            // Check if we should use filtered contacts or all contacts
+            // Only reset filteredContacts if it's empty (not from a search with no results)
+
+            // If no search is active and filteredContacts is empty, initialize it with all contacts
+            if (!hasSearchTerm && filteredContacts.length === 0 && contactsToRender.length > 0) {
+                console.log('🔧 RENDER FIX - Initializing filteredContacts with all contacts (no search active)');
                 filteredContacts = [...contactsToRender];
             }
+
             const finalContactsToRender = filteredContacts.length > 0 ? filteredContacts : contactsToRender;
+
+            // If search is active but no results found, show "no results" message
+            if (hasSearchTerm && finalContactsToRender.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 30px; color: #666;">
+                        <h4 style="color: #999; margin-bottom: 10px;">🔍 No Results Found</h4>
+                        <p style="font-size: 12px;">No contacts match "${searchInput.value}"</p>
+                        <small style="color: #999;">Try a different search term</small>
+                    </div>
+                `;
+                return;
+            }
 
             finalContactsToRender.forEach((contact, index) => {
                 console.log(`Rendering contact ${index + 1}:`, contact);
