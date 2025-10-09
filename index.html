@@ -1764,6 +1764,23 @@
                 renderContacts();
                 showAlert(`✅ Extracted ${contacts.length} contacts from ${fileType} document!`, contacts.length > 0 ? 'success' : 'warning');
 
+                // CRITICAL FIX: Immediately sync extracted contacts to database to prevent them from being overwritten
+                console.log('[ADVANCED FILE UPLOAD] 💾 Syncing extracted contacts to database...');
+                if (typeof dbManager !== 'undefined' && dbManager.isAuthenticated && dbManager.isAuthenticated()) {
+                    try {
+                        await dbManager.saveAllUserData({
+                            contacts: contacts,
+                            emailHistory: window.emailHistory || []
+                        });
+                        console.log('[ADVANCED FILE UPLOAD] ✅ Extracted contacts saved to database:', contacts.length);
+                    } catch (dbError) {
+                        console.error('[ADVANCED FILE UPLOAD] ⚠️ Failed to save contacts to database:', dbError);
+                        // Don't show error to user - local contacts are still loaded
+                    }
+                } else {
+                    console.log('[ADVANCED FILE UPLOAD] Database not available, contacts saved locally only');
+                }
+
             } catch (error) {
                 hideProgress();
                 const sanitizedError = sanitizeInput(error.message);
@@ -3800,6 +3817,23 @@ Phone: +91-XXXXXXXXXX`;
                 console.log('About to render contacts. Array length:', contacts.length);
                 renderContacts();
                 showAlert(`✅ Loaded ${contacts.length} contacts${file.name.toLowerCase().endsWith('.csv') ? '' : ' from multiple countries'}! (${statusReport.failed} rows had issues)`, statusReport.failed > 0 ? 'error' : 'success');
+
+                // CRITICAL FIX: Immediately sync uploaded contacts to database to prevent them from being overwritten
+                console.log('[FILE UPLOAD] 💾 Syncing uploaded contacts to database...');
+                if (typeof dbManager !== 'undefined' && dbManager.isAuthenticated && dbManager.isAuthenticated()) {
+                    try {
+                        await dbManager.saveAllUserData({
+                            contacts: contacts,
+                            emailHistory: window.emailHistory || []
+                        });
+                        console.log('[FILE UPLOAD] ✅ Uploaded contacts saved to database:', contacts.length);
+                    } catch (dbError) {
+                        console.error('[FILE UPLOAD] ⚠️ Failed to save contacts to database:', dbError);
+                        // Don't show error to user - local contacts are still loaded
+                    }
+                } else {
+                    console.log('[FILE UPLOAD] Database not available, contacts saved locally only');
+                }
                 }
 
             } catch (error) {
