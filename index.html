@@ -1732,6 +1732,7 @@
                 contacts = [];
                 filteredContacts = [];
                 selectedContactIndex = -1;
+                window.contacts = []; // CRITICAL: Clear window.contacts to prevent renderContacts from using old data
                 currentUploadProgress = { current: 0, total: 0 };
 
                 // Clear from database immediately before processing new file
@@ -1773,6 +1774,10 @@
 
                 console.log('Extracted contacts:', extractedContacts.length);
                 contacts = extractedContacts;
+
+                // CRITICAL FIX: Update window.contacts so renderContacts uses the new data
+                window.contacts = contacts;
+                console.log('[ADVANCED FILE UPLOAD] ✅ Updated window.contacts with new contacts:', window.contacts.length);
 
                 hideProgress();
                 renderContacts();
@@ -3625,6 +3630,7 @@ Phone: +91-XXXXXXXXXX`;
                 contacts = [];
                 filteredContacts = [];
                 selectedContactIndex = -1;
+                window.contacts = []; // CRITICAL: Clear window.contacts to prevent renderContacts from using old data
                 uploadedSpreadsheetData = [];
                 currentUploadProgress = { current: 0, total: 0 };
 
@@ -3843,6 +3849,11 @@ Phone: +91-XXXXXXXXXX`;
                 showUploadStatusReport(statusReport);
 
                 console.log('About to render contacts. Array length:', contacts.length);
+
+                // CRITICAL FIX: Update window.contacts so renderContacts uses the new data
+                window.contacts = contacts;
+                console.log('[FILE UPLOAD] ✅ Updated window.contacts with new contacts:', window.contacts.length);
+
                 renderContacts();
                 showAlert(`✅ Loaded ${contacts.length} contacts${file.name.toLowerCase().endsWith('.csv') ? '' : ' from multiple countries'}! (${statusReport.failed} rows had issues)`, statusReport.failed > 0 ? 'error' : 'success');
 
