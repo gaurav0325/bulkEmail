@@ -11377,8 +11377,11 @@ Phone: +91-XXXXXXXXXX`;
                 const targetUserId = userId || UserManager.currentUser?.id;
                 if (!targetUserId) return [];
 
+                // Return companies that either:
+                // 1. Belong to the current user (ownerId matches)
+                // 2. Have no ownerId (backward compatibility with old companies)
                 return Object.values(this.companies).filter(company =>
-                    company.ownerId === targetUserId
+                    company.ownerId === targetUserId || !company.ownerId
                 );
             },
 
