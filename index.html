@@ -1686,17 +1686,26 @@
 
         // Advanced file upload handler for multiple document types
         async function handleAdvancedFileUpload(event) {
+            console.log('[handleAdvancedFileUpload] Function called, event:', event);
+            console.log('[handleAdvancedFileUpload] Event target:', event.target);
+            console.log('[handleAdvancedFileUpload] Files:', event.target.files);
+
             const file = event.target.files[0];
             if (!file) {
-                console.log('No file selected');
+                console.log('[handleAdvancedFileUpload] ❌ No file selected');
                 return;
             }
+
+            console.log('[handleAdvancedFileUpload] ✅ File selected:', file.name, 'Size:', file.size, 'Type:', file.type);
 
             const fileName = file.name.toLowerCase();
             const fileExt = fileName.split('.').pop();
 
+            console.log('[handleAdvancedFileUpload] File extension:', fileExt);
+
             // For Excel/CSV files, use the original handler
             if (fileExt === 'xlsx' || fileExt === 'xls' || fileExt === 'csv') {
+                console.log('[handleAdvancedFileUpload] Excel/CSV detected, calling handleFileUpload...');
                 return handleFileUpload(event);
             }
 
@@ -3447,23 +3456,34 @@ Phone: +91-XXXXXXXXXX`;
 
 
         async function handleFileUpload(event) {
+            console.log('[handleFileUpload] ========== FUNCTION CALLED ==========');
+            console.log('[handleFileUpload] Event:', event);
+            console.log('[handleFileUpload] Event target files:', event.target.files);
+
             const file = event.target.files[0];
             if (!file) {
-                console.log('No file selected');
+                console.log('[handleFileUpload] ❌ No file selected - files array is empty or undefined');
                 return;
             }
+
+            console.log('[handleFileUpload] ✅ File object retrieved:', file.name, file.size, file.type);
 
             // Security: File validation
             if (!validateFileUpload(file)) {
+                console.log('[handleFileUpload] ❌ File validation failed');
                 return;
             }
 
+            console.log('[handleFileUpload] ✅ File validation passed');
+
             // Check if XLSX library is loaded for Excel files
             if (!file.name.toLowerCase().endsWith('.csv') && typeof XLSX === 'undefined') {
+                console.log('[handleFileUpload] ❌ XLSX library not loaded');
                 showAlert('Error: Excel processing library not loaded. Please refresh the page.', 'error');
                 return;
             }
 
+            console.log('[handleFileUpload] ✅ XLSX library check passed');
             console.log('=== FILE UPLOAD STARTED ===');
             console.log('File selected:', file.name, file.type, file.size);
             showAlert(`Processing ${sanitizeInput(file.name)}...`, 'success');
