@@ -4405,6 +4405,9 @@ Phone: +91-XXXXXXXXXX`;
             if (sendBtn) {
                 sendBtn.disabled = false;
             }
+
+            // Render attachments to show template attachments from company onboarding
+            renderAttachments();
         }
 
         // Fallback template function
@@ -12514,8 +12517,11 @@ Best regards,
                 // Handle default company checkbox
                 const isDefaultCheckbox = document.getElementById('isDefaultCompany');
                 if (isDefaultCheckbox) {
-                    isDefaultCheckbox.checked = this.data.isDefault || false;
-                    console.log('[CompanyOnboarding] Set default checkbox to:', this.data.isDefault);
+                    // Get fresh data from companies object to ensure we have latest isDefault value
+                    const freshData = this.currentCompanyId ? this.companies[this.currentCompanyId] : this.data;
+                    const isDefault = freshData ? freshData.isDefault : false;
+                    isDefaultCheckbox.checked = isDefault;
+                    console.log('[CompanyOnboarding] Set default checkbox to:', isDefault, '| Company:', freshData?.companyName, '| ID:', this.currentCompanyId);
                 }
 
                 // Update the current company display after loading
@@ -13844,22 +13850,34 @@ Best regards,
                 subjectTemplate = subjectTemplate.replace(/{companyName}/g, companyData.companyName);
             }
 
-            // Set the subject and message body
-            document.getElementById('subject').value = subjectTemplate;
-            document.getElementById('messageBody').innerHTML = professionalTemplate;
+            // Load professional template into the Custom Email Template field (instead of message body)
+            // This allows users to edit it with variables, formatting, and add attachments
+            const templateEditor = document.getElementById('companyEmailTemplate');
+            if (templateEditor) {
+                templateEditor.innerHTML = professionalTemplate;
+                console.log('[LoadProfessionalTemplate] Professional template loaded into custom email template editor');
 
-            // Show appropriate success message
-            const populatedFields = companyData ? this.availableFields.filter(field =>
-                companyData[field] && companyData[field].trim()
-            ).length : 0;
+                // Show appropriate success message
+                const populatedFields = companyData ? this.availableFields.filter(field =>
+                    companyData[field] && companyData[field].trim()
+                ).length : 0;
 
-            if (populatedFields > 0) {
-                showAlert(`✨ Professional template loaded with company data! 📧 ${populatedFields}/${this.availableFields.length} company fields populated. Contact variables ({contactName}, {firm}, {country}, {email}) will be replaced when sending.`, 'success');
+                if (populatedFields > 0) {
+                    showAlert(`✨ Professional template loaded into Custom Email Template! 📧 ${populatedFields}/${this.availableFields.length} company fields populated. You can now edit it, add formatting, variables, and attachments. Click "💾 Save Template" when done.`, 'success');
+                } else {
+                    showAlert('📧 Professional template loaded into Custom Email Template! ⚠️ No company data found - please complete your company profile for full personalization. You can still edit the template and add variables.', 'warning');
+                }
+
+                // Scroll to template editor so user sees where it loaded
+                setTimeout(() => {
+                    templateEditor.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 300);
+
+                // Don't close the modal - let user edit the template
+                console.log('[LoadProfessionalTemplate] Modal kept open for template editing');
             } else {
-                showAlert('📧 Professional template loaded! ⚠️ No company data found - please complete your company profile for personalization.', 'warning');
+                showAlert('❌ Template editor not found. Please try again.', 'error');
             }
-
-            this.closeManager();
         };
 
         // Module: Apply Template to Message Composer
