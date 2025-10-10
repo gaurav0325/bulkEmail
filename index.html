@@ -14138,6 +14138,13 @@ Best regards,
                 return;
             }
 
+            // Get currently selected contact for personalization
+            const selectedContact = (typeof selectedContactIndex !== 'undefined' && selectedContactIndex >= 0 && typeof contacts !== 'undefined')
+                ? contacts[selectedContactIndex]
+                : null;
+
+            console.log('[ApplyTemplate] Selected contact:', selectedContact ? `${selectedContact.contactName} (${selectedContact.firm})` : 'None');
+
             // Check template type selection
             const isPersonalized = document.querySelector('input[name="templateType"]:checked').value === 'personalized';
 
@@ -14149,13 +14156,31 @@ Best regards,
             let processedContent = templateData.content;
 
             if (isPersonalized) {
-                // Use enhanced personalization engine
-                processedSubject = personalizeEmailContent(processedSubject, null);
-                processedContent = personalizeEmailContent(processedContent, null);
+                // Use enhanced personalization engine WITH selected contact
+                processedSubject = personalizeEmailContent(processedSubject, selectedContact);
+                processedContent = personalizeEmailContent(processedContent, selectedContact);
                 showAlert('✨ Personalized template applied with smart content and grammar checking! 📧', 'success');
             } else {
                 // Use basic personalization (company variables only, no smart content hiding)
                 const companyData = this.getData();
+
+                // First replace contact variables if contact is selected
+                if (selectedContact) {
+                    const contactReplacements = {
+                        '{contactName}': selectedContact.contactName || '',
+                        '{firm}': selectedContact.firm || '',
+                        '{country}': selectedContact.country || '',
+                        '{email}': selectedContact.email || ''
+                    };
+
+                    Object.entries(contactReplacements).forEach(([placeholder, value]) => {
+                        const regex = new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g');
+                        processedSubject = processedSubject.replace(regex, value);
+                        processedContent = processedContent.replace(regex, value);
+                    });
+                }
+
+                // Then replace company variables
                 this.availableFields.forEach(field => {
                     if (companyData[field]) {
                         const regex = new RegExp(`{${field}}`, 'g');
