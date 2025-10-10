@@ -14148,12 +14148,28 @@ Best regards,
             // Check template type selection
             const isPersonalized = document.querySelector('input[name="templateType"]:checked').value === 'personalized';
 
-            // Use the existing template extraction logic
-            const templateData = this.extractTemplateContent(template);
+            let processedSubject = '';
+            let processedContent = '';
 
-            // Apply personalization based on type
-            let processedSubject = templateData.subject;
-            let processedContent = templateData.content;
+            // If using professional template, use full HTML without extraction
+            if (useProfessional && professionalTemplateContent) {
+                console.log('[ApplyTemplate] Professional template detected - using full HTML structure');
+
+                // Professional template is already full HTML with styling - don't extract, use as-is
+                processedContent = professionalTemplateContent;
+
+                // Try to extract subject if it exists in the template
+                const subjectMatch = professionalTemplateContent.match(/<title>(.*?)<\/title>/i);
+                if (subjectMatch) {
+                    processedSubject = subjectMatch[1].replace(/\s*-\s*Professional Email/, '').trim();
+                }
+            } else {
+                // For custom templates, use the existing extraction logic
+                console.log('[ApplyTemplate] Custom template - extracting content');
+                const templateData = this.extractTemplateContent(template);
+                processedSubject = templateData.subject;
+                processedContent = templateData.content;
+            }
 
             if (isPersonalized) {
                 // Use enhanced personalization engine WITH selected contact
