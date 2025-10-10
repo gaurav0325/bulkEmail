@@ -4583,30 +4583,28 @@ Phone: +91-XXXXXXXXXX`;
                             emailSnippet: personalizedContent.substring(0, 200)
                         });
 
-                        // If professional template (full HTML), render in iframe
+                        // Always keep messageBody editable
+                        messageBody.contentEditable = 'true';
+
+                        // If professional template (full HTML), extract body content for editing
                         if (hasProfessionalTemplate) {
-                            console.log('[ContactSelection] Rendering professional template in iframe');
+                            console.log('[ContactSelection] Professional template - extracting body content for editing');
 
-                            // Create iframe for professional email display
-                            const iframe = document.createElement('iframe');
-                            iframe.style.cssText = 'width: 100%; min-height: 600px; border: 1px solid #ddd; border-radius: 4px; background: white;';
-                            iframe.id = 'professionalEmailPreview';
+                            // Extract content from the main content section
+                            const tempDiv = document.createElement('div');
+                            tempDiv.innerHTML = personalizedContent;
 
-                            // Clear messageBody and add iframe
-                            messageBody.innerHTML = '';
-                            messageBody.contentEditable = 'false'; // Disable editing for professional template
-                            messageBody.appendChild(iframe);
+                            // Find the content section (inside the table with padding class)
+                            const contentCell = tempDiv.querySelector('.padding');
+                            const extractedContent = contentCell ? contentCell.innerHTML : personalizedContent;
 
-                            // Write personalized content to iframe
-                            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                            iframeDoc.open();
-                            iframeDoc.write(personalizedContent);
-                            iframeDoc.close();
+                            // Display extracted content in editable messageBody
+                            messageBody.innerHTML = extractedContent;
 
                             // Store the full HTML for email sending
                             window.professionalEmailHTML = personalizedContent;
 
-                            console.log('[ContactSelection] Professional template rendered in iframe with contact personalization');
+                            console.log('[ContactSelection] Body content extracted for editing, full HTML stored for sending');
                         } else {
                             // Custom template: display as before
                             const cleanedContent = personalizedContent
@@ -4615,8 +4613,6 @@ Phone: +91-XXXXXXXXXX`;
                                 .replace(/\s{2,}/g, ' ') // Replace multiple spaces with single space
                                 .trim();
                             const sanitizedContent = sanitizeHTML(cleanedContent);
-
-                            messageBody.contentEditable = 'true'; // Re-enable editing
                             messageBody.innerHTML = sanitizedContent;
 
                             // Clear any stored professional HTML
@@ -4956,7 +4952,19 @@ Phone: +91-XXXXXXXXXX`;
                         }
 
                         // Get message body HTML (preserving formatting)
-                        const messageBodyHTML = document.getElementById('messageBody').innerHTML;
+                        let messageBodyHTML = document.getElementById('messageBody').innerHTML;
+
+                        // If professional template is active, inject edited content into full template
+                        if (window.professionalEmailHTML) {
+                            const tempDiv = document.createElement('div');
+                            tempDiv.innerHTML = window.professionalEmailHTML;
+                            const contentCell = tempDiv.querySelector('.padding');
+                            if (contentCell) {
+                                contentCell.innerHTML = messageBodyHTML;
+                                messageBodyHTML = tempDiv.innerHTML;
+                                console.log('[SendEmail] Using professional template with edited content');
+                            }
+                        }
 
                         // Send email using real email service
                         const result = await sendRealEmail(contact, subject, messageBodyHTML);
@@ -5080,8 +5088,25 @@ Phone: +91-XXXXXXXXXX`;
             // Check if professional template is being used
             let rawMessageHTML;
             if (window.professionalEmailHTML) {
-                console.log('[SendEmail] Using professional template HTML for sending');
-                rawMessageHTML = window.professionalEmailHTML;
+                console.log('[SendEmail] Professional template detected - injecting edited content');
+
+                // User may have edited the message body - inject the edited content back into professional template
+                const editedContent = messageBody.innerHTML.trim();
+
+                // Replace the content section in the professional template with edited content
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = window.professionalEmailHTML;
+
+                const contentCell = tempDiv.querySelector('.padding');
+                if (contentCell) {
+                    contentCell.innerHTML = editedContent;
+                    rawMessageHTML = tempDiv.innerHTML;
+                    console.log('[SendEmail] Injected edited content into professional template');
+                } else {
+                    // Fallback: use edited content if can't find content section
+                    rawMessageHTML = editedContent;
+                    console.log('[SendEmail] Could not find content section, using edited content directly');
+                }
             } else {
                 rawMessageHTML = messageBody.innerHTML.trim();
             }
@@ -14292,34 +14317,31 @@ Best regards,
             if (processedContent) {
                 const messageBody = document.getElementById('messageBody');
 
-                // If professional template (full HTML), render it in an iframe for proper display
+                // Always keep messageBody editable
+                messageBody.contentEditable = 'true';
+
+                // If professional template (full HTML), extract body content for editing but store full HTML for sending
                 if (useProfessional && professionalTemplateContent) {
-                    console.log('[ApplyTemplate] Rendering professional template in iframe for display');
+                    console.log('[ApplyTemplate] Professional template - extracting body content for editing');
 
-                    // Create iframe to show professional email
-                    const iframe = document.createElement('iframe');
-                    iframe.style.cssText = 'width: 100%; min-height: 600px; border: 1px solid #ddd; border-radius: 4px; background: white;';
-                    iframe.id = 'professionalEmailPreview';
+                    // Extract content from the main content section of the professional template
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = processedContent;
 
-                    // Clear messageBody and add iframe
-                    messageBody.innerHTML = '';
-                    messageBody.contentEditable = 'false'; // Disable editing for professional template
-                    messageBody.appendChild(iframe);
+                    // Find the content section (inside the table with padding class)
+                    const contentCell = tempDiv.querySelector('.padding');
+                    const extractedContent = contentCell ? contentCell.innerHTML : processedContent;
 
-                    // Write processed content to iframe
-                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                    iframeDoc.open();
-                    iframeDoc.write(processedContent);
-                    iframeDoc.close();
+                    // Display extracted content in editable messageBody
+                    messageBody.innerHTML = extractedContent;
 
-                    // Store the full HTML for email sending
+                    // Store the full HTML structure for email sending
                     window.professionalEmailHTML = processedContent;
 
-                    console.log('[ApplyTemplate] Professional template rendered in iframe');
+                    console.log('[ApplyTemplate] Body content extracted for editing, full HTML stored for sending');
                 } else {
                     // Custom template: display as before
                     const sanitizedContent = processedContent.replace(/\n/g, '<br>');
-                    messageBody.contentEditable = 'true'; // Re-enable editing
                     messageBody.innerHTML = sanitizedContent;
 
                     // Clear any stored professional HTML
