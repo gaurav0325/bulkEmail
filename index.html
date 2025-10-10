@@ -4519,15 +4519,38 @@ Phone: +91-XXXXXXXXXX`;
             const companyData = CompanyOnboardingModule.getDataSync();
             console.log('[ContactSelection] Company data retrieved:', companyData);
 
-            // Check if company data exists and use personalized template
-            if (companyData && companyData.emailTemplate) {
-                console.log('[ContactSelection] Using personalized template with company onboarding data');
-                console.log('[ContactSelection] Email template:', companyData.emailTemplate);
+            // Check for professional template first, then email template
+            const hasProfessionalTemplate = companyData && companyData.useProfessionalTemplate && companyData.professionalTemplate;
+            const hasEmailTemplate = companyData && companyData.emailTemplate;
+
+            if (hasProfessionalTemplate || hasEmailTemplate) {
+                const templateToUse = hasProfessionalTemplate ? companyData.professionalTemplate : companyData.emailTemplate;
+                const templateType = hasProfessionalTemplate ? 'professional' : 'custom';
+
+                console.log(`[ContactSelection] Using ${templateType} template for personalization`);
 
                 try {
-                    // Extract template content
-                    const templateData = CompanyOnboardingModule.extractTemplateContent(companyData.emailTemplate);
-                    console.log('[ContactSelection] Extracted template data:', templateData);
+                    let templateData;
+
+                    // Professional template: use full HTML, don't extract
+                    if (hasProfessionalTemplate) {
+                        console.log('[ContactSelection] Professional template detected - using full HTML');
+                        templateData = {
+                            subject: '', // Will be set from title tag or left empty
+                            content: templateToUse
+                        };
+
+                        // Try to extract subject from HTML title
+                        const subjectMatch = templateToUse.match(/<title>(.*?)<\/title>/i);
+                        if (subjectMatch) {
+                            templateData.subject = subjectMatch[1].replace(/\s*-\s*Professional Email/, '').trim();
+                        }
+                    } else {
+                        // Custom template: extract as before
+                        templateData = CompanyOnboardingModule.extractTemplateContent(templateToUse);
+                    }
+
+                    console.log('[ContactSelection] Template data:', { hasSubject: !!templateData.subject, contentLength: templateData.content?.length });
 
                     // Debug: Verify contact object before personalization
                     console.log('[ContactSelection] Contact object before personalization:', {
@@ -14145,6 +14168,11 @@ Best regards,
 
             console.log('[ApplyTemplate] Selected contact:', selectedContact ? `${selectedContact.contactName} (${selectedContact.firm})` : 'None');
 
+            // Show info if no contact selected
+            if (!selectedContact) {
+                console.log('[ApplyTemplate] No contact selected - template will show with placeholder variables');
+            }
+
             // Check template type selection
             const isPersonalized = document.querySelector('input[name="templateType"]:checked').value === 'personalized';
 
@@ -14175,7 +14203,12 @@ Best regards,
                 // Use enhanced personalization engine WITH selected contact
                 processedSubject = personalizeEmailContent(processedSubject, selectedContact);
                 processedContent = personalizeEmailContent(processedContent, selectedContact);
-                showAlert('✨ Personalized template applied with smart content and grammar checking! 📧', 'success');
+
+                if (selectedContact) {
+                    showAlert('✨ Personalized template applied with smart content and grammar checking! 📧', 'success');
+                } else {
+                    showAlert('✨ Template applied! Select a contact to auto-personalize with their details.', 'info');
+                }
             } else {
                 // Use basic personalization (company variables only, no smart content hiding)
                 const companyData = this.getData();
@@ -14204,7 +14237,12 @@ Best regards,
                         processedContent = processedContent.replace(regex, companyData[field]);
                     }
                 });
-                showAlert('🔍 Standard template applied with basic personalization! 📧', 'success');
+
+                if (selectedContact) {
+                    showAlert('🔍 Standard template applied with basic personalization! 📧', 'success');
+                } else {
+                    showAlert('📧 Template applied! Select a contact to auto-personalize with their details.', 'info');
+                }
             }
 
             // Apply to subject and message body
