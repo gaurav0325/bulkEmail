@@ -14098,9 +14098,13 @@ Best regards,
                 this.companies[companyId].useProfessionalTemplate = true;
                 this.companies[companyId].updatedAt = new Date().toISOString();
 
+                // Also update this.data since it references the current company
+                this.data.professionalTemplate = this.professionalTemplate;
+                this.data.useProfessionalTemplate = true;
+
                 // Save companies to localStorage and database
                 this.saveAllCompanies();
-                console.log('[AcceptProfessionalTemplate] Professional template saved to company data');
+                console.log('[AcceptProfessionalTemplate] Professional template saved to company data and this.data');
             } else {
                 console.warn('[AcceptProfessionalTemplate] No current company ID, saving to module only');
             }
@@ -14116,10 +14120,14 @@ Best regards,
         // Module: Apply Template to Message Composer
         CompanyOnboardingModule.applyTemplateToMessage = function() {
             // Check if user has accepted professional template
+            // Check both module-level and company data-level flags
+            const useProfessional = this.useProfessionalTemplate || this.data?.useProfessionalTemplate;
+            const professionalTemplateContent = this.professionalTemplate || this.data?.professionalTemplate;
+
             let template;
-            if (this.useProfessionalTemplate && this.professionalTemplate) {
+            if (useProfessional && professionalTemplateContent) {
                 console.log('[ApplyTemplate] Using professional template');
-                template = this.professionalTemplate;
+                template = professionalTemplateContent;
             } else {
                 console.log('[ApplyTemplate] Using custom email template');
                 template = document.getElementById('companyEmailTemplate').innerHTML;
