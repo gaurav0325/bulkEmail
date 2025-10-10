@@ -4583,19 +4583,50 @@ Phone: +91-XXXXXXXXXX`;
                             emailSnippet: personalizedContent.substring(0, 200)
                         });
 
-                        // Clean up any extra whitespace and formatting issues
-                        const cleanedContent = personalizedContent
-                            .replace(/\s+{(\w+)}\s+/g, '{$1}') // Remove spaces around variables
-                            .replace(/\n/g, '<br>')
-                            .replace(/\s{2,}/g, ' ') // Replace multiple spaces with single space
-                            .trim();
-                        const sanitizedContent = sanitizeHTML(cleanedContent);
-                        messageBody.innerHTML = sanitizedContent;
+                        // If professional template (full HTML), render in iframe
+                        if (hasProfessionalTemplate) {
+                            console.log('[ContactSelection] Rendering professional template in iframe');
+
+                            // Create iframe for professional email display
+                            const iframe = document.createElement('iframe');
+                            iframe.style.cssText = 'width: 100%; min-height: 600px; border: 1px solid #ddd; border-radius: 4px; background: white;';
+                            iframe.id = 'professionalEmailPreview';
+
+                            // Clear messageBody and add iframe
+                            messageBody.innerHTML = '';
+                            messageBody.contentEditable = 'false'; // Disable editing for professional template
+                            messageBody.appendChild(iframe);
+
+                            // Write personalized content to iframe
+                            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                            iframeDoc.open();
+                            iframeDoc.write(personalizedContent);
+                            iframeDoc.close();
+
+                            // Store the full HTML for email sending
+                            window.professionalEmailHTML = personalizedContent;
+
+                            console.log('[ContactSelection] Professional template rendered in iframe with contact personalization');
+                        } else {
+                            // Custom template: display as before
+                            const cleanedContent = personalizedContent
+                                .replace(/\s+{(\w+)}\s+/g, '{$1}') // Remove spaces around variables
+                                .replace(/\n/g, '<br>')
+                                .replace(/\s{2,}/g, ' ') // Replace multiple spaces with single space
+                                .trim();
+                            const sanitizedContent = sanitizeHTML(cleanedContent);
+
+                            messageBody.contentEditable = 'true'; // Re-enable editing
+                            messageBody.innerHTML = sanitizedContent;
+
+                            // Clear any stored professional HTML
+                            window.professionalEmailHTML = null;
+                        }
 
                         // Update hidden textarea
                         const hiddenTextarea = document.getElementById('messageBodyHidden');
                         if (hiddenTextarea) {
-                            hiddenTextarea.value = messageBody.innerHTML;
+                            hiddenTextarea.value = window.professionalEmailHTML || messageBody.innerHTML;
                         }
                     }
 
@@ -5045,7 +5076,15 @@ Phone: +91-XXXXXXXXXX`;
             let subjectValue = document.getElementById('subject').value.trim();
             const messageBody = document.getElementById('messageBody');
             const fromEmail = document.getElementById('fromEmail').value;
-            let rawMessageHTML = messageBody.innerHTML.trim();
+
+            // Check if professional template is being used
+            let rawMessageHTML;
+            if (window.professionalEmailHTML) {
+                console.log('[SendEmail] Using professional template HTML for sending');
+                rawMessageHTML = window.professionalEmailHTML;
+            } else {
+                rawMessageHTML = messageBody.innerHTML.trim();
+            }
 
             // If subject or message is empty, try to get content from Company Onboarding template
             const companyData = CompanyOnboardingModule.getData();
@@ -14252,8 +14291,40 @@ Best regards,
 
             if (processedContent) {
                 const messageBody = document.getElementById('messageBody');
-                const sanitizedContent = processedContent.replace(/\n/g, '<br>');
-                messageBody.innerHTML = sanitizedContent;
+
+                // If professional template (full HTML), render it in an iframe for proper display
+                if (useProfessional && professionalTemplateContent) {
+                    console.log('[ApplyTemplate] Rendering professional template in iframe for display');
+
+                    // Create iframe to show professional email
+                    const iframe = document.createElement('iframe');
+                    iframe.style.cssText = 'width: 100%; min-height: 600px; border: 1px solid #ddd; border-radius: 4px; background: white;';
+                    iframe.id = 'professionalEmailPreview';
+
+                    // Clear messageBody and add iframe
+                    messageBody.innerHTML = '';
+                    messageBody.contentEditable = 'false'; // Disable editing for professional template
+                    messageBody.appendChild(iframe);
+
+                    // Write processed content to iframe
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    iframeDoc.open();
+                    iframeDoc.write(processedContent);
+                    iframeDoc.close();
+
+                    // Store the full HTML for email sending
+                    window.professionalEmailHTML = processedContent;
+
+                    console.log('[ApplyTemplate] Professional template rendered in iframe');
+                } else {
+                    // Custom template: display as before
+                    const sanitizedContent = processedContent.replace(/\n/g, '<br>');
+                    messageBody.contentEditable = 'true'; // Re-enable editing
+                    messageBody.innerHTML = sanitizedContent;
+
+                    // Clear any stored professional HTML
+                    window.professionalEmailHTML = null;
+                }
             }
 
             // Enable auto-sync for real-time template reflection
