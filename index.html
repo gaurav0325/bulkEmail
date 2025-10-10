@@ -14085,20 +14085,24 @@ Best regards,
                 return;
             }
 
+            console.log('[AcceptProfessionalTemplate] Storing professional template...');
+
             // Store the professional template as active (separate from custom template)
             this.professionalTemplate = this.pendingProfessionalTemplate;
             this.useProfessionalTemplate = true;
 
-            // Save to localStorage and database
-            this.saveToLocalStorage();
-            if (typeof dbManager !== 'undefined' && dbManager.isAuthenticated && dbManager.isAuthenticated()) {
-                const companyId = this.currentCompanyId;
-                if (companyId && this.companies[companyId]) {
-                    this.companies[companyId].professionalTemplate = this.professionalTemplate;
-                    this.companies[companyId].useProfessionalTemplate = true;
-                    this.companies[companyId].updatedAt = new Date().toISOString();
-                    this.saveAllCompanies();
-                }
+            // Save to company data
+            const companyId = this.currentCompanyId;
+            if (companyId && this.companies[companyId]) {
+                this.companies[companyId].professionalTemplate = this.professionalTemplate;
+                this.companies[companyId].useProfessionalTemplate = true;
+                this.companies[companyId].updatedAt = new Date().toISOString();
+
+                // Save companies to localStorage and database
+                this.saveAllCompanies();
+                console.log('[AcceptProfessionalTemplate] Professional template saved to company data');
+            } else {
+                console.warn('[AcceptProfessionalTemplate] No current company ID, saving to module only');
             }
 
             // Close modal
@@ -14106,7 +14110,7 @@ Best regards,
 
             showAlert('✅ Professional template accepted! This will be used for email personalization. Click "💾 Save Template" to apply it.', 'success');
 
-            console.log('[LoadProfessionalTemplate] Professional template accepted and set as active');
+            console.log('[AcceptProfessionalTemplate] Professional template accepted and set as active');
         };
 
         // Module: Apply Template to Message Composer
