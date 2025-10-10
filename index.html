@@ -12879,6 +12879,10 @@ Best regards,
                     Image2: getElementValue('Image2'),
                     emailTemplate: document.getElementById('companyEmailTemplate')?.innerHTML || '',
 
+                    // Professional template fields (must preserve these!)
+                    professionalTemplate: this.professionalTemplate || this.data?.professionalTemplate || '',
+                    useProfessionalTemplate: this.useProfessionalTemplate || this.data?.useProfessionalTemplate || false,
+
                     // Email configuration fields
                     companyZohoEmail: getElementValue('companyZohoEmail'),
                     companyZohoPassword: getElementValue('companyZohoPassword'),
@@ -13346,7 +13350,14 @@ Best regards,
                     return;
                 }
 
-                if (!companyData.emailTemplate) {
+                // Check for professional template first, then fall back to regular template
+                const hasProfessionalTemplate = companyData.useProfessionalTemplate && companyData.professionalTemplate;
+                const templateToUse = hasProfessionalTemplate ? companyData.professionalTemplate : companyData.emailTemplate;
+
+                console.log('[RefreshEmail] Professional template active:', hasProfessionalTemplate);
+                console.log('[RefreshEmail] Template to use:', hasProfessionalTemplate ? 'PROFESSIONAL' : 'CUSTOM');
+
+                if (!templateToUse) {
                     console.warn('[CompanyOnboarding] ⚠️ No email template found in company data');
                     console.log('[CompanyOnboarding] Company data keys:', Object.keys(companyData));
                     return;
@@ -13356,7 +13367,17 @@ Best regards,
                 const selectedContact = window.selectedContact || null;
 
                 // Extract template content
-                const templateData = this.extractTemplateContent(companyData.emailTemplate);
+                let templateData;
+                if (hasProfessionalTemplate) {
+                    // Professional template is full HTML - use as-is, don't extract
+                    templateData = {
+                        subject: '',
+                        content: templateToUse
+                    };
+                } else {
+                    // Custom template - extract as before
+                    templateData = this.extractTemplateContent(templateToUse);
+                }
                 console.log('[CompanyOnboarding] Extracted template - Subject:', templateData.subject ? 'YES' : 'NO', '| Content:', templateData.content ? 'YES' : 'NO');
 
                 // Update subject line
@@ -13373,22 +13394,49 @@ Best regards,
                 const messageBody = document.getElementById('messageBody');
                 if (messageBody && templateData.content) {
                     const personalizedContent = personalizeEmailContent(templateData.content, selectedContact);
-                    // Clean up formatting issues
-                    const cleanedContent = personalizedContent
-                        .replace(/\s+{(\w+)}\s+/g, '{$1}')
-                        .replace(/\n/g, '<br>')
-                        .replace(/\s{2,}/g, ' ')
-                        .trim();
-                    const sanitizedContent = sanitizeHTML(cleanedContent);
-                    messageBody.innerHTML = sanitizedContent;
 
-                    // Update hidden textarea if it exists
-                    const hiddenTextarea = document.getElementById('messageBodyTextarea');
-                    if (hiddenTextarea) {
-                        hiddenTextarea.value = sanitizedContent;
+                    // Always keep messageBody editable
+                    messageBody.contentEditable = 'true';
+
+                    if (hasProfessionalTemplate) {
+                        console.log('[RefreshEmail] 📧 Professional template - extracting body content for editing');
+
+                        // Extract content from the main content section
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = personalizedContent;
+
+                        // Find the content section (inside the table with padding class)
+                        const contentCell = tempDiv.querySelector('.padding');
+                        const extractedContent = contentCell ? contentCell.innerHTML : personalizedContent;
+
+                        // Display extracted content in editable messageBody
+                        messageBody.innerHTML = extractedContent;
+
+                        // Store the full HTML structure for email sending
+                        window.professionalEmailHTML = personalizedContent;
+
+                        console.log('[RefreshEmail] ✅ Professional template applied - Body editable, full HTML stored');
+                    } else {
+                        // Custom template: clean and display as before
+                        const cleanedContent = personalizedContent
+                            .replace(/\s+{(\w+)}\s+/g, '{$1}')
+                            .replace(/\n/g, '<br>')
+                            .replace(/\s{2,}/g, ' ')
+                            .trim();
+                        const sanitizedContent = sanitizeHTML(cleanedContent);
+                        messageBody.innerHTML = sanitizedContent;
+
+                        // Clear any stored professional HTML
+                        window.professionalEmailHTML = null;
+
+                        // Update hidden textarea if it exists
+                        const hiddenTextarea = document.getElementById('messageBodyTextarea');
+                        if (hiddenTextarea) {
+                            hiddenTextarea.value = sanitizedContent;
+                        }
                     }
 
-                    console.log('[CompanyOnboarding] ✅ Updated message body (', sanitizedContent.length, 'chars)');
+                    console.log('[CompanyOnboarding] ✅ Updated message body (', messageBody.innerHTML.length, 'chars)');
                 } else {
                     console.warn('[CompanyOnboarding] ⚠️ Could not update message body - Field:', !!messageBody, '| Content:', !!templateData.content);
                 }
@@ -14206,17 +14254,27 @@ Best regards,
 
         // Module: Apply Template to Message Composer
         CompanyOnboardingModule.applyTemplateToMessage = function() {
+            console.log('[ApplyTemplate] ========== STARTING TEMPLATE APPLICATION ==========');
+
             // Check if user has accepted professional template
             // Check both module-level and company data-level flags
             const useProfessional = this.useProfessionalTemplate || this.data?.useProfessionalTemplate;
             const professionalTemplateContent = this.professionalTemplate || this.data?.professionalTemplate;
 
+            console.log('[ApplyTemplate] Debug info:', {
+                'this.useProfessionalTemplate': this.useProfessionalTemplate,
+                'this.data?.useProfessionalTemplate': this.data?.useProfessionalTemplate,
+                'useProfessional': useProfessional,
+                'has professionalTemplateContent': !!professionalTemplateContent,
+                'professionalTemplateContent length': professionalTemplateContent?.length
+            });
+
             let template;
             if (useProfessional && professionalTemplateContent) {
-                console.log('[ApplyTemplate] Using professional template');
+                console.log('[ApplyTemplate] ✅ Using professional template');
                 template = professionalTemplateContent;
             } else {
-                console.log('[ApplyTemplate] Using custom email template');
+                console.log('[ApplyTemplate] ⚠️ Using custom email template (professional not active)');
                 template = document.getElementById('companyEmailTemplate').innerHTML;
             }
 
@@ -14315,14 +14373,23 @@ Best regards,
             }
 
             if (processedContent) {
+                console.log('[ApplyTemplate] Applying content to message body...');
+                console.log('[ApplyTemplate] processedContent length:', processedContent.length);
+                console.log('[ApplyTemplate] processedContent preview:', processedContent.substring(0, 200));
+
                 const messageBody = document.getElementById('messageBody');
+
+                if (!messageBody) {
+                    console.error('[ApplyTemplate] ❌ messageBody element not found!');
+                    return;
+                }
 
                 // Always keep messageBody editable
                 messageBody.contentEditable = 'true';
 
                 // If professional template (full HTML), extract body content for editing but store full HTML for sending
                 if (useProfessional && professionalTemplateContent) {
-                    console.log('[ApplyTemplate] Professional template - extracting body content for editing');
+                    console.log('[ApplyTemplate] 📧 Professional template - extracting body content for editing');
 
                     // Extract content from the main content section of the professional template
                     const tempDiv = document.createElement('div');
@@ -14330,7 +14397,11 @@ Best regards,
 
                     // Find the content section (inside the table with padding class)
                     const contentCell = tempDiv.querySelector('.padding');
+                    console.log('[ApplyTemplate] Found content cell:', !!contentCell);
+
                     const extractedContent = contentCell ? contentCell.innerHTML : processedContent;
+                    console.log('[ApplyTemplate] Extracted content length:', extractedContent.length);
+                    console.log('[ApplyTemplate] Extracted content preview:', extractedContent.substring(0, 200));
 
                     // Display extracted content in editable messageBody
                     messageBody.innerHTML = extractedContent;
@@ -14338,15 +14409,20 @@ Best regards,
                     // Store the full HTML structure for email sending
                     window.professionalEmailHTML = processedContent;
 
-                    console.log('[ApplyTemplate] Body content extracted for editing, full HTML stored for sending');
+                    console.log('[ApplyTemplate] ✅ Body content extracted and displayed, full HTML stored for sending');
                 } else {
                     // Custom template: display as before
+                    console.log('[ApplyTemplate] 📝 Custom template - displaying as-is');
                     const sanitizedContent = processedContent.replace(/\n/g, '<br>');
                     messageBody.innerHTML = sanitizedContent;
 
                     // Clear any stored professional HTML
                     window.professionalEmailHTML = null;
+
+                    console.log('[ApplyTemplate] ✅ Custom template displayed');
                 }
+            } else {
+                console.warn('[ApplyTemplate] ⚠️ No processedContent to display!');
             }
 
             // Enable auto-sync for real-time template reflection
