@@ -4598,6 +4598,9 @@ Phone: +91-XXXXXXXXXX`;
                             const contentCell = tempDiv.querySelector('.padding');
                             const extractedContent = contentCell ? contentCell.innerHTML : personalizedContent;
 
+                            console.log('[ContactSelection] 🔍 EXTRACTED CONTENT PREVIEW:', extractedContent.substring(0, 500));
+                            console.log('[ContactSelection] 🔍 Found .padding cell:', !!contentCell);
+
                             // Display extracted content in editable messageBody
                             messageBody.innerHTML = extractedContent;
 
@@ -13408,6 +13411,10 @@ Best regards,
                         // Find the content section (inside the table with padding class)
                         const contentCell = tempDiv.querySelector('.padding');
                         const extractedContent = contentCell ? contentCell.innerHTML : personalizedContent;
+
+                        console.log('[RefreshEmail] 🔍 EXTRACTED CONTENT PREVIEW:', extractedContent.substring(0, 500));
+                        console.log('[RefreshEmail] 🔍 Found .padding cell:', !!contentCell);
+                        console.log('[RefreshEmail] 🔍 Full personalized HTML length:', personalizedContent.length);
 
                         // Display extracted content in editable messageBody
                         messageBody.innerHTML = extractedContent;
