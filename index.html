@@ -4518,10 +4518,21 @@ Phone: +91-XXXXXXXXXX`;
             // Get company onboarding data for personalization
             const companyData = CompanyOnboardingModule.getDataSync();
             console.log('[ContactSelection] Company data retrieved:', companyData);
+            console.log('[ContactSelection] 🔍 Professional template check:', {
+                'companyData exists': !!companyData,
+                'useProfessionalTemplate': companyData?.useProfessionalTemplate,
+                'professionalTemplate exists': !!companyData?.professionalTemplate,
+                'professionalTemplate length': companyData?.professionalTemplate?.length || 0
+            });
 
             // Check for professional template first, then email template
             const hasProfessionalTemplate = !!(companyData && companyData.useProfessionalTemplate && companyData.professionalTemplate);
             const hasEmailTemplate = companyData && companyData.emailTemplate;
+
+            console.log('[ContactSelection] 🎯 Template decision:', {
+                hasProfessionalTemplate,
+                hasEmailTemplate
+            });
 
             if (hasProfessionalTemplate || hasEmailTemplate) {
                 const templateToUse = hasProfessionalTemplate ? companyData.professionalTemplate : companyData.emailTemplate;
@@ -12942,6 +12953,18 @@ Best regards,
                         document.getElementById(field) && document.getElementById(field).value.trim()
                     ).length
                 };
+
+                // Debug: Log professional template status
+                console.log('[CompanyOnboarding] 🔍 Professional template status:', {
+                    'this.professionalTemplate exists': !!this.professionalTemplate,
+                    'this.professionalTemplate length': this.professionalTemplate?.length || 0,
+                    'this.useProfessionalTemplate': this.useProfessionalTemplate,
+                    'this.data?.professionalTemplate exists': !!this.data?.professionalTemplate,
+                    'this.data?.useProfessionalTemplate': this.data?.useProfessionalTemplate,
+                    'newData.professionalTemplate exists': !!newData.professionalTemplate,
+                    'newData.professionalTemplate length': newData.professionalTemplate?.length || 0,
+                    'newData.useProfessionalTemplate': newData.useProfessionalTemplate
+                });
 
                 // Validate data integrity
                 if (!this.validateDataIntegrity(newData)) {
