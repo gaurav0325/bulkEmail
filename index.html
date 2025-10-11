@@ -4206,6 +4206,78 @@ Phone: +91-XXXXXXXXXX`;
             return 'Consumer electronics and technology solutions';
         }
 
+        // Delete a single contact
+        async function deleteContact(index) {
+            if (index < 0 || index >= contacts.length) {
+                console.error('[DeleteContact] Invalid index:', index);
+                return;
+            }
+
+            const contact = contacts[index];
+            const confirmMessage = `Delete contact?\n\n${contact.firm}\n${contact.contactName}\n${contact.email}`;
+
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+
+            console.log('[DeleteContact] Deleting contact at index:', index, contact);
+
+            try {
+                // Remove from arrays
+                contacts.splice(index, 1);
+
+                // Update window.contacts if it exists
+                if (window.contacts && window.contacts.length > 0) {
+                    window.contacts = [...contacts];
+                }
+
+                // Update filtered contacts
+                if (filteredContacts.length > 0) {
+                    filteredContacts = filteredContacts.filter(c => c !== contact);
+                }
+
+                // Clear selection if deleted contact was selected
+                if (selectedContactIndex === index) {
+                    selectedContactIndex = -1;
+                    document.getElementById('toEmail').value = '';
+                    document.getElementById('subject').value = '';
+                    document.getElementById('messageBody').innerHTML = '';
+                } else if (selectedContactIndex > index) {
+                    // Adjust selected index if it's after the deleted contact
+                    selectedContactIndex--;
+                }
+
+                console.log('[DeleteContact] ✅ Contact removed from arrays');
+
+                // Save to localStorage
+                localStorage.setItem('bulkEmail_contacts', JSON.stringify(contacts));
+                console.log('[DeleteContact] ✅ localStorage updated');
+
+                // Save to database if available
+                const dbAvailable = typeof dbManager !== 'undefined' &&
+                                  dbManager.isAuthenticated &&
+                                  dbManager.isAuthenticated();
+
+                if (dbAvailable) {
+                    await dbManager.saveAllUserData({
+                        contacts: contacts
+                    });
+                    console.log('[DeleteContact] ✅ Database updated');
+                }
+
+                // Update UI
+                renderContacts();
+                updateContactCounts();
+
+                showAlert(`✓ Contact deleted: ${contact.firm}`, 'success');
+                console.log('[DeleteContact] ✅ Delete operation complete');
+
+            } catch (error) {
+                console.error('[DeleteContact] Error:', error);
+                showAlert('❌ Error deleting contact: ' + error.message, 'error');
+            }
+        }
+
         // Clear all contacts from list and database
         async function clearAllContacts() {
             // Confirm with user before clearing
@@ -4227,6 +4299,10 @@ Phone: +91-XXXXXXXXXX`;
                 window.contacts = [];
 
                 console.log('[ClearContacts] ✅ Local arrays cleared');
+
+                // Clear from localStorage
+                localStorage.removeItem('bulkEmail_contacts');
+                console.log('[ClearContacts] ✅ localStorage cleared');
 
                 // Clear from UI
                 renderContacts();
@@ -4430,11 +4506,24 @@ Phone: +91-XXXXXXXXXX`;
                     contentDiv.appendChild(detailDiv);
                 });
 
-                // Status icon
+                // Status icon and delete button
                 const statusDiv = document.createElement('div');
                 statusDiv.style.cssText = 'display: flex; flex-direction: column; align-items: center; gap: 4px;';
                 const iconColor = contact.emailStatus === 'sent' ? '#22c55e' : contact.emailStatus === 'failed' ? '#ef4444' : '#6b7280';
                 statusDiv.innerHTML = '<div style="font-size: 16px; color: ' + iconColor + '; font-weight: bold;">' + statusIcon + '</div>' + statusBadge;
+
+                // Add delete button
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = '🗑️';
+                deleteBtn.style.cssText = 'background: none; border: none; cursor: pointer; font-size: 14px; padding: 4px; opacity: 0.5; transition: opacity 0.2s; margin-top: 4px;';
+                deleteBtn.title = 'Delete this contact';
+                deleteBtn.onmouseover = () => deleteBtn.style.opacity = '1';
+                deleteBtn.onmouseout = () => deleteBtn.style.opacity = '0.5';
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation(); // Prevent contact selection when clicking delete
+                    deleteContact(actualIndex >= 0 ? actualIndex : index);
+                };
+                statusDiv.appendChild(deleteBtn);
 
                 flexContainer.appendChild(contentDiv);
                 flexContainer.appendChild(statusDiv);
@@ -14153,6 +14242,11 @@ Best regards,
 
         // Create professional email structure from existing content
         CompanyOnboardingModule.createProfessionalEmailStructure = function(content, companyData) {
+            // Decode HTML entities from content to fix &amp; issues
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = content;
+            const decodedContent = tempDiv.innerHTML; // This automatically decodes entities
+
             const companyLogo = companyData?.companyLogo || '';
             const companyName = companyData?.companyName || '{companyName}';
             const companyWebsite = companyData?.companyWebsite || '{companyWebsite}';
@@ -14203,7 +14297,7 @@ Best regards,
           <!-- Main Content (User's Custom Email Template Content) -->
           <tr>
             <td class="padding" style="padding: 30px 40px; font-family: Arial, sans-serif; color: #333333; font-size: 16px; line-height: 1.6;">
-              ${content}
+              ${decodedContent}
             </td>
           </tr>
 
