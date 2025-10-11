@@ -4596,10 +4596,27 @@ Phone: +91-XXXXXXXXXX`;
 
                             // Find the content section (inside the table with padding class)
                             const contentCell = tempDiv.querySelector('.padding');
-                            const extractedContent = contentCell ? contentCell.innerHTML : personalizedContent;
+                            let extractedContent = contentCell ? contentCell.innerHTML : personalizedContent;
 
-                            console.log('[ContactSelection] 🔍 EXTRACTED CONTENT PREVIEW:', extractedContent.substring(0, 500));
+                            console.log('[ContactSelection] 🔍 EXTRACTED CONTENT PREVIEW (before cleanup):', extractedContent.substring(0, 500));
                             console.log('[ContactSelection] 🔍 Found .padding cell:', !!contentCell);
+
+                            // Remove TO/FROM/Subject fields that shouldn't be in message body
+                            extractedContent = extractedContent
+                                // Remove "To: email" patterns (case-insensitive, various formats)
+                                .replace(/^[\s]*(<p[^>]*>)?[\s]*To[\s]*:[\s]*[^<\n]+(<\/p>)?[\s]*/gmi, '')
+                                .replace(/(<p[^>]*>)?[\s]*To[\s]*:[\s]*[^<\n]+(<\/p>)?[\s]*/gi, '')
+                                // Remove "From: email" patterns
+                                .replace(/^[\s]*(<p[^>]*>)?[\s]*From[\s]*:[\s]*[^<\n]+(<\/p>)?[\s]*/gmi, '')
+                                .replace(/(<p[^>]*>)?[\s]*From[\s]*:[\s]*[^<\n]+(<\/p>)?[\s]*/gi, '')
+                                // Remove "Subject: text" patterns
+                                .replace(/^[\s]*(<p[^>]*>)?[\s]*Subject[\s]*:[\s]*[^<\n]+(<\/p>)?[\s]*/gmi, '')
+                                .replace(/(<p[^>]*>)?[\s]*Subject[\s]*:[\s]*[^<\n]+(<\/p>)?[\s]*/gi, '')
+                                // Remove any leading/trailing whitespace and empty paragraphs
+                                .replace(/^[\s]*(<p[^>]*>[\s]*<\/p>)+/gi, '')
+                                .trim();
+
+                            console.log('[ContactSelection] 🔍 EXTRACTED CONTENT PREVIEW (after cleanup):', extractedContent.substring(0, 500));
 
                             // Display extracted content in editable messageBody
                             messageBody.innerHTML = extractedContent;
@@ -13410,11 +13427,33 @@ Best regards,
 
                         // Find the content section (inside the table with padding class)
                         const contentCell = tempDiv.querySelector('.padding');
-                        const extractedContent = contentCell ? contentCell.innerHTML : personalizedContent;
+                        let extractedContent = contentCell ? contentCell.innerHTML : personalizedContent;
 
-                        console.log('[RefreshEmail] 🔍 EXTRACTED CONTENT PREVIEW:', extractedContent.substring(0, 500));
+                        console.log('[RefreshEmail] 🔍 EXTRACTED CONTENT PREVIEW (before cleanup):', extractedContent.substring(0, 500));
                         console.log('[RefreshEmail] 🔍 Found .padding cell:', !!contentCell);
                         console.log('[RefreshEmail] 🔍 Full personalized HTML length:', personalizedContent.length);
+
+                        // Remove TO/FROM/Subject fields that shouldn't be in message body
+                        extractedContent = extractedContent
+                            // Remove "From: email" and "From-Name: name" patterns
+                            .replace(/^[\s]*(<p[^>]*>)?[\s]*From[\s]*:[\s]*[^<\n]+(<\/p>)?[\s]*/gmi, '')
+                            .replace(/(<p[^>]*>)?[\s]*From[\s]*:[\s]*[^<\n]+(<\/p>)?[\s]*/gi, '')
+                            .replace(/^[\s]*(<p[^>]*>)?[\s]*From-Name[\s]*:[\s]*[^<\n]+(<\/p>)?[\s]*/gmi, '')
+                            .replace(/(<p[^>]*>)?[\s]*From-Name[\s]*:[\s]*[^<\n]+(<\/p>)?[\s]*/gi, '')
+                            // Remove "To: email" patterns
+                            .replace(/^[\s]*(<p[^>]*>)?[\s]*To[\s]*:[\s]*[^<\n]+(<\/p>)?[\s]*/gmi, '')
+                            .replace(/(<p[^>]*>)?[\s]*To[\s]*:[\s]*[^<\n]+(<\/p>)?[\s]*/gi, '')
+                            .replace(/(<div[^>]*>)?[\s]*To[\s]*:[\s]*[^<\n]+(<\/div>)?[\s]*/gi, '')
+                            // Remove "Subject: text" patterns
+                            .replace(/^[\s]*(<p[^>]*>)?[\s]*Subject[\s]*:[\s]*[^<\n]+(<\/p>)?[\s]*/gmi, '')
+                            .replace(/(<p[^>]*>)?[\s]*Subject[\s]*:[\s]*[^<\n]+(<\/p>)?[\s]*/gi, '')
+                            .replace(/(<div[^>]*>)?[\s]*Subject[\s]*:[\s]*[^\n<]+(<\/div>)?[\s]*/gi, '')
+                            // Remove any leading/trailing whitespace and empty divs/paragraphs
+                            .replace(/^[\s]*(<[pd]iv[^>]*>[\s]*<\/[pd]iv>)+/gi, '')
+                            .replace(/^[\s]*(<br\s*\/?>\s*)+/gi, '')
+                            .trim();
+
+                        console.log('[RefreshEmail] 🔍 EXTRACTED CONTENT PREVIEW (after cleanup):', extractedContent.substring(0, 500));
 
                         // Display extracted content in editable messageBody
                         messageBody.innerHTML = extractedContent;
