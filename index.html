@@ -4520,7 +4520,7 @@ Phone: +91-XXXXXXXXXX`;
             console.log('[ContactSelection] Company data retrieved:', companyData);
 
             // Check for professional template first, then email template
-            const hasProfessionalTemplate = companyData && companyData.useProfessionalTemplate && companyData.professionalTemplate;
+            const hasProfessionalTemplate = !!(companyData && companyData.useProfessionalTemplate && companyData.professionalTemplate);
             const hasEmailTemplate = companyData && companyData.emailTemplate;
 
             if (hasProfessionalTemplate || hasEmailTemplate) {
@@ -13371,7 +13371,7 @@ Best regards,
                 }
 
                 // Check for professional template first, then fall back to regular template
-                const hasProfessionalTemplate = companyData.useProfessionalTemplate && companyData.professionalTemplate;
+                const hasProfessionalTemplate = !!(companyData.useProfessionalTemplate && companyData.professionalTemplate);
                 const templateToUse = hasProfessionalTemplate ? companyData.professionalTemplate : companyData.emailTemplate;
 
                 console.log('[RefreshEmail] Professional template active:', hasProfessionalTemplate);
