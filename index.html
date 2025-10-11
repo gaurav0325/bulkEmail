@@ -4603,23 +4603,42 @@ Phone: +91-XXXXXXXXXX`;
 
                             // Remove TO/FROM/Subject fields that shouldn't be in message body
                             extractedContent = extractedContent
-                                // Remove "To: email" patterns (case-insensitive, various formats)
-                                .replace(/^[\s]*(<p[^>]*>)?[\s]*To[\s]*:[\s]*[^<\n]+(<\/p>)?[\s]*/gmi, '')
-                                .replace(/(<p[^>]*>)?[\s]*To[\s]*:[\s]*[^<\n]+(<\/p>)?[\s]*/gi, '')
-                                // Remove "From: email" patterns
-                                .replace(/^[\s]*(<p[^>]*>)?[\s]*From[\s]*:[\s]*[^<\n]+(<\/p>)?[\s]*/gmi, '')
-                                .replace(/(<p[^>]*>)?[\s]*From[\s]*:[\s]*[^<\n]+(<\/p>)?[\s]*/gi, '')
+                                // Remove "From: email" and "From-Name: name" patterns (various formats)
+                                .replace(/^[\s]*(<[^>]+>)?[\s]*From[\s]*:[\s]*[^<\n]+(<\/[^>]+>)?[\s]*/gmi, '')
+                                .replace(/(<[^>]+>)?[\s]*From[\s]*:[\s]*[^<\n]+(<\/[^>]+>)?[\s]*/gi, '')
+                                .replace(/^[\s]*(<[^>]+>)?[\s]*From-Name[\s]*:[\s]*[^<\n]+(<\/[^>]+>)?[\s]*/gmi, '')
+                                .replace(/(<[^>]+>)?[\s]*From-Name[\s]*:[\s]*[^<\n]+(<\/[^>]+>)?[\s]*/gi, '')
+                                // Remove "To: email" patterns
+                                .replace(/^[\s]*(<[^>]+>)?[\s]*To[\s]*:[\s]*[^<\n]+(<\/[^>]+>)?[\s]*/gmi, '')
+                                .replace(/(<[^>]+>)?[\s]*To[\s]*:[\s]*[^<\n]+(<\/[^>]+>)?[\s]*/gi, '')
                                 // Remove "Subject: text" patterns
-                                .replace(/^[\s]*(<p[^>]*>)?[\s]*Subject[\s]*:[\s]*[^<\n]+(<\/p>)?[\s]*/gmi, '')
-                                .replace(/(<p[^>]*>)?[\s]*Subject[\s]*:[\s]*[^<\n]+(<\/p>)?[\s]*/gi, '')
-                                // Remove any leading/trailing whitespace and empty paragraphs
-                                .replace(/^[\s]*(<p[^>]*>[\s]*<\/p>)+/gi, '')
+                                .replace(/^[\s]*(<[^>]+>)?[\s]*Subject[\s]*:[\s]*[^<\n]+(<\/[^>]+>)?[\s]*/gmi, '')
+                                .replace(/(<[^>]+>)?[\s]*Subject[\s]*:[\s]*[^<\n]+(<\/[^>]+>)?[\s]*/gi, '')
+                                // Decode HTML entities to fix &amp; issue
+                                .replace(/&amp;/g, '&')
+                                .replace(/&lt;/g, '<')
+                                .replace(/&gt;/g, '>')
+                                .replace(/&quot;/g, '"')
+                                .replace(/&#39;/g, "'")
+                                // Remove any leading/trailing whitespace and empty tags
+                                .replace(/^[\s]*(<[^>]+>[\s]*<\/[^>]+>)+/gi, '')
+                                .replace(/^[\s]*(<br\s*\/?>\s*)+/gi, '')
                                 .trim();
 
                             console.log('[ContactSelection] 🔍 EXTRACTED CONTENT PREVIEW (after cleanup):', extractedContent.substring(0, 500));
 
                             // Display extracted content in editable messageBody
                             messageBody.innerHTML = extractedContent;
+
+                            // Add professional styling to message body
+                            messageBody.style.fontFamily = 'Arial, sans-serif';
+                            messageBody.style.fontSize = '16px';
+                            messageBody.style.lineHeight = '1.6';
+                            messageBody.style.color = '#333333';
+                            messageBody.style.padding = '20px';
+                            messageBody.style.backgroundColor = '#ffffff';
+                            messageBody.style.borderRadius = '4px';
+                            messageBody.style.border = '1px solid #e0e0e0';
 
                             // Store the full HTML for email sending
                             window.professionalEmailHTML = personalizedContent;
@@ -13435,21 +13454,25 @@ Best regards,
 
                         // Remove TO/FROM/Subject fields that shouldn't be in message body
                         extractedContent = extractedContent
-                            // Remove "From: email" and "From-Name: name" patterns
-                            .replace(/^[\s]*(<p[^>]*>)?[\s]*From[\s]*:[\s]*[^<\n]+(<\/p>)?[\s]*/gmi, '')
-                            .replace(/(<p[^>]*>)?[\s]*From[\s]*:[\s]*[^<\n]+(<\/p>)?[\s]*/gi, '')
-                            .replace(/^[\s]*(<p[^>]*>)?[\s]*From-Name[\s]*:[\s]*[^<\n]+(<\/p>)?[\s]*/gmi, '')
-                            .replace(/(<p[^>]*>)?[\s]*From-Name[\s]*:[\s]*[^<\n]+(<\/p>)?[\s]*/gi, '')
+                            // Remove "From: email" and "From-Name: name" patterns (various HTML tags)
+                            .replace(/^[\s]*(<[^>]+>)?[\s]*From[\s]*:[\s]*[^<\n]+(<\/[^>]+>)?[\s]*/gmi, '')
+                            .replace(/(<[^>]+>)?[\s]*From[\s]*:[\s]*[^<\n]+(<\/[^>]+>)?[\s]*/gi, '')
+                            .replace(/^[\s]*(<[^>]+>)?[\s]*From-Name[\s]*:[\s]*[^<\n]+(<\/[^>]+>)?[\s]*/gmi, '')
+                            .replace(/(<[^>]+>)?[\s]*From-Name[\s]*:[\s]*[^<\n]+(<\/[^>]+>)?[\s]*/gi, '')
                             // Remove "To: email" patterns
-                            .replace(/^[\s]*(<p[^>]*>)?[\s]*To[\s]*:[\s]*[^<\n]+(<\/p>)?[\s]*/gmi, '')
-                            .replace(/(<p[^>]*>)?[\s]*To[\s]*:[\s]*[^<\n]+(<\/p>)?[\s]*/gi, '')
-                            .replace(/(<div[^>]*>)?[\s]*To[\s]*:[\s]*[^<\n]+(<\/div>)?[\s]*/gi, '')
+                            .replace(/^[\s]*(<[^>]+>)?[\s]*To[\s]*:[\s]*[^<\n]+(<\/[^>]+>)?[\s]*/gmi, '')
+                            .replace(/(<[^>]+>)?[\s]*To[\s]*:[\s]*[^<\n]+(<\/[^>]+>)?[\s]*/gi, '')
                             // Remove "Subject: text" patterns
-                            .replace(/^[\s]*(<p[^>]*>)?[\s]*Subject[\s]*:[\s]*[^<\n]+(<\/p>)?[\s]*/gmi, '')
-                            .replace(/(<p[^>]*>)?[\s]*Subject[\s]*:[\s]*[^<\n]+(<\/p>)?[\s]*/gi, '')
-                            .replace(/(<div[^>]*>)?[\s]*Subject[\s]*:[\s]*[^\n<]+(<\/div>)?[\s]*/gi, '')
-                            // Remove any leading/trailing whitespace and empty divs/paragraphs
-                            .replace(/^[\s]*(<[pd]iv[^>]*>[\s]*<\/[pd]iv>)+/gi, '')
+                            .replace(/^[\s]*(<[^>]+>)?[\s]*Subject[\s]*:[\s]*[^<\n]+(<\/[^>]+>)?[\s]*/gmi, '')
+                            .replace(/(<[^>]+>)?[\s]*Subject[\s]*:[\s]*[^<\n]+(<\/[^>]+>)?[\s]*/gi, '')
+                            // Decode HTML entities to fix &amp; issue
+                            .replace(/&amp;/g, '&')
+                            .replace(/&lt;/g, '<')
+                            .replace(/&gt;/g, '>')
+                            .replace(/&quot;/g, '"')
+                            .replace(/&#39;/g, "'")
+                            // Remove any leading/trailing whitespace and empty tags
+                            .replace(/^[\s]*(<[^>]+>[\s]*<\/[^>]+>)+/gi, '')
                             .replace(/^[\s]*(<br\s*\/?>\s*)+/gi, '')
                             .trim();
 
@@ -13457,6 +13480,16 @@ Best regards,
 
                         // Display extracted content in editable messageBody
                         messageBody.innerHTML = extractedContent;
+
+                        // Add professional styling to message body
+                        messageBody.style.fontFamily = 'Arial, sans-serif';
+                        messageBody.style.fontSize = '16px';
+                        messageBody.style.lineHeight = '1.6';
+                        messageBody.style.color = '#333333';
+                        messageBody.style.padding = '20px';
+                        messageBody.style.backgroundColor = '#ffffff';
+                        messageBody.style.borderRadius = '4px';
+                        messageBody.style.border = '1px solid #e0e0e0';
 
                         // Store the full HTML structure for email sending
                         window.professionalEmailHTML = personalizedContent;
