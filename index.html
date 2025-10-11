@@ -4640,10 +4640,13 @@ Phone: +91-XXXXXXXXXX`;
                             content: templateToUse
                         };
 
-                        // Try to extract subject from HTML title
+                        // Extract subject from HTML title tag (subject is stored there)
                         const subjectMatch = templateToUse.match(/<title>(.*?)<\/title>/i);
                         if (subjectMatch) {
-                            templateData.subject = subjectMatch[1].replace(/\s*-\s*Professional Email/, '').trim();
+                            templateData.subject = subjectMatch[1].trim();
+                            console.log('[ContactSelection] Extracted subject from professional template:', templateData.subject);
+                        } else {
+                            console.warn('[ContactSelection] No subject found in professional template title tag');
                         }
                     } else {
                         // Custom template: extract as before
@@ -11891,7 +11894,7 @@ Phone: +91-XXXXXXXXXX`;
                             updated_at: new Date().toISOString()
                         }));
 
-                        // Check for duplicate IDs (debug)
+                        // Check for duplicate IDs and merge them intelligently
                         const ids = companiesArray.map(c => c.id);
                         const uniqueIds = [...new Set(ids)];
                         if (ids.length !== uniqueIds.length) {
@@ -11900,16 +11903,41 @@ Phone: +91-XXXXXXXXXX`;
                                 unique: uniqueIds.length,
                                 duplicates: ids.filter((id, index) => ids.indexOf(id) !== index)
                             });
-                            // Deduplicate by keeping only unique IDs
-                            const seenIds = new Set();
-                            const deduplicatedArray = companiesArray.filter(company => {
-                                if (seenIds.has(company.id)) {
-                                    console.warn('[CompanyOnboarding] Removing duplicate company:', company.id, company.companyName);
-                                    return false;
+
+                            // Smart deduplication: Keep the company with MORE data
+                            const companyMap = new Map();
+                            companiesArray.forEach(company => {
+                                const existingCompany = companyMap.get(company.id);
+                                if (!existingCompany) {
+                                    companyMap.set(company.id, company);
+                                    console.log('[CompanyOnboarding] Added company:', company.id, company.companyName);
+                                } else {
+                                    // Compare which has more data
+                                    const existingDataSize = JSON.stringify(existingCompany).length;
+                                    const newDataSize = JSON.stringify(company).length;
+
+                                    console.log('[CompanyOnboarding] 🔍 Duplicate found:', company.companyName);
+                                    console.log('[CompanyOnboarding] 🔍 Existing data size:', existingDataSize, 'bytes');
+                                    console.log('[CompanyOnboarding] 🔍 New data size:', newDataSize, 'bytes');
+                                    console.log('[CompanyOnboarding] 🔍 Existing has professional template:', !!existingCompany.professionalTemplate);
+                                    console.log('[CompanyOnboarding] 🔍 New has professional template:', !!company.professionalTemplate);
+
+                                    // Keep the one with professional template, or if neither has it, keep the larger one
+                                    if (company.professionalTemplate && !existingCompany.professionalTemplate) {
+                                        console.log('[CompanyOnboarding] ✅ Replacing with new (has professional template)');
+                                        companyMap.set(company.id, company);
+                                    } else if (!company.professionalTemplate && existingCompany.professionalTemplate) {
+                                        console.log('[CompanyOnboarding] ✅ Keeping existing (has professional template)');
+                                    } else if (newDataSize > existingDataSize) {
+                                        console.log('[CompanyOnboarding] ✅ Replacing with new (larger data)');
+                                        companyMap.set(company.id, company);
+                                    } else {
+                                        console.log('[CompanyOnboarding] ✅ Keeping existing (larger or equal data)');
+                                    }
                                 }
-                                seenIds.add(company.id);
-                                return true;
                             });
+
+                            const deduplicatedArray = Array.from(companyMap.values());
                             console.log('[CompanyOnboarding] Deduplicated:', companiesArray.length, '→', deduplicatedArray.length, 'companies');
                             await dbManager.saveCompanies(deduplicatedArray);
                         } else {
@@ -12016,6 +12044,18 @@ Phone: +91-XXXXXXXXXX`;
                 if (this.companies[companyId]) {
                     const existingCompany = this.companies[companyId];
 
+                    console.log('[updateCompany] 🔍 Updating company:', companyId);
+                    console.log('[updateCompany] 🔍 Incoming data professional fields:', {
+                        'useProfessionalTemplate': companyData.useProfessionalTemplate,
+                        'professionalTemplate exists': !!companyData.professionalTemplate,
+                        'professionalTemplate length': companyData.professionalTemplate?.length || 0
+                    });
+                    console.log('[updateCompany] 🔍 Existing company professional fields:', {
+                        'useProfessionalTemplate': existingCompany.useProfessionalTemplate,
+                        'professionalTemplate exists': !!existingCompany.professionalTemplate,
+                        'professionalTemplate length': existingCompany.professionalTemplate?.length || 0
+                    });
+
                     // Special handling for isDefault flag
                     // If new data sets isDefault to true, clear all other defaults first
                     if (companyData.isDefault === true && !existingCompany.isDefault) {
@@ -12028,16 +12068,26 @@ Phone: +91-XXXXXXXXXX`;
                         companyId: companyId, // Preserve ID
                         updatedAt: new Date().toISOString()
                     };
+
+                    console.log('[updateCompany] 🔍 AFTER merge - company professional fields:', {
+                        'useProfessionalTemplate': this.companies[companyId].useProfessionalTemplate,
+                        'professionalTemplate exists': !!this.companies[companyId].professionalTemplate,
+                        'professionalTemplate length': this.companies[companyId].professionalTemplate?.length || 0
+                    });
+                    console.log('[updateCompany] 🔍 AFTER merge - all fields:', Object.keys(this.companies[companyId]));
+
                     this.saveAllCompanies();
 
                     // Update current data if this is the active company
                     if (this.currentCompanyId === companyId) {
                         this.data = this.companies[companyId];
+                        console.log('[updateCompany] ✅ Updated this.data since this is the current company');
                     }
 
                     console.log('[CompanyOnboarding] Updated company:', companyId, '| isDefault:', this.companies[companyId].isDefault);
                     return true;
                 }
+                console.error('[updateCompany] ❌ Company not found:', companyId);
                 return false;
             },
 
@@ -13520,11 +13570,20 @@ Best regards,
                 // Extract template content
                 let templateData;
                 if (hasProfessionalTemplate) {
-                    // Professional template is full HTML - use as-is, don't extract
+                    // Professional template is full HTML - extract subject from title tag
                     templateData = {
                         subject: '',
                         content: templateToUse
                     };
+
+                    // Extract subject from HTML title tag (subject is stored there)
+                    const subjectMatch = templateToUse.match(/<title>(.*?)<\/title>/i);
+                    if (subjectMatch) {
+                        templateData.subject = subjectMatch[1].trim();
+                        console.log('[RefreshEmail] Extracted subject from professional template:', templateData.subject);
+                    } else {
+                        console.warn('[RefreshEmail] No subject found in professional template title tag');
+                    }
                 } else {
                     // Custom template - extract as before
                     templateData = this.extractTemplateContent(templateToUse);
@@ -13941,16 +14000,32 @@ Best regards,
 
         // Synchronous version for backwards compatibility
         CompanyOnboardingModule.getDataSync = function() {
+            console.log('[getDataSync] 🔍 Starting getDataSync...');
+            console.log('[getDataSync] currentCompanyId:', this.currentCompanyId);
+            console.log('[getDataSync] companies keys:', Object.keys(this.companies || {}));
+
             // If we have a current company, return its data
             if (this.currentCompanyId && this.companies[this.currentCompanyId]) {
                 this.data = this.companies[this.currentCompanyId];
+
+                // DEBUG: Log all fields in the company object
+                console.log('[getDataSync] 🔍 Company object fields:', Object.keys(this.data));
+                console.log('[getDataSync] 🔍 Professional template fields:', {
+                    'useProfessionalTemplate': this.data.useProfessionalTemplate,
+                    'professionalTemplate exists': !!this.data.professionalTemplate,
+                    'professionalTemplate length': this.data.professionalTemplate?.length || 0,
+                    'emailTemplate exists': !!this.data.emailTemplate,
+                    'emailTemplate length': this.data.emailTemplate?.length || 0
+                });
             }
             // Fallback to legacy single company data if no multi-company data exists
             else if (!this.data || Object.keys(this.data).length === 0) {
+                console.log('[getDataSync] No current company, checking legacy data...');
                 const savedData = localStorage.getItem(this.storageKey);
                 if (savedData) {
                     try {
                         this.data = JSON.parse(savedData);
+                        console.log('[getDataSync] Loaded legacy data');
                     } catch (error) {
                         console.error('[CompanyOnboarding] Error loading legacy data:', error);
                         this.data = {};
@@ -13972,6 +14047,7 @@ Best regards,
                 }
             }
 
+            console.log('[getDataSync] ✅ Returning data with', Object.keys(this.data || {}).length, 'fields');
             return this.data || {};
         };
 
@@ -14247,6 +14323,11 @@ Best regards,
             tempDiv.innerHTML = content;
             const decodedContent = tempDiv.innerHTML; // This automatically decodes entities
 
+            // Extract subject from the custom template if it exists
+            const templateData = this.extractTemplateContent(content);
+            const extractedSubject = templateData.subject || `Partnership Opportunity - ${companyData?.companyName || '{companyName}'} & {firm} in {country}`;
+            console.log('[CreateProfessionalTemplate] Extracted subject from custom template:', extractedSubject);
+
             const companyLogo = companyData?.companyLogo || '';
             const companyName = companyData?.companyName || '{companyName}';
             const companyWebsite = companyData?.companyWebsite || '{companyWebsite}';
@@ -14256,12 +14337,13 @@ Best regards,
             const companyIndustry = companyData?.companyIndustry || '{companyIndustry}';
 
             // Professional HTML email template structure wrapping existing content
+            // Store the extracted subject in the title tag so it can be retrieved later
             const professionalTemplate = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${companyName} - Professional Email</title>
+  <title>${extractedSubject}</title>
   <style>
     body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
     img { border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; max-width: 100%; }
